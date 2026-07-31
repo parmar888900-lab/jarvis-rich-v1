@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Node
+node_modules/
+.next/
+out/
+.npm
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/*.log
+logs/*.txt
+!logs/.gitkeep
+
+# Database
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+!database/.gitkeep
+
+# Memory store
+memory/*.json
+memory/*.db
+!memory/.gitkeep
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+coverage/
+
+# Misc
+*.bak
+*.tmp

@@ -1,0 +1,14 @@
+{
+  "name": "jarvis-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "JARVIS AI - Local-first AI assistant built with open-source tools",
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "start": "npm run start --prefix frontend",
+    "lint": "npm run lint --prefix frontend",
+    "backend": "cd backend && ..\\venv\\Scripts\\python -m uvicorn app:app --reload --host 0.0.0.0 --port 8000",
+    "backend:unix": "cd backend && ../venv/bin/python -m uvicorn app:app --reload --host 0.0.0.0 --port 8000"
+  }
+}
