@@ -3,15 +3,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
-from models.command import (
+from backend.database import get_db
+from backend.models.command import (
     CommandErrorResponse,
     CommandSchema,
     CommandSubmitRequest,
     CommandSubmitResponse,
 )
-from services.agent_registry import AgentNotFoundError, TaskNotSupportedError
-from services.commander import CommandValidationError, Commander
+from backend.services.agent_registry import AgentNotFoundError, TaskNotSupportedError
+from backend.services.commander import CommandValidationError, Commander
 
 router = APIRouter()
 commander = Commander()

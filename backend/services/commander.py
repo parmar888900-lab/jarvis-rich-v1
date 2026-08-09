@@ -9,8 +9,8 @@ from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import LOGS_DIR
-from models.command import (
+from backend.config import LOGS_DIR
+from backend.models.command import (
     CommandPriority,
     CommandRecord,
     CommandSchema,
@@ -18,7 +18,7 @@ from models.command import (
     CommandSubmitRequest,
     CommandSubmitResponse,
 )
-from services.agent_registry import AgentNotFoundError, AgentRegistry, TaskNotSupportedError, build_default_registry
+from backend.services.agent_registry import AgentNotFoundError, AgentRegistry, TaskNotSupportedError, build_default_registry
 
 # ---------------------------------------------------------------------------
 # Logging setup — every command is logged to file and stdout

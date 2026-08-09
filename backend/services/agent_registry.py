@@ -6,8 +6,8 @@ modifying Commander logic.
 
 import logging
 
-from services.agent_handlers import BUILTIN_HANDLERS
-from services.agent_handlers.base import BaseAgentHandler
+from backend.services.agent_handlers import BUILTIN_HANDLERS
+from backend.services.agent_handlers.base import BaseAgentHandler
 
 logger = logging.getLogger("jarvis.commander.registry")
 

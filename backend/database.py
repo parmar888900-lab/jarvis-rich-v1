@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
-from config import settings
+from backend.config import settings
 
 
 class Base(DeclarativeBase):
@@ -26,7 +26,7 @@ async_session = async_sessionmaker(
 
 async def init_db() -> None:
     """Create all database tables."""
-    from models import agent, command, conversation, memory  # noqa: F401
+    from backend.models import agent, command, conversation, memory  # noqa: F401
 
     settings.database_url  # ensure database dir exists via config path
     async with engine.begin() as conn:

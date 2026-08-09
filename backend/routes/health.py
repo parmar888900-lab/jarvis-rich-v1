@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter
 
-from config import settings
-from models.schemas import HealthResponse
-from services.llm_service import LLMService
+from backend.config import settings
+from backend.models.schemas import HealthResponse
+from backend.services.llm_service import LLMService
 
 router = APIRouter()
 llm_service = LLMService()

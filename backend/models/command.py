@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import DateTime, Enum, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from database import Base
+from backend.database import Base
 
 
 class CommandPriority(str, enum.Enum):

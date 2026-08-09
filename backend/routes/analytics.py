@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
-from models.agent import Agent, Conversation, Message
-from models.schemas import AnalyticsSummary
+from backend.database import get_db
+from backend.models.agent import Agent, Conversation, Message
+from backend.models.schemas import AnalyticsSummary
 
 router = APIRouter()
 

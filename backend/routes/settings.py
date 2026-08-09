@@ -2,8 +2,8 @@
 
 from fastapi import APIRouter
 
-from config import settings
-from models.schemas import SettingsResponse, SettingsUpdate
+from backend.config import settings
+from backend.models.schemas import SettingsResponse, SettingsUpdate
 
 router = APIRouter()
 

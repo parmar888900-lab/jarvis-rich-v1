@@ -3,8 +3,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.agent import Agent
-from models.schemas import AgentCreate, AgentUpdate
+from backend.models.agent import Agent
+from backend.models.schemas import AgentCreate, AgentUpdate
 
 
 class AgentService:

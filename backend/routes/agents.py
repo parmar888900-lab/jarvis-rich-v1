@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
-from models.agent import Agent
-from models.schemas import AgentCreate, AgentResponse, AgentUpdate, ChatRequest, ChatResponse
-from services.agent_service import AgentService
-from services.llm_service import LLMService
+from backend.database import get_db
+from backend.models.agent import Agent
+from backend.models.schemas import AgentCreate, AgentResponse, AgentUpdate, ChatRequest, ChatResponse
+from backend.services.agent_service import AgentService
+from backend.services.llm_service import LLMService
 
 router = APIRouter()
 agent_service = AgentService()

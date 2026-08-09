@@ -25,11 +25,11 @@ class Settings(BaseSettings):
     debug: bool = True
 
     # Database (SQLite - local only)
-    database_url: str = f"sqlite+aiosqlite:///{DATABASE_DIR / 'jarvis.db'}"
+    database_url : str = f"sqlite+aiosqlite:///{DATABASE_DIR / 'jarvis.db'}"
 
     # Local LLM via Ollama (free, open-source, runs locally)
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "llama3.2"
+    ollama_model: str = "qwen2.5:7b" 
 
     # CORS
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
