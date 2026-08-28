@@ -144,17 +144,17 @@ class VideoRenderer:
 
             for scene in scenes:
 
-                subtitle = (
+                phrase_clips = (
                     self.subtitle_renderer
-                    .create_clip(
+                    .create_phrase_clips(
                         text=scene.narration,
                         start_time=scene.start_time,
                         end_time=scene.end_time,
                     )
                 )
 
-                subtitle_clips.append(
-                    subtitle
+                subtitle_clips.extend(
+                    phrase_clips
                 )
 
             ##################################################
@@ -233,3 +233,4 @@ class VideoRenderer:
             "fps": self.FPS,
             "captions": True,
         }
+

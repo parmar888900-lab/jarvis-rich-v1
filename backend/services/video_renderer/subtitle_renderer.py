@@ -16,6 +16,8 @@ class SubtitleRenderer:
     STROKE_COLOR = "black"
     STROKE_WIDTH = 5
 
+    WORDS_PER_PHRASE = 4
+
     def create_clip(
         self,
         text: str,
@@ -68,3 +70,84 @@ class SubtitleRenderer:
                 )
             )
         )
+
+    def create_phrase_clips(
+        self,
+        text: str,
+        start_time: float,
+        end_time: float,
+    ) -> list[TextClip]:
+
+        text = text.strip()
+
+        if not text:
+            raise ValueError(
+                "Subtitle text cannot be empty."
+            )
+
+        duration = (
+            end_time - start_time
+        )
+
+        if duration <= 0:
+            raise ValueError(
+                "Subtitle duration must be positive."
+            )
+
+        words = text.split()
+
+        phrases = [
+            words[
+                index:
+                index + self.WORDS_PER_PHRASE
+            ]
+            for index in range(
+                0,
+                len(words),
+                self.WORDS_PER_PHRASE,
+            )
+        ]
+
+        total_words = len(words)
+
+        clips = []
+
+        current_time = start_time
+
+        for index, phrase_words in enumerate(
+            phrases
+        ):
+
+            phrase_text = " ".join(
+                phrase_words
+            )
+
+            phrase_duration = (
+                duration
+                * len(phrase_words)
+                / total_words
+            )
+
+            # Force the final phrase to end exactly
+            # at the scene boundary.
+            if index == len(phrases) - 1:
+                phrase_end = end_time
+            else:
+                phrase_end = (
+                    current_time
+                    + phrase_duration
+                )
+
+            clip = self.create_clip(
+                text=phrase_text,
+                start_time=current_time,
+                end_time=phrase_end,
+            )
+
+            clips.append(
+                clip
+            )
+
+            current_time = phrase_end
+
+        return clips
