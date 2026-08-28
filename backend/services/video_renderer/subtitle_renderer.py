@@ -7,8 +7,14 @@ from moviepy import TextClip
 
 class SubtitleRenderer:
 
-    FONT_SIZE = 72
+    # Tuned for 1080x1920 vertical Shorts.
+    FONT_SIZE = 78
     WIDTH = 900
+    Y_POSITION = 1320
+
+    TEXT_COLOR = "white"
+    STROKE_COLOR = "black"
+    STROKE_WIDTH = 5
 
     def create_clip(
         self,
@@ -26,29 +32,39 @@ class SubtitleRenderer:
                 "Subtitle duration must be positive."
             )
 
-        if not text.strip():
+        text = text.strip()
+
+        if not text:
             raise ValueError(
                 "Subtitle text cannot be empty."
             )
 
         clip = TextClip(
-            text=text.strip(),
+            text=text,
             font_size=self.FONT_SIZE,
+            color=self.TEXT_COLOR,
+            stroke_color=self.STROKE_COLOR,
+            stroke_width=self.STROKE_WIDTH,
             method="caption",
-            size=(self.WIDTH, None),
+            size=(
+                self.WIDTH,
+                None,
+            ),
             text_align="center",
         )
 
-        clip = (
+        return (
             clip
-            .with_start(start_time)
-            .with_duration(duration)
+            .with_start(
+                start_time
+            )
+            .with_duration(
+                duration
+            )
             .with_position(
                 (
                     "center",
-                    1450,
+                    self.Y_POSITION,
                 )
             )
         )
-
-        return clip
