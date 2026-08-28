@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 import shutil
 import time
@@ -89,8 +89,8 @@ class FluxProvider(BaseImageProvider):
             prompt=prompt,
             image_path=str(destination_path),
             provider="flux-comfyui",
-            width=1024,
-            height=1024,
+            width=720,
+            height=1280,
         )
 
     def _load_workflow(self) -> dict:
@@ -222,3 +222,4 @@ class FluxProvider(BaseImageProvider):
                         )
 
                 await asyncio.sleep(2)
+
