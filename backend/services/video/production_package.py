@@ -1,4 +1,4 @@
-"""
+﻿"""
 Builds a complete production package.
 
 Everything required to recreate the video is stored
@@ -90,8 +90,8 @@ class ProductionPackageBuilder:
         # Voice Generation
         ####################################################
 
-        voice = await self.voice.generate(
-            script,
+        voice = await self.voice.generate_scenes(
+            scenes,
             filename=safe_name,
         )
 
@@ -157,10 +157,7 @@ class ProductionPackageBuilder:
         # Metadata
         ####################################################
 
-        duration = sum(
-            scene.duration
-            for scene in scenes
-        )
+        duration = voice["duration"]
 
         metadata = {
 
@@ -286,9 +283,7 @@ class ProductionPackageBuilder:
         (
             package_dir / "captions.srt"
         ).write_text(
-
-            "",
-
+            self._build_srt(scenes),
             encoding="utf-8",
         )
 
@@ -313,3 +308,72 @@ class ProductionPackageBuilder:
             "script": script,
 
         }
+
+
+
+    @staticmethod
+    def _format_srt_time(
+        seconds: float,
+    ) -> str:
+
+        milliseconds = round(
+            seconds * 1000
+        )
+
+        hours = (
+            milliseconds // 3_600_000
+        )
+
+        milliseconds %= 3_600_000
+
+        minutes = (
+            milliseconds // 60_000
+        )
+
+        milliseconds %= 60_000
+
+        secs = (
+            milliseconds // 1000
+        )
+
+        millis = (
+            milliseconds % 1000
+        )
+
+        return (
+            f"{hours:02d}:"
+            f"{minutes:02d}:"
+            f"{secs:02d},"
+            f"{millis:03d}"
+        )
+
+    @classmethod
+    def _build_srt(
+        cls,
+        scenes: list[Scene],
+    ) -> str:
+
+        blocks = []
+
+        for index, scene in enumerate(
+            scenes,
+            start=1,
+        ):
+
+            start = cls._format_srt_time(
+                scene.start_time
+            )
+
+            end = cls._format_srt_time(
+                scene.end_time
+            )
+
+            blocks.append(
+                f"{index}\n"
+                f"{start} --> {end}\n"
+                f"{scene.narration.strip()}"
+            )
+
+        return "\n\n".join(
+            blocks
+        ) + "\n"

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 
 
 @dataclass(slots=True)
@@ -12,3 +12,7 @@ class Scene:
     image_prompt: str
 
     duration: float = 4.0
+
+    start_time: float = 0.0
+
+    end_time: float = 0.0

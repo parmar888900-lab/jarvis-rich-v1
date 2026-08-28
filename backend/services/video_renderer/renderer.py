@@ -10,6 +10,7 @@ from pathlib import Path
 
 from moviepy import (
     AudioFileClip,
+    CompositeVideoClip,
     ImageClip,
     concatenate_videoclips,
 )
@@ -17,6 +18,7 @@ from moviepy import (
 from backend.models.generated_content import GeneratedContent
 from backend.services.storyboard.scene import Scene
 from backend.services.image_generation.models import GeneratedImage
+from backend.services.video_renderer.subtitle_renderer import SubtitleRenderer
 
 
 class VideoRenderer:
@@ -27,11 +29,17 @@ class VideoRenderer:
 
     def __init__(self):
 
-        self.output_dir = Path("generated/videos")
+        self.output_dir = Path(
+            "generated/videos"
+        )
 
         self.output_dir.mkdir(
             parents=True,
             exist_ok=True,
+        )
+
+        self.subtitle_renderer = (
+            SubtitleRenderer()
         )
 
     async def render(
@@ -63,10 +71,6 @@ class VideoRenderer:
                 f"Audio not found: {audio_path}"
             )
 
-        ##################################################
-        # Load narration
-        ##################################################
-
         audio = AudioFileClip(
             str(audio_path)
         )
@@ -80,20 +84,16 @@ class VideoRenderer:
                 "Narration has invalid duration."
             )
 
-        ##################################################
-        # Synchronize scenes to narration
-        ##################################################
+        image_clips = []
+        subtitle_clips = []
 
-        scene_duration = (
-            audio_duration / len(scenes)
-        )
-
-        clips = []
+        base_video = None
+        final_video = None
 
         try:
 
             ##################################################
-            # Build image clips
+            # Build synchronized image clips
             ##################################################
 
             for scene, image in zip(
@@ -111,7 +111,9 @@ class VideoRenderer:
                     )
 
                 clip = (
-                    ImageClip(str(image_path))
+                    ImageClip(
+                        str(image_path)
+                    )
                     .resized(
                         (
                             self.WIDTH,
@@ -119,23 +121,63 @@ class VideoRenderer:
                         )
                     )
                     .with_duration(
-                        scene_duration
+                        scene.duration
                     )
                 )
 
-                clips.append(clip)
+                image_clips.append(
+                    clip
+                )
 
             ##################################################
-            # Combine clips
+            # Combine synchronized scenes
             ##################################################
 
-            video = concatenate_videoclips(
-                clips,
+            base_video = concatenate_videoclips(
+                image_clips,
                 method="compose",
             )
 
-            video = video.with_audio(
-                audio
+            ##################################################
+            # Build synchronized subtitles
+            ##################################################
+
+            for scene in scenes:
+
+                subtitle = (
+                    self.subtitle_renderer
+                    .create_clip(
+                        text=scene.narration,
+                        start_time=scene.start_time,
+                        end_time=scene.end_time,
+                    )
+                )
+
+                subtitle_clips.append(
+                    subtitle
+                )
+
+            ##################################################
+            # Composite images + subtitles
+            ##################################################
+
+            final_video = CompositeVideoClip(
+                [
+                    base_video,
+                    *subtitle_clips,
+                ],
+                size=(
+                    self.WIDTH,
+                    self.HEIGHT,
+                ),
+            )
+
+            final_video = (
+                final_video
+                .with_audio(audio)
+                .with_duration(
+                    audio_duration
+                )
             )
 
             ##################################################
@@ -156,7 +198,7 @@ class VideoRenderer:
             # Render
             ##################################################
 
-            video.write_videofile(
+            final_video.write_videofile(
                 str(output),
                 fps=self.FPS,
                 codec="libx264",
@@ -164,18 +206,21 @@ class VideoRenderer:
                 logger=None,
             )
 
-            video.close()
-
         finally:
 
-            audio.close()
+            if final_video is not None:
+                final_video.close()
 
-            for clip in clips:
+            if base_video is not None:
+                base_video.close()
+
+            for subtitle in subtitle_clips:
+                subtitle.close()
+
+            for clip in image_clips:
                 clip.close()
 
-        ##################################################
-        # Return
-        ##################################################
+            audio.close()
 
         return {
             "status": "success",
@@ -186,4 +231,5 @@ class VideoRenderer:
                 f"{self.WIDTH}x{self.HEIGHT}"
             ),
             "fps": self.FPS,
+            "captions": True,
         }
