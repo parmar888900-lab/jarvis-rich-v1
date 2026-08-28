@@ -18,6 +18,7 @@ from moviepy import (
 from backend.models.generated_content import GeneratedContent
 from backend.services.storyboard.scene import Scene
 from backend.services.image_generation.models import GeneratedImage
+from backend.services.video.caption_aligner import CaptionAligner
 from backend.services.video_renderer.subtitle_renderer import SubtitleRenderer
 
 
@@ -40,6 +41,10 @@ class VideoRenderer:
 
         self.subtitle_renderer = (
             SubtitleRenderer()
+        )
+
+        self.caption_aligner = (
+            CaptionAligner()
         )
 
     async def render(
@@ -90,6 +95,8 @@ class VideoRenderer:
         base_video = None
         final_video = None
 
+        caption_mode = "whisper"
+
         try:
 
             ##################################################
@@ -139,23 +146,69 @@ class VideoRenderer:
             )
 
             ##################################################
-            # Build synchronized subtitles
+            # Build speech-aligned subtitles
             ##################################################
 
-            for scene in scenes:
+            try:
 
-                phrase_clips = (
-                    self.subtitle_renderer
-                    .create_phrase_clips(
-                        text=scene.narration,
-                        start_time=scene.start_time,
-                        end_time=scene.end_time,
+                phrases = (
+                    await self.caption_aligner
+                    .align_phrases(
+                        str(audio_path)
                     )
                 )
 
-                subtitle_clips.extend(
-                    phrase_clips
+                for phrase in phrases:
+
+                    subtitle = (
+                        self.subtitle_renderer
+                        .create_clip(
+                            text=phrase["text"],
+                            start_time=phrase[
+                                "start_time"
+                            ],
+                            end_time=phrase[
+                                "end_time"
+                            ],
+                        )
+                    )
+
+                    subtitle_clips.append(
+                        subtitle
+                    )
+
+            except Exception as exc:
+
+                caption_mode = "fallback"
+
+                print(
+                    "Whisper caption alignment "
+                    "failed. Using fallback "
+                    "captions."
                 )
+
+                print(
+                    f"Alignment error: {exc}"
+                )
+
+                ##################################################
+                # Fallback proportional captions
+                ##################################################
+
+                for scene in scenes:
+
+                    phrase_clips = (
+                        self.subtitle_renderer
+                        .create_phrase_clips(
+                            text=scene.narration,
+                            start_time=scene.start_time,
+                            end_time=scene.end_time,
+                        )
+                    )
+
+                    subtitle_clips.extend(
+                        phrase_clips
+                    )
 
             ##################################################
             # Composite images + subtitles
@@ -232,5 +285,5 @@ class VideoRenderer:
             ),
             "fps": self.FPS,
             "captions": True,
+            "caption_mode": caption_mode,
         }
-
