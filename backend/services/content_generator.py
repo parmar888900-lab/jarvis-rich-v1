@@ -175,6 +175,214 @@ class ContentGenerator:
         )
 
     ########################################################
+    # Content repair
+    ########################################################
+
+    async def repair(
+        self,
+        content: GeneratedContent,
+        trend: dict,
+        issues: list[dict],
+    ) -> GeneratedContent | None:
+
+        topic = (
+            trend.get("title")
+            or trend.get("topic")
+            or content.title
+            or "Trending Story"
+        )
+
+        research = trend.get(
+            "research",
+            "",
+        )
+
+        if isinstance(research, list):
+            research = "\n".join(
+                str(x)
+                for x in research
+            )
+
+        if not research:
+            research = json.dumps(
+                trend,
+                indent=2,
+            )
+
+        original_script = "\n".join(
+            content.script_lines
+        )
+
+        raw = await self.llm.chat(
+            self._build_repair_messages(
+                topic=topic,
+                research=research,
+                original_script=original_script,
+                issues=issues,
+            ),
+            json_mode=True,
+        )
+
+        data = self._extract_json(
+            raw
+        )
+
+        if not self._is_valid_content(
+            data
+        ):
+
+            logger.warning(
+                "Content repair failed "
+                "structural validation."
+            )
+
+            return None
+
+        title = str(
+            data.get(
+                "title",
+                content.title,
+            )
+        ).strip()
+
+        hashtags = [
+            str(tag).strip()
+            for tag in data.get(
+                "hashtags",
+                content.hashtags,
+            )
+            if str(tag).strip()
+        ]
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+            if str(line).strip()
+        ]
+
+        return GeneratedContent(
+            title=title,
+            hashtags=hashtags,
+            script_lines=lines,
+            metadata={
+                **content.metadata,
+                "source": topic,
+                "generator": "Jarvis Rich V1",
+                "repaired": True,
+                "repair_issues": issues,
+                "word_count": sum(
+                    len(line.split())
+                    for line in lines
+                ),
+            },
+        )
+
+    def _build_repair_messages(
+        self,
+        topic: str,
+        research: str,
+        original_script: str,
+        issues: list[dict],
+    ) -> list[dict]:
+
+        issue_text = json.dumps(
+            issues,
+            indent=2,
+        )
+
+        system_prompt = """
+You are Jarvis, a factual YouTube Shorts script editor.
+
+Your job is to repair a script that failed
+content-quality validation.
+
+Return ONLY one valid JSON object.
+Never use markdown or code fences.
+Never add text outside the JSON.
+
+Use exactly this schema:
+
+{
+  "title": "string",
+  "hashtags": [
+    "#hashtag1",
+    "#hashtag2",
+    "#hashtag3"
+  ],
+  "script_lines": [
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4"
+  ]
+}
+
+REPAIR RULES:
+
+1. Exactly four narration lines.
+2. Total narration MUST be 75-105 words.
+3. Aim for 19-26 words per line.
+4. Preserve the useful meaning of the original script.
+5. Remove or soften every flagged high-risk claim.
+6. Use only facts supported by the supplied research.
+7. Do not invent replacement facts.
+8. Avoid absolute claims such as guaranteed,
+   indistinguishable, always, never, perfect,
+   proven, or 100 percent unless explicitly
+   supported by the research.
+9. Prefer precise language such as:
+   "can", "may", "appears", "is improving",
+   "research suggests", or "in some cases"
+   when that wording accurately reflects
+   the supplied research.
+10. Count the narration words before responding.
+"""
+
+        user_prompt = f"""
+TOPIC:
+
+{topic}
+
+RESEARCH:
+
+{research}
+
+ORIGINAL SCRIPT:
+
+{original_script}
+
+VALIDATION ISSUES:
+
+{issue_text}
+
+Rewrite the script so every validation issue is fixed.
+
+Before returning JSON:
+
+- verify exactly 4 script_lines
+- verify 75-105 total narration words
+- verify all flagged claims were removed or
+  rewritten conservatively
+- verify every factual statement is supported
+  by the supplied research
+
+Return only the JSON object.
+"""
+
+        return [
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {
+                "role": "user",
+                "content": user_prompt,
+            },
+        ]
+    ########################################################
     # Prompt construction
     ########################################################
 
@@ -489,4 +697,5 @@ Return only the JSON object.
             )
 
         return {}
+
 

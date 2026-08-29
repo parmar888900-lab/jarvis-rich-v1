@@ -4,6 +4,7 @@ Central video production pipeline.
 Responsibilities:
     - Generate content
     - Validate content
+    - Repair rejected content
     - Build storyboard
     - Generate images
     - Build production package
@@ -63,16 +64,42 @@ class VideoPipeline:
             generated
         )
 
+        ####################################################
+        # 3. Repair rejected content
+        ####################################################
+
         if not validation["valid"]:
 
-            raise RuntimeError(
-                "Generated content failed factual "
-                "grounding validation: "
-                f"{validation['issues']}"
+            repaired = await self.generator.repair(
+                content=generated,
+                trend=trend,
+                issues=validation["issues"],
             )
 
+            if repaired is None:
+                raise RuntimeError(
+                    "Generated content failed validation "
+                    "and automatic repair failed."
+                )
+
+            repaired_validation = (
+                self.content_validator.validate(
+                    repaired
+                )
+            )
+
+            if not repaired_validation["valid"]:
+                raise RuntimeError(
+                    "Repaired content still failed "
+                    "factual grounding validation: "
+                    f"{repaired_validation['issues']}"
+                )
+
+            generated = repaired
+            validation = repaired_validation
+
         ####################################################
-        # 3. Build storyboard
+        # 4. Build storyboard
         ####################################################
 
         storyboard = self.storyboard.generate(
@@ -85,7 +112,7 @@ class VideoPipeline:
             )
 
         ####################################################
-        # 4. Generate images
+        # 5. Generate images
         ####################################################
 
         images = []
@@ -104,7 +131,7 @@ class VideoPipeline:
             )
 
         ####################################################
-        # 5. Build production package
+        # 6. Build production package
         ####################################################
 
         package = await self.package_builder.build(
@@ -120,7 +147,7 @@ class VideoPipeline:
         )
 
         ####################################################
-        # 6. Render final video
+        # 7. Render final video
         ####################################################
 
         video = await self.renderer.render(
@@ -136,7 +163,7 @@ class VideoPipeline:
         )
 
         ####################################################
-        # 7. Return everything
+        # 8. Return everything
         ####################################################
 
         return {
