@@ -1,8 +1,9 @@
-"""
+﻿"""
 Central video production pipeline.
 
 Responsibilities:
     - Generate content
+    - Validate content
     - Build storyboard
     - Generate images
     - Build production package
@@ -13,6 +14,7 @@ This class ONLY orchestrates the workflow.
 
 
 from backend.services.content_generator import ContentGenerator
+from backend.services.content_validator import ContentValidator
 from backend.services.storyboard.generator import StoryboardGenerator
 from backend.services.image_generation.generator import ImageGenerator
 from backend.services.video.production_package import ProductionPackageBuilder
@@ -24,6 +26,8 @@ class VideoPipeline:
     def __init__(self):
 
         self.generator = ContentGenerator()
+
+        self.content_validator = ContentValidator()
 
         self.storyboard = StoryboardGenerator()
 
@@ -52,7 +56,23 @@ class VideoPipeline:
             )
 
         ####################################################
-        # 2. Build storyboard
+        # 2. Validate generated content
+        ####################################################
+
+        validation = self.content_validator.validate(
+            generated
+        )
+
+        if not validation["valid"]:
+
+            raise RuntimeError(
+                "Generated content failed factual "
+                "grounding validation: "
+                f"{validation['issues']}"
+            )
+
+        ####################################################
+        # 3. Build storyboard
         ####################################################
 
         storyboard = self.storyboard.generate(
@@ -65,7 +85,7 @@ class VideoPipeline:
             )
 
         ####################################################
-        # 3. Generate images
+        # 4. Generate images
         ####################################################
 
         images = []
@@ -84,7 +104,7 @@ class VideoPipeline:
             )
 
         ####################################################
-        # 4. Build production package
+        # 5. Build production package
         ####################################################
 
         package = await self.package_builder.build(
@@ -100,7 +120,7 @@ class VideoPipeline:
         )
 
         ####################################################
-        # 5. Render final video
+        # 6. Render final video
         ####################################################
 
         video = await self.renderer.render(
@@ -116,12 +136,14 @@ class VideoPipeline:
         )
 
         ####################################################
-        # 6. Return everything
+        # 7. Return everything
         ####################################################
 
         return {
 
             "generated": generated,
+
+            "content_validation": validation,
 
             "storyboard": storyboard,
 
@@ -134,4 +156,3 @@ class VideoPipeline:
             "status": "success",
 
         }
-
