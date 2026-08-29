@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 import re
 
@@ -199,8 +199,8 @@ class ContentGenerator:
 
         if isinstance(research, list):
             research = "\n".join(
-                str(x)
-                for x in research
+                str(item)
+                for item in research
             )
 
         if not research:
@@ -213,12 +213,23 @@ class ContentGenerator:
             content.script_lines
         )
 
+        banned_terms = (
+            self._extract_flagged_terms(
+                issues
+            )
+        )
+
+        ####################################################
+        # Repair attempt 1
+        ####################################################
+
         raw = await self.llm.chat(
             self._build_repair_messages(
                 topic=topic,
                 research=research,
                 original_script=original_script,
                 issues=issues,
+                banned_terms=banned_terms,
             ),
             json_mode=True,
         )
@@ -227,32 +238,145 @@ class ContentGenerator:
             raw
         )
 
-        if not self._is_valid_content(
-            data
+        if self._repair_candidate_valid(
+            data=data,
+            banned_terms=banned_terms,
         ):
-
-            logger.warning(
-                "Content repair failed "
-                "structural validation."
+            return self._build_repaired_content(
+                data=data,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=1,
             )
 
-            return None
+        recovered = self._recover_repair_length(
+            data=data,
+            research=research,
+            banned_terms=banned_terms,
+        )
 
-        title = str(
-            data.get(
-                "title",
-                content.title,
+        if recovered is not None:
+            logger.info(
+                "Repair attempt 1 recovered "
+                "deterministically."
             )
-        ).strip()
 
-        hashtags = [
-            str(tag).strip()
-            for tag in data.get(
-                "hashtags",
-                content.hashtags,
+            return self._build_repaired_content(
+                data=recovered,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=1,
             )
-            if str(tag).strip()
-        ]
+
+        first_words = self._word_count(
+            data
+        )
+
+        remaining_terms = (
+            self._remaining_flagged_terms(
+                data=data,
+                banned_terms=banned_terms,
+            )
+        )
+
+        logger.warning(
+            "Repair attempt 1 failed. "
+            "Words=%s, remaining terms=%s",
+            first_words,
+            remaining_terms,
+        )
+
+        ####################################################
+        # Repair attempt 2
+        ####################################################
+
+        previous_repair = ""
+
+        if isinstance(data, dict):
+            previous_repair = json.dumps(
+                data,
+                indent=2,
+            )
+
+        retry_raw = await self.llm.chat(
+            self._build_repair_messages(
+                topic=topic,
+                research=research,
+                original_script=original_script,
+                issues=issues,
+                banned_terms=banned_terms,
+                retry=True,
+                previous_repair=previous_repair,
+                previous_words=first_words,
+                remaining_terms=remaining_terms,
+            ),
+            json_mode=True,
+        )
+
+        retry_data = self._extract_json(
+            retry_raw
+        )
+
+        if self._repair_candidate_valid(
+            data=retry_data,
+            banned_terms=banned_terms,
+        ):
+            logger.info(
+                "Repair attempt 2 succeeded."
+            )
+
+            return self._build_repaired_content(
+                data=retry_data,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=2,
+            )
+
+        recovered_retry = self._recover_repair_length(
+            data=retry_data,
+            research=research,
+            banned_terms=banned_terms,
+        )
+
+        if recovered_retry is not None:
+            logger.info(
+                "Repair attempt 2 recovered "
+                "deterministically."
+            )
+
+            return self._build_repaired_content(
+                data=recovered_retry,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=2,
+            )
+
+        logger.warning(
+            "Repair attempt 2 failed. "
+            "Words=%s, remaining terms=%s",
+            self._word_count(
+                retry_data
+            ),
+            self._remaining_flagged_terms(
+                data=retry_data,
+                banned_terms=banned_terms,
+            ),
+        )
+
+        return None
+
+    def _build_repaired_content(
+        self,
+        data: dict,
+        original: GeneratedContent,
+        topic: str,
+        issues: list[dict],
+        attempt: int,
+    ) -> GeneratedContent:
 
         lines = [
             str(line).strip()
@@ -263,15 +387,30 @@ class ContentGenerator:
             if str(line).strip()
         ]
 
+        hashtags = [
+            str(tag).strip()
+            for tag in data.get(
+                "hashtags",
+                original.hashtags,
+            )
+            if str(tag).strip()
+        ]
+
         return GeneratedContent(
-            title=title,
+            title=str(
+                data.get(
+                    "title",
+                    original.title,
+                )
+            ).strip(),
             hashtags=hashtags,
             script_lines=lines,
             metadata={
-                **content.metadata,
+                **original.metadata,
                 "source": topic,
                 "generator": "Jarvis Rich V1",
                 "repaired": True,
+                "repair_attempt": attempt,
                 "repair_issues": issues,
                 "word_count": sum(
                     len(line.split())
@@ -280,12 +419,287 @@ class ContentGenerator:
             },
         )
 
+    def _recover_repair_length(
+        self,
+        data: dict,
+        research: str,
+        banned_terms: list[str],
+    ) -> dict | None:
+
+        if not self._is_structurally_valid_content(
+            data
+        ):
+            return None
+
+        current_words = self._word_count(
+            data
+        )
+
+        if (
+            self.MIN_WORDS
+            <= current_words
+            <= self.MAX_WORDS
+        ):
+            return data
+
+        if current_words > self.MAX_WORDS:
+            return None
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+        ]
+
+        research_text = " ".join(
+            str(research).split()
+        ).strip()
+
+        if not research_text:
+            return None
+
+        # Preserve complete research sentences.
+        research_sentences = [
+            sentence.strip()
+            for sentence in re.split(
+                r"(?<=[.!?])\s+",
+                research_text,
+            )
+            if sentence.strip()
+        ]
+
+        safe_sentences = []
+
+        for sentence in research_sentences:
+
+            blocked = False
+
+            for term in banned_terms:
+
+                pattern = (
+                    r"(?<!\w)"
+                    + re.escape(term)
+                    + r"(?!\w)"
+                )
+
+                if re.search(
+                    pattern,
+                    sentence,
+                    flags=re.IGNORECASE,
+                ):
+                    blocked = True
+                    break
+
+            if not blocked:
+                safe_sentences.append(
+                    sentence
+                )
+
+        if not safe_sentences:
+            return None
+
+        candidate_lines = list(
+            lines
+        )
+
+        total_words = current_words
+        line_index = 0
+
+        for sentence in safe_sentences:
+
+            sentence_words = len(
+                sentence.split()
+            )
+
+            if (
+                total_words
+                + sentence_words
+                > self.MAX_WORDS
+            ):
+                continue
+
+            base = candidate_lines[
+                line_index
+            ].rstrip()
+
+            if (
+                base
+                and base[-1]
+                not in ".!?"
+            ):
+                base += "."
+
+            candidate_lines[
+                line_index
+            ] = (
+                base
+                + " "
+                + sentence
+            ).strip()
+
+            total_words += (
+                sentence_words
+            )
+
+            line_index = (
+                line_index + 1
+            ) % 4
+
+            if total_words >= self.MIN_WORDS:
+                break
+
+        candidate = {
+            **data,
+            "script_lines": candidate_lines,
+        }
+
+        if not self._is_valid_content(
+            candidate
+        ):
+            return None
+
+        if self._remaining_flagged_terms(
+            data=candidate,
+            banned_terms=banned_terms,
+        ):
+            return None
+
+        return candidate
+
+    def _repair_candidate_valid(
+        self,
+        data: dict,
+        banned_terms: list[str],
+    ) -> bool:
+
+        if not self._is_valid_content(
+            data
+        ):
+            return False
+
+        remaining = (
+            self._remaining_flagged_terms(
+                data=data,
+                banned_terms=banned_terms,
+            )
+        )
+
+        if remaining:
+            logger.warning(
+                "Repair still contains "
+                "flagged terms: %s",
+                remaining,
+            )
+            return False
+
+        return True
+
+    @staticmethod
+    def _extract_flagged_terms(
+        issues: list[dict],
+    ) -> list[str]:
+
+        terms = []
+
+        for issue in issues:
+
+            matches = issue.get(
+                "matches",
+                [],
+            )
+
+            if not isinstance(
+                matches,
+                list,
+            ):
+                continue
+
+            for match in matches:
+
+                term = str(
+                    match
+                ).strip()
+
+                if (
+                    term
+                    and term.lower()
+                    not in {
+                        existing.lower()
+                        for existing in terms
+                    }
+                ):
+                    terms.append(
+                        term
+                    )
+
+        return terms
+
+    @staticmethod
+    def _remaining_flagged_terms(
+        data: dict,
+        banned_terms: list[str],
+    ) -> list[str]:
+
+        if not isinstance(
+            data,
+            dict,
+        ):
+            return list(
+                banned_terms
+            )
+
+        lines = data.get(
+            "script_lines",
+            [],
+        )
+
+        if not isinstance(
+            lines,
+            list,
+        ):
+            return list(
+                banned_terms
+            )
+
+        script = " ".join(
+            str(line)
+            for line in lines
+        )
+
+        remaining = []
+
+        for term in banned_terms:
+
+            pattern = (
+                r"(?<!\w)"
+                + re.escape(term)
+                + r"(?!\w)"
+            )
+
+            if re.search(
+                pattern,
+                script,
+                flags=re.IGNORECASE,
+            ):
+                remaining.append(
+                    term
+                )
+
+        return remaining
+
     def _build_repair_messages(
         self,
         topic: str,
         research: str,
         original_script: str,
         issues: list[dict],
+        banned_terms: list[str],
+        retry: bool = False,
+        previous_repair: str = "",
+        previous_words: int = 0,
+        remaining_terms: list[str] | None = None,
     ) -> list[dict]:
 
         issue_text = json.dumps(
@@ -293,15 +707,56 @@ class ContentGenerator:
             indent=2,
         )
 
+        banned_text = (
+            ", ".join(
+                banned_terms
+            )
+            or "None"
+        )
+
+        retry_text = ""
+
+        if retry:
+
+            remaining_text = (
+                ", ".join(
+                    remaining_terms or []
+                )
+                or "None"
+            )
+
+            retry_text = f"""
+THIS IS REPAIR ATTEMPT 2.
+
+The first repair failed.
+
+Previous word count:
+{previous_words}
+
+Required word count:
+75-105.
+
+Flagged terms still present:
+{remaining_text}
+
+Previous failed repair:
+
+{previous_repair}
+
+Rewrite it again rather than copying it.
+
+If it was below 75 words, expand only with
+information supported by the research.
+
+None of the banned terms may appear.
+"""
+
         system_prompt = """
 You are Jarvis, a factual YouTube Shorts script editor.
 
-Your job is to repair a script that failed
-content-quality validation.
-
 Return ONLY one valid JSON object.
-Never use markdown or code fences.
-Never add text outside the JSON.
+Do not use markdown or code fences.
+Do not include text outside the JSON.
 
 Use exactly this schema:
 
@@ -320,25 +775,18 @@ Use exactly this schema:
   ]
 }
 
-REPAIR RULES:
+MANDATORY RULES:
 
 1. Exactly four narration lines.
-2. Total narration MUST be 75-105 words.
-3. Aim for 19-26 words per line.
-4. Preserve the useful meaning of the original script.
-5. Remove or soften every flagged high-risk claim.
-6. Use only facts supported by the supplied research.
-7. Do not invent replacement facts.
-8. Avoid absolute claims such as guaranteed,
-   indistinguishable, always, never, perfect,
-   proven, or 100 percent unless explicitly
-   supported by the research.
-9. Prefer precise language such as:
-   "can", "may", "appears", "is improving",
-   "research suggests", or "in some cases"
-   when that wording accurately reflects
-   the supplied research.
-10. Count the narration words before responding.
+2. EACH line must contain about 19-26 words.
+3. Total narration must contain 75-105 words.
+4. Use only claims supported by the research.
+5. Remove every flagged high-risk claim.
+6. Do not invent replacement facts.
+7. Do not make absolute predictions.
+8. Banned terms must not appear anywhere
+   inside script_lines.
+9. Count the words before responding.
 """
 
         user_prompt = f"""
@@ -358,18 +806,29 @@ VALIDATION ISSUES:
 
 {issue_text}
 
-Rewrite the script so every validation issue is fixed.
+BANNED TERMS:
 
-Before returning JSON:
+{banned_text}
+
+The banned terms must not appear anywhere
+inside script_lines.
+
+Do not use a banned word even to negate it.
+For example, if "indistinguishable" is banned,
+do not write "not indistinguishable".
+
+{retry_text}
+
+Before returning:
 
 - verify exactly 4 script_lines
 - verify 75-105 total narration words
-- verify all flagged claims were removed or
-  rewritten conservatively
-- verify every factual statement is supported
-  by the supplied research
+- verify each line is approximately 19-26 words
+- verify no banned term appears
+- verify every factual claim is supported
+  by the research
 
-Return only the JSON object.
+Return only JSON.
 """
 
         return [
@@ -382,6 +841,7 @@ Return only the JSON object.
                 "content": user_prompt,
             },
         ]
+
     ########################################################
     # Prompt construction
     ########################################################
@@ -490,7 +950,7 @@ Return only the JSON object.
     # Validation
     ########################################################
 
-    def _is_valid_content(
+    def _is_structurally_valid_content(
         self,
         data: dict,
     ) -> bool:
@@ -531,6 +991,18 @@ Return only the JSON object.
             isinstance(line, str)
             and line.strip()
             for line in lines
+        ):
+            return False
+
+        return True
+
+    def _is_valid_content(
+        self,
+        data: dict,
+    ) -> bool:
+
+        if not self._is_structurally_valid_content(
+            data
         ):
             return False
 
