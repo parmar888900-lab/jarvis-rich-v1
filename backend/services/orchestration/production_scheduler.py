@@ -4,6 +4,9 @@ import asyncio
 import logging
 from typing import Any
 
+from backend.services.orchestration.autonomous_retry import (
+    AutonomousRetryPolicy,
+)
 from backend.services.orchestration.production_runner import (
     ProductionCycleBusyError,
     ProductionRunner,
@@ -21,6 +24,7 @@ class ProductionScheduler:
         *,
         interval_seconds: float,
         enabled: bool = False,
+        retry_policy: AutonomousRetryPolicy | None = None,
     ) -> None:
 
         if interval_seconds <= 0:
@@ -37,6 +41,11 @@ class ProductionScheduler:
             interval_seconds
         )
         self.enabled = enabled
+        self.retry_policy = (
+            retry_policy
+            if retry_policy is not None
+            else AutonomousRetryPolicy()
+        )
         self._task: asyncio.Task | None = None
 
     @property
@@ -118,29 +127,73 @@ class ProductionScheduler:
         return changed
 
     async def run_once(self) -> dict:
-        """Attempt one autonomous production cycle."""
+        """Attempt one autonomous production cycle with safe retries."""
 
-        try:
-            return await self.runner.run_cycle()
+        attempt = 1
 
-        except ProductionCycleBusyError:
-            return {
-                "status": "skipped",
-                "reason": "production_busy",
-            }
+        while True:
+            try:
+                result = await self.runner.run_cycle()
 
-        except asyncio.CancelledError:
-            raise
+                return {
+                    "status": result.get(
+                        "status",
+                        "success",
+                    ),
+                    "attempts": attempt,
+                    "result": result,
+                }
 
-        except Exception:
-            logger.exception(
-                "Scheduled production cycle failed."
-            )
+            except ProductionCycleBusyError:
+                return {
+                    "status": "skipped",
+                    "reason": "production_busy",
+                    "attempts": attempt,
+                }
 
-            return {
-                "status": "scheduler_failed",
-                "reason": "production_cycle_failed",
-            }
+            except asyncio.CancelledError:
+                raise
+
+            except Exception as exc:
+                should_retry = (
+                    self.retry_policy.is_retryable_exception(
+                        exc
+                    )
+                    and attempt
+                    < self.retry_policy.max_attempts
+                )
+
+                if not should_retry:
+                    logger.exception(
+                        "Scheduled production cycle failed."
+                    )
+
+                    return {
+                        "status": "scheduler_failed",
+                        "reason": "production_cycle_failed",
+                        "attempts": attempt,
+                        "error_type": type(exc).__name__,
+                    }
+
+                delay = (
+                    self.retry_policy.delay_for_retry(
+                        attempt
+                    )
+                )
+
+                logger.warning(
+                    "Transient production failure on "
+                    "attempt %s/%s. Retrying in %.2fs.",
+                    attempt,
+                    self.retry_policy.max_attempts,
+                    delay,
+                )
+
+                await asyncio.sleep(
+                    delay
+                )
+
+                attempt += 1
 
     async def _run_loop(self) -> None:
         """Run scheduled cycles until cancelled."""
@@ -160,4 +213,3 @@ class ProductionScheduler:
                 logger.exception(
                     "Unexpected scheduler-loop failure."
                 )
-
