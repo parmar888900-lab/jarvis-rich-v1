@@ -101,7 +101,12 @@ class Commander:
             record.status = CommandStatus.PROCESSING
             await db.flush()
 
-            result = await self.route(payload.agent, payload.task, command_id)
+            result = await self.route(
+                payload.agent,
+                payload.task,
+                command_id,
+                parameters=payload.parameters,
+            )
 
             record.status = CommandStatus.COMPLETED
             record.result = json.dumps(result)
@@ -143,6 +148,25 @@ class Commander:
         if not task:
             raise CommandValidationError("Task cannot be empty")
 
+        reserved_parameters = {
+            "task",
+            "command_id",
+        }
+
+        conflicts = (
+            reserved_parameters
+            & payload.parameters.keys()
+        )
+
+        if conflicts:
+            names = ", ".join(
+                sorted(conflicts)
+            )
+            raise CommandValidationError(
+                "Reserved command parameters "
+                f"cannot be supplied: {names}"
+            )
+
         handler = self.registry.get(agent)
         if not handler.supports_task(task):
             raise TaskNotSupportedError(agent, task, handler.supported_tasks)
@@ -175,11 +199,21 @@ class Commander:
         )
         return record
 
-    async def route(self, agent: str, task: str, command_id: str) -> dict:
+    async def route(
+        self,
+        agent: str,
+        task: str,
+        command_id: str,
+        parameters: dict | None = None,
+    ) -> dict:
         """Route command to the registered agent handler."""
         handler = self.registry.get(agent)
         logger.info("ROUTING | id=%s → agent=%s task=%s", command_id, agent, task)
-        return await handler.execute(task=task, command_id=command_id)
+        return await handler.execute(
+            task=task,
+            command_id=command_id,
+            **(parameters or {}),
+        )
 
     # -- error helpers ------------------------------------------------------
 

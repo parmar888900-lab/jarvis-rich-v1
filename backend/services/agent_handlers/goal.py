@@ -62,6 +62,33 @@ class GoalAgentHandler(BaseAgentHandler):
             **result,
         }
 
+    @staticmethod
+    def _parse_datetime(
+        value: datetime | str,
+        *,
+        field_name: str,
+    ) -> datetime:
+        """Accept datetime objects or ISO-8601 strings."""
+
+        if isinstance(value, datetime):
+            return value
+
+        if isinstance(value, str):
+            try:
+                return datetime.fromisoformat(
+                    value.replace("Z", "+00:00")
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    f"Invalid ISO datetime for "
+                    f"{field_name}: {value}"
+                ) from exc
+
+        raise ValueError(
+            f"{field_name} must be a datetime "
+            "or ISO-8601 string"
+        )
+
     async def _create_goal(
         self,
         *,
@@ -75,6 +102,15 @@ class GoalAgentHandler(BaseAgentHandler):
         period: str = "custom",
         **_,
     ) -> dict:
+
+        start_date = self._parse_datetime(
+            start_date,
+            field_name="start_date",
+        )
+        deadline = self._parse_datetime(
+            deadline,
+            field_name="deadline",
+        )
 
         try:
             goal_period = GoalPeriod(

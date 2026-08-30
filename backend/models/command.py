@@ -4,6 +4,8 @@ import enum
 import uuid
 from datetime import datetime
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 from sqlalchemy import DateTime, Enum, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -54,6 +56,7 @@ class CommandSubmitRequest(BaseModel):
     agent: str = Field(..., min_length=1, max_length=100, examples=["youtube"])
     task: str = Field(..., min_length=1, max_length=200, examples=["create_video"])
     priority: CommandPriority = Field(default=CommandPriority.NORMAL)
+    parameters: dict[str, Any] = Field(default_factory=dict)
 
 
 class CommandSubmitResponse(BaseModel):
