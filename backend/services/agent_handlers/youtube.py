@@ -1,12 +1,26 @@
 ﻿"""YouTube agent handler."""
 
+import asyncio
+import hashlib
+from pathlib import Path
+
+from backend.database import async_session
 from backend.services.agent_handlers.base import BaseAgentHandler
 from backend.services.intelligence.production_selector import (
     ProductionTopicSelector,
 )
 from backend.services.intelligence.trend_engine import TrendEngine
 from backend.services.providers.registry import build_trend_manager
+from backend.services.orchestration.idempotency import (
+    OperationType,
+)
+from backend.services.orchestration.idempotent_operation_executor import (
+    IdempotentOperationExecutor,
+)
 from backend.services.pipelines import VideoPipeline
+from backend.services.providers.youtube_publisher import (
+    YoutubePublisher,
+)
 
 
 class YoutubeAgentHandler(BaseAgentHandler):
@@ -36,6 +50,12 @@ class YoutubeAgentHandler(BaseAgentHandler):
         self.engine = TrendEngine()
         self.selector = ProductionTopicSelector()
         self.pipeline = VideoPipeline()
+        self.publisher = YoutubePublisher()
+        self.operation_executor = (
+            IdempotentOperationExecutor(
+                async_session
+            )
+        )
 
     async def execute(
         self,
@@ -57,7 +77,8 @@ class YoutubeAgentHandler(BaseAgentHandler):
 
         if task == "upload_video":
             return await self._upload_video(
-                command_id
+                command_id,
+                **kwargs,
             )
 
         return {
@@ -182,12 +203,151 @@ class YoutubeAgentHandler(BaseAgentHandler):
             "status": "success",
         }
 
+    @staticmethod
+    def _sha256_file(
+        path: Path,
+    ) -> str:
+        """Return a stable SHA-256 identity for a video."""
+
+        digest = hashlib.sha256()
+
+        with path.open("rb") as handle:
+            while True:
+                chunk = handle.read(
+                    1024 * 1024
+                )
+
+                if not chunk:
+                    break
+
+                digest.update(chunk)
+
+        return digest.hexdigest()
+
     async def _upload_video(
         self,
         command_id: str,
+        *,
+        video_path: str,
+        title: str,
+        description: str = "",
+        tags: list[str] | None = None,
+        privacy_status: str = "private",
+        category_id: str = "22",
+        allow_public: bool = False,
     ) -> dict:
+        """Upload a video through the idempotent boundary."""
+
+        path = Path(
+            video_path
+        ).expanduser().resolve()
+
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Video not found: {path}"
+            )
+
+        clean_title = title.strip()
+
+        if not clean_title:
+            raise ValueError(
+                "YouTube title cannot be empty."
+            )
+
+        privacy = (
+            privacy_status
+            .strip()
+            .lower()
+        )
+
+        allowed_privacy = {
+            "private",
+            "unlisted",
+            "public",
+        }
+
+        if privacy not in allowed_privacy:
+            raise ValueError(
+                "privacy_status must be private, "
+                "unlisted, or public."
+            )
+
+        # Public publishing stays fail-closed until
+        # the autonomous release policy is added.
+        if (
+            privacy == "public"
+            and not allow_public
+        ):
+            raise ValueError(
+                "Public YouTube publishing is locked. "
+                "Set allow_public=true only through an "
+                "authorized release policy."
+            )
+
+        clean_tags = []
+
+        for tag in tags or []:
+            clean_tag = str(
+                tag
+            ).strip()
+
+            if clean_tag:
+                clean_tags.append(
+                    clean_tag
+                )
+
+        channel = await asyncio.to_thread(
+            self.publisher
+            .get_authorized_channel
+        )
+
+        video_hash = await asyncio.to_thread(
+            self._sha256_file,
+            path,
+        )
+
+        resource_id = (
+            f"youtube:"
+            f"{channel['channel_id']}:"
+            f"{video_hash}"
+        )
+
+        async def upload() -> dict:
+            return await self.publisher.upload_video(
+                video_path=path,
+                title=clean_title,
+                description=description,
+                tags=clean_tags,
+                privacy_status=privacy,
+                category_id=str(
+                    category_id
+                ),
+            )
+
+        operation_result = (
+            await self.operation_executor.execute(
+                operation_type=(
+                    OperationType.UPLOAD_VIDEO
+                ),
+                resource_id=resource_id,
+                operation=upload,
+            )
+        )
 
         return {
-            "status": "coming_soon",
+            "agent": self.name,
+            "task": "upload_video",
             "command_id": command_id,
+            "status": (
+                operation_result["status"]
+            ),
+            "channel_id": (
+                channel["channel_id"]
+            ),
+            "channel_title": (
+                channel["channel_title"]
+            ),
+            "artifact_sha256": video_hash,
+            "privacy_status": privacy,
+            "upload": operation_result,
         }
