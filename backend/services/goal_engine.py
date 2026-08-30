@@ -105,7 +105,7 @@ class GoalEngine:
         else:
             required_daily_rate = None
 
-        if time_progress <= 0:
+        if time_progress < 0.01:
             pace_ratio = None
         else:
             pace_ratio = (
@@ -233,3 +233,4 @@ class GoalEngine:
             return GoalStatus.FAILED
 
         return goal.status
+
