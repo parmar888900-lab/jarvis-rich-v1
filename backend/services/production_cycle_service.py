@@ -1,7 +1,7 @@
 ﻿"""Persistence service for production cycles."""
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -128,7 +128,7 @@ class ProductionCycleService:
             result,
             ensure_ascii=False,
         )
-        cycle.completed_at = datetime.now()
+        cycle.completed_at = self._utc_now()
 
         await session.commit()
         await session.refresh(cycle)
@@ -157,7 +157,7 @@ class ProductionCycleService:
             result,
             ensure_ascii=False,
         )
-        cycle.completed_at = datetime.now()
+        cycle.completed_at = self._utc_now()
 
         await session.commit()
         await session.refresh(cycle)
@@ -186,7 +186,7 @@ class ProductionCycleService:
             result,
             ensure_ascii=False,
         )
-        cycle.completed_at = datetime.now()
+        cycle.completed_at = self._utc_now()
 
         await session.commit()
         await session.refresh(cycle)
@@ -207,7 +207,7 @@ class ProductionCycleService:
                 "stale_after must be greater than zero."
             )
 
-        recovery_time = now or datetime.now()
+        recovery_time = now or self._utc_now()
         cutoff = recovery_time - stale_after
 
         statement = (
@@ -273,6 +273,16 @@ class ProductionCycleService:
         return stale_cycles
 
     @staticmethod
+    def _utc_now() -> datetime:
+        """Return naive UTC for SQLite DateTime consistency."""
+
+        return datetime.now(
+            timezone.utc
+        ).replace(
+            tzinfo=None
+        )
+
+    @staticmethod
     def _require_started(
         cycle: ProductionCycleRecord,
     ) -> None:
@@ -303,3 +313,4 @@ class ProductionCycleService:
             )
 
         return cycle
+
