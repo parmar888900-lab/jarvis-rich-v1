@@ -177,12 +177,153 @@ class ProductionOrchestrator:
 
                 return result
 
+            video = production.get(
+                "video"
+            )
+
+            if not isinstance(
+                video,
+                dict,
+            ):
+                failure = classify_failure_category(
+                    None,
+                    detail=(
+                        "Production succeeded but returned "
+                        "no rendered video artifact."
+                    ),
+                )
+
+                result = {
+                    "cycle_id": cycle_id,
+                    "status": "production_artifact_missing",
+                    "failure": failure.to_dict(),
+                    "analysis": analysis,
+                    "production": production,
+                }
+
+                await self._fail_cycle(
+                    cycle_id,
+                    result,
+                )
+
+                return result
+
+            video_path = video.get(
+                "video_path"
+            )
+
+            if (
+                not isinstance(video_path, str)
+                or not video_path.strip()
+            ):
+                failure = classify_failure_category(
+                    None,
+                    detail=(
+                        "Production returned an invalid "
+                        "rendered video path."
+                    ),
+                )
+
+                result = {
+                    "cycle_id": cycle_id,
+                    "status": "production_artifact_missing",
+                    "failure": failure.to_dict(),
+                    "analysis": analysis,
+                    "production": production,
+                }
+
+                await self._fail_cycle(
+                    cycle_id,
+                    result,
+                )
+
+                return result
+
+            generated_content = production.get(
+                "generated_content",
+                {},
+            )
+
+            if not isinstance(
+                generated_content,
+                dict,
+            ):
+                generated_content = {}
+
+            title = str(
+                generated_content.get(
+                    "title"
+                )
+                or trend.get(
+                    "title"
+                )
+                or "Jarvis Short"
+            ).strip()
+
+            raw_tags = generated_content.get(
+                "hashtags",
+                [],
+            )
+
+            tags = (
+                raw_tags
+                if isinstance(raw_tags, list)
+                else []
+            )
+
+            upload = await self.commander.route(
+                agent="youtube",
+                task="upload_video",
+                command_id=f"{cycle_id}:upload",
+                parameters={
+                    "video_path": video_path,
+                    "title": title,
+                    "tags": tags,
+                    "privacy_status": "private",
+                },
+            )
+
+            if (
+                upload.get("status")
+                != "completed"
+            ):
+                failure = classify_failure_category(
+                    upload.get(
+                        "failure_category"
+                    ),
+                    detail=(
+                        upload.get("error")
+                        or (
+                            "YouTube upload did not "
+                            "complete successfully."
+                        )
+                    ),
+                )
+
+                result = {
+                    "cycle_id": cycle_id,
+                    "status": "upload_failed",
+                    "failure": failure.to_dict(),
+                    "selected_trend": trend,
+                    "analysis": analysis,
+                    "production": production,
+                    "upload": upload,
+                }
+
+                await self._fail_cycle(
+                    cycle_id,
+                    result,
+                )
+
+                return result
+
             result = {
                 "cycle_id": cycle_id,
                 "status": "success",
                 "selected_trend": trend,
                 "analysis": analysis,
                 "production": production,
+                "upload": upload,
             }
 
             production_score = selection.get(

@@ -134,9 +134,37 @@ class FakeCommander:
                 "status": "success",
                 "generated_content": {
                     "title": "Generated test short",
+                    "hashtags": [
+                        "technology",
+                        "shorts",
+                    ],
                 },
                 "production_package": {
-                    "video_path": "generated/test.mp4",
+                    "package_dir": (
+                        "generated/packages/test"
+                    ),
+                },
+                "video": {
+                    "status": "success",
+                    "video_path": (
+                        "generated/test.mp4"
+                    ),
+                },
+            }
+
+        if task == "upload_video":
+            return {
+                "status": "completed",
+                "channel_id": "test-channel",
+                "privacy_status": "private",
+                "upload": {
+                    "status": "completed",
+                    "executed": True,
+                    "result": {
+                        "video_id": (
+                            "fake-youtube-video"
+                        ),
+                    },
                 },
             }
 
@@ -170,7 +198,7 @@ async def test_success():
     )
 
     assert result["status"] == "success"
-    assert len(commander.calls) == 2
+    assert len(commander.calls) == 3
 
     assert [
         call["method"]
@@ -203,6 +231,46 @@ async def test_success():
     assert (
         produce_call["parameters"]["trend"]
         == result["selected_trend"]
+    )
+
+    upload_call = commander.calls[2]
+
+    assert (
+        upload_call["task"]
+        == "upload_video"
+    )
+
+    assert (
+        upload_call["command_id"]
+        == "cycle-test-001:upload"
+    )
+
+    assert (
+        upload_call["parameters"]["video_path"]
+        == "generated/test.mp4"
+    )
+
+    assert (
+        upload_call["parameters"]["title"]
+        == "Generated test short"
+    )
+
+    assert (
+        upload_call["parameters"]["tags"]
+        == [
+            "technology",
+            "shorts",
+        ]
+    )
+
+    assert (
+        upload_call["parameters"]["privacy_status"]
+        == "private"
+    )
+
+    assert (
+        result["upload"]["status"]
+        == "completed"
     )
 
     print("=" * 70)
@@ -531,6 +599,292 @@ async def test_production_failure():
     )
 
 
+
+async def test_missing_rendered_artifact():
+    class MissingArtifactCommander:
+        def __init__(self):
+            self.calls = []
+
+        async def route(
+            self,
+            agent,
+            task,
+            command_id,
+            parameters=None,
+        ):
+            self.calls.append(
+                {
+                    "task": task,
+                    "command_id": command_id,
+                    "parameters": parameters,
+                }
+            )
+
+            if task == "analyze_trends":
+                return {
+                    "status": "success",
+                    "best_trend": {
+                        "title": (
+                            "Missing artifact test topic"
+                        ),
+                        "production_selection": {
+                            "eligible": True,
+                            "selected": True,
+                            "production_score": 88.0,
+                        },
+                    },
+                }
+
+            if task == "create_video":
+                return {
+                    "status": "success",
+                    "generated_content": {
+                        "title": "Missing artifact short",
+                    },
+                    "production_package": {
+                        "package_dir": (
+                            "generated/packages/"
+                            "missing_artifact"
+                        ),
+                    },
+
+                    # Deliberately no "video" key.
+                }
+
+            if task == "upload_video":
+                raise AssertionError(
+                    "upload_video must not run when "
+                    "the rendered artifact is missing."
+                )
+
+            raise AssertionError(
+                f"Unexpected task: {task}"
+            )
+
+    commander = MissingArtifactCommander()
+    cycle_service = FakeCycleService()
+
+    orchestrator = build_orchestrator(
+        commander,
+        cycle_service,
+    )
+
+    result = await orchestrator.run_cycle(
+        "cycle-test-missing-artifact"
+    )
+
+    assert (
+        result["status"]
+        == "production_artifact_missing"
+    )
+
+    assert [
+        call["task"]
+        for call in commander.calls
+    ] == [
+        "analyze_trends",
+        "create_video",
+    ]
+
+    assert [
+        call["method"]
+        for call in cycle_service.calls
+    ] == [
+        "start_cycle",
+        "fail_cycle",
+    ]
+
+    assert not any(
+        call["method"] == "complete_cycle"
+        for call in cycle_service.calls
+    )
+
+    failure = cycle_service.calls[1]
+
+    assert (
+        failure["result"]["status"]
+        == "production_artifact_missing"
+    )
+
+    print()
+    print("=" * 70)
+    print("MISSING RENDERED ARTIFACT TEST")
+    print()
+    print("STATUS:", result["status"])
+    print()
+    print(
+        "PASS: missing rendered artifact "
+        "prevents upload."
+    )
+    print(
+        "PASS: missing rendered artifact "
+        "is persisted as FAILED."
+    )
+    print(
+        "PASS: cycle is never falsely marked "
+        "COMPLETED."
+    )
+
+
+async def test_upload_failure():
+    class UploadFailureCommander:
+        def __init__(self):
+            self.calls = []
+
+        async def route(
+            self,
+            agent,
+            task,
+            command_id,
+            parameters=None,
+        ):
+            self.calls.append(
+                {
+                    "task": task,
+                    "command_id": command_id,
+                    "parameters": parameters,
+                }
+            )
+
+            if task == "analyze_trends":
+                return {
+                    "status": "success",
+                    "best_trend": {
+                        "title": (
+                            "Upload failure test topic"
+                        ),
+                        "production_selection": {
+                            "eligible": True,
+                            "selected": True,
+                            "production_score": 91.0,
+                        },
+                    },
+                }
+
+            if task == "create_video":
+                return {
+                    "status": "success",
+                    "generated_content": {
+                        "title": (
+                            "Upload failure test short"
+                        ),
+                        "hashtags": [
+                            "technology",
+                            "shorts",
+                        ],
+                    },
+                    "production_package": {
+                        "package_dir": (
+                            "generated/packages/"
+                            "upload_failure"
+                        ),
+                    },
+                    "video": {
+                        "status": "success",
+                        "video_path": (
+                            "generated/"
+                            "upload_failure_test.mp4"
+                        ),
+                    },
+                }
+
+            if task == "upload_video":
+                return {
+                    "status": "failed",
+                    "failure_category": (
+                        "provider_failure"
+                    ),
+                    "error": (
+                        "Simulated YouTube "
+                        "provider failure"
+                    ),
+                }
+
+            raise AssertionError(
+                f"Unexpected task: {task}"
+            )
+
+    commander = UploadFailureCommander()
+    cycle_service = FakeCycleService()
+
+    orchestrator = build_orchestrator(
+        commander,
+        cycle_service,
+    )
+
+    result = await orchestrator.run_cycle(
+        "cycle-test-upload-failure"
+    )
+
+    assert (
+        result["status"]
+        == "upload_failed"
+    )
+
+    assert [
+        call["task"]
+        for call in commander.calls
+    ] == [
+        "analyze_trends",
+        "create_video",
+        "upload_video",
+    ]
+
+    upload_call = commander.calls[2]
+
+    assert (
+        upload_call["parameters"]["video_path"]
+        == "generated/upload_failure_test.mp4"
+    )
+
+    assert (
+        upload_call["parameters"]["privacy_status"]
+        == "private"
+    )
+
+    assert [
+        call["method"]
+        for call in cycle_service.calls
+    ] == [
+        "start_cycle",
+        "fail_cycle",
+    ]
+
+    assert not any(
+        call["method"] == "complete_cycle"
+        for call in cycle_service.calls
+    )
+
+    failure = cycle_service.calls[1]
+
+    assert (
+        failure["result"]["status"]
+        == "upload_failed"
+    )
+
+    print()
+    print("=" * 70)
+    print("UPLOAD FAILURE TEST")
+    print()
+    print("STATUS:", result["status"])
+    print()
+    print(
+        "PASS: exact rendered artifact was "
+        "sent to upload_video."
+    )
+    print(
+        "PASS: autonomous upload remained PRIVATE."
+    )
+    print(
+        "PASS: failed upload is persisted "
+        "as FAILED."
+    )
+    print(
+        "PASS: cycle is never falsely marked "
+        "COMPLETED."
+    )
+
+
 async def test_unexpected_exception():
     class ExplodingCommander:
         async def route(
@@ -605,6 +959,8 @@ async def main():
     await test_unauthorized_trend()
     await test_analysis_failure()
     await test_production_failure()
+    await test_missing_rendered_artifact()
+    await test_upload_failure()
     await test_unexpected_exception()
 
 

@@ -200,6 +200,9 @@ class YoutubeAgentHandler(BaseAgentHandler):
             "production_package": (
                 result["production_package"]
             ),
+            "video": (
+                result["video"]
+            ),
             "status": "success",
         }
 
