@@ -115,6 +115,76 @@ async def get_production_status(
     }
 
 
+@router.post("/production/autonomy/enable")
+async def enable_production_autonomy(
+    request: Request,
+):
+    """Enable autonomous production scheduling."""
+
+    scheduler = getattr(
+        request.app.state,
+        "production_scheduler",
+        None,
+    )
+
+    if scheduler is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "production_scheduler_unavailable",
+                "detail": (
+                    "Production scheduler is unavailable."
+                ),
+            },
+        )
+
+    changed = scheduler.enable()
+
+    return {
+        "enabled": scheduler.enabled,
+        "running": scheduler.running,
+        "changed": changed,
+        "interval_seconds": (
+            scheduler.interval_seconds
+        ),
+    }
+
+
+@router.post("/production/autonomy/disable")
+async def disable_production_autonomy(
+    request: Request,
+):
+    """Disable autonomous production scheduling."""
+
+    scheduler = getattr(
+        request.app.state,
+        "production_scheduler",
+        None,
+    )
+
+    if scheduler is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "production_scheduler_unavailable",
+                "detail": (
+                    "Production scheduler is unavailable."
+                ),
+            },
+        )
+
+    changed = await scheduler.disable()
+
+    return {
+        "enabled": scheduler.enabled,
+        "running": scheduler.running,
+        "changed": changed,
+        "interval_seconds": (
+            scheduler.interval_seconds
+        ),
+    }
+
+
 @router.post("/production/cycle")
 async def run_production_cycle():
     """Run one complete analyze-to-production cycle."""
@@ -143,3 +213,4 @@ async def run_production_cycle():
                 "detail": "Production cycle failed",
             },
         ) from exc
+

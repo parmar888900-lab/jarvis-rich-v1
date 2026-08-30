@@ -92,6 +92,31 @@ class ProductionScheduler:
 
         return True
 
+    def enable(self) -> bool:
+        """Enable autonomous production and start scheduling."""
+
+        was_enabled = self.enabled
+        self.enabled = True
+
+        started = self.start()
+
+        return (
+            not was_enabled
+            or started
+        )
+
+    async def disable(self) -> bool:
+        """Disable autonomous production and stop scheduling."""
+
+        changed = self.enabled or self.running
+
+        self.enabled = False
+
+        if self.running:
+            await self.stop()
+
+        return changed
+
     async def run_once(self) -> dict:
         """Attempt one autonomous production cycle."""
 
@@ -135,3 +160,4 @@ class ProductionScheduler:
                 logger.exception(
                     "Unexpected scheduler-loop failure."
                 )
+
