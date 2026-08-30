@@ -7,6 +7,9 @@ inside Commander or individual agent handlers.
 from typing import Any
 
 from backend.services.commander import Commander
+from backend.services.orchestration.failure_classification import (
+    classify_failure_category,
+)
 from backend.services.production_cycle_service import (
     ProductionCycleService,
 )
@@ -70,9 +73,19 @@ class ProductionOrchestrator:
                 return result
 
             if analysis_status != "success":
+                failure = classify_failure_category(
+                    analysis.get(
+                        "failure_category"
+                    ),
+                    detail=analysis.get(
+                        "error"
+                    ),
+                )
+
                 result = {
                     "cycle_id": cycle_id,
                     "status": "analysis_failed",
+                    "failure": failure.to_dict(),
                     "analysis": analysis,
                 }
 
@@ -140,9 +153,19 @@ class ProductionOrchestrator:
                 production.get("status")
                 != "success"
             ):
+                failure = classify_failure_category(
+                    production.get(
+                        "failure_category"
+                    ),
+                    detail=production.get(
+                        "error"
+                    ),
+                )
+
                 result = {
                     "cycle_id": cycle_id,
                     "status": "production_failed",
+                    "failure": failure.to_dict(),
                     "analysis": analysis,
                     "production": production,
                 }
@@ -271,3 +294,6 @@ class ProductionOrchestrator:
                 cycle_id,
                 result=result,
             )
+
+
+

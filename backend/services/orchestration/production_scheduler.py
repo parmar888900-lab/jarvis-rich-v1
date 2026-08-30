@@ -135,7 +135,47 @@ class ProductionScheduler:
             try:
                 result = await self.runner.run_cycle()
 
-                return {
+                failure = result.get(
+                    "failure"
+                )
+
+                result_retryable = (
+                    isinstance(failure, dict)
+                    and failure.get("retryable") is True
+                )
+
+                if (
+                    result_retryable
+                    and attempt
+                    < self.retry_policy.max_attempts
+                ):
+                    delay = (
+                        self.retry_policy.delay_for_retry(
+                            attempt
+                        )
+                    )
+
+                    logger.warning(
+                        "Retryable production result on "
+                        "attempt %s/%s. Retrying in %.2fs. "
+                        "Category: %s",
+                        attempt,
+                        self.retry_policy.max_attempts,
+                        delay,
+                        failure.get(
+                            "category",
+                            "unknown",
+                        ),
+                    )
+
+                    await asyncio.sleep(
+                        delay
+                    )
+
+                    attempt += 1
+                    continue
+
+                response = {
                     "status": result.get(
                         "status",
                         "success",
@@ -143,6 +183,17 @@ class ProductionScheduler:
                     "attempts": attempt,
                     "result": result,
                 }
+
+                if (
+                    result_retryable
+                    and attempt
+                    >= self.retry_policy.max_attempts
+                ):
+                    response[
+                        "retry_exhausted"
+                    ] = True
+
+                return response
 
             except ProductionCycleBusyError:
                 return {
@@ -213,3 +264,4 @@ class ProductionScheduler:
                 logger.exception(
                     "Unexpected scheduler-loop failure."
                 )
+
