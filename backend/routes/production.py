@@ -1,5 +1,6 @@
 ﻿"""Production orchestration API routes."""
 
+import asyncio
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
@@ -19,10 +20,26 @@ orchestrator = ProductionOrchestrator(
     session_factory=async_session,
 )
 
+production_lock = asyncio.Lock()
+
 
 @router.post("/production/cycle")
 async def run_production_cycle():
     """Run one complete analyze-to-production cycle."""
+
+    if production_lock.locked():
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "production_cycle_busy",
+                "detail": (
+                    "Another production cycle "
+                    "is already running."
+                ),
+            },
+        )
+
+    await production_lock.acquire()
 
     cycle_id = str(uuid4())
 
@@ -30,6 +47,9 @@ async def run_production_cycle():
         result = await orchestrator.run_cycle(
             cycle_id
         )
+
+        return result
+
     except Exception as exc:
         raise HTTPException(
             status_code=500,
@@ -39,4 +59,5 @@ async def run_production_cycle():
             },
         ) from exc
 
-    return result
+    finally:
+        production_lock.release()
