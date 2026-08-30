@@ -115,18 +115,69 @@ class IdempotentOperationExecutor:
                     .FAILED
                     .value
                 ):
+                    if record.retry_authorized:
+                        record, reclaimed = (
+                            await self.operation_service
+                            .reclaim_failed(
+                                session,
+                                idempotency_key=key,
+                            )
+                        )
+
+                        if not reclaimed:
+                            if (
+                                record is not None
+                                and record.status
+                                == ProductionOperationStatus
+                                .COMPLETED
+                                .value
+                            ):
+                                return {
+                                    "status": "completed",
+                                    "executed": False,
+                                    "idempotency_key": key,
+                                    "result": (
+                                        self._decode_result(
+                                            record.result
+                                        )
+                                    ),
+                                }
+
+                            if (
+                                record is not None
+                                and record.status
+                                == ProductionOperationStatus
+                                .IN_PROGRESS
+                                .value
+                            ):
+                                return {
+                                    "status": "in_progress",
+                                    "executed": False,
+                                    "idempotency_key": key,
+                                }
+
+                            return {
+                                "status": "blocked",
+                                "executed": False,
+                                "idempotency_key": key,
+                            }
+
+                        claimed = True
+
+                    else:
+                        return {
+                            "status": "failed",
+                            "executed": False,
+                            "idempotency_key": key,
+                            "error": record.error,
+                        }
+
+                if not claimed:
                     return {
-                        "status": "failed",
+                        "status": "blocked",
                         "executed": False,
                         "idempotency_key": key,
-                        "error": record.error,
                     }
-
-                return {
-                    "status": "blocked",
-                    "executed": False,
-                    "idempotency_key": key,
-                }
 
         try:
             result = await operation()

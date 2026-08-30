@@ -74,6 +74,11 @@ class ProductionOperationRecord(Base):
         nullable=True,
     )
 
+    retry_authorized: Mapped[bool] = mapped_column(
+        nullable=False,
+        default=False,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,

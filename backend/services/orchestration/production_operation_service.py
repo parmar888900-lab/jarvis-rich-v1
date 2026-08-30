@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -97,6 +97,57 @@ class ProductionOperationService:
         await session.refresh(record)
 
         return record, True
+
+    async def reclaim_failed(
+        self,
+        session: AsyncSession,
+        *,
+        idempotency_key: str,
+    ) -> tuple[
+        ProductionOperationRecord | None,
+        bool,
+    ]:
+        """Atomically reclaim an authorized failed operation."""
+
+        statement = (
+            update(ProductionOperationRecord)
+            .where(
+                ProductionOperationRecord.idempotency_key
+                == idempotency_key
+            )
+            .where(
+                ProductionOperationRecord.status
+                == ProductionOperationStatus.FAILED.value
+            )
+            .where(
+                ProductionOperationRecord.retry_authorized
+                .is_(True)
+            )
+            .values(
+                status=(
+                    ProductionOperationStatus
+                    .IN_PROGRESS
+                    .value
+                ),
+                retry_authorized=False,
+                error=None,
+                started_at=self._utc_now(),
+                completed_at=None,
+            )
+        )
+
+        result = await session.execute(statement)
+        await session.commit()
+
+        record = await self.get_by_key(
+            session,
+            idempotency_key,
+        )
+
+        return (
+            record,
+            result.rowcount == 1,
+        )
 
     async def complete(
         self,
