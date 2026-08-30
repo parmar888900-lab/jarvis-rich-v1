@@ -12,6 +12,7 @@ from backend.routes import (
     analytics,
     commander,
     health,
+    production,
     settings as settings_routes,
 )
 
@@ -40,6 +41,7 @@ app.add_middleware(
 
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(commander.router, tags=["commander"])
+app.include_router(production.router, tags=["production"])
 app.include_router(agents.router, prefix="/api/agents", tags=["agents"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(settings_routes.router, prefix="/api/settings", tags=["settings"])
