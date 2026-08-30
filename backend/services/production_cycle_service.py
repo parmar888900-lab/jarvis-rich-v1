@@ -91,6 +91,28 @@ class ProductionCycleService:
             result.scalars().all()
         )
 
+    async def get_latest_cycle(
+        self,
+        session: AsyncSession,
+    ) -> ProductionCycleRecord | None:
+        """Return the most recently started production cycle."""
+
+        statement = (
+            select(
+                ProductionCycleRecord
+            )
+            .order_by(
+                ProductionCycleRecord.started_at.desc()
+            )
+            .limit(1)
+        )
+
+        result = await session.execute(
+            statement
+        )
+
+        return result.scalars().first()
+
     async def complete_cycle(
         self,
         session: AsyncSession,
@@ -313,4 +335,5 @@ class ProductionCycleService:
             )
 
         return cycle
+
 
