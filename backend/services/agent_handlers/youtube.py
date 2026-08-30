@@ -1,4 +1,4 @@
-"""YouTube agent handler."""
+﻿"""YouTube agent handler."""
 
 from backend.services.agent_handlers.base import BaseAgentHandler
 from backend.services.intelligence.production_selector import (
@@ -16,7 +16,8 @@ class YoutubeAgentHandler(BaseAgentHandler):
     Responsibilities:
         - Collect trends
         - Rank trends
-        - Launch the VideoPipeline
+        - Select production-ready topics
+        - Launch the VideoPipeline for create_video
 
     It should NEVER know how videos are built.
     """
@@ -32,11 +33,8 @@ class YoutubeAgentHandler(BaseAgentHandler):
     )
 
     def __init__(self):
-
         self.engine = TrendEngine()
-
         self.selector = ProductionTopicSelector()
-
         self.pipeline = VideoPipeline()
 
     async def execute(
@@ -47,13 +45,20 @@ class YoutubeAgentHandler(BaseAgentHandler):
     ) -> dict:
 
         if task == "analyze_trends":
-            return await self._analyze_trends(command_id)
+            return await self._analyze_trends(
+                command_id
+            )
 
         if task == "create_video":
-            return await self._create_video(command_id)
+            return await self._create_video(
+                command_id,
+                **kwargs,
+            )
 
         if task == "upload_video":
-            return await self._upload_video(command_id)
+            return await self._upload_video(
+                command_id
+            )
 
         return {
             "status": "unsupported_task",
@@ -77,7 +82,6 @@ class YoutubeAgentHandler(BaseAgentHandler):
         )
 
         if not ranked_trends:
-
             return {
                 "agent": self.name,
                 "task": "analyze_trends",
@@ -90,7 +94,6 @@ class YoutubeAgentHandler(BaseAgentHandler):
         )
 
         if best_trend is None:
-
             return {
                 "agent": self.name,
                 "task": "analyze_trends",
@@ -109,37 +112,74 @@ class YoutubeAgentHandler(BaseAgentHandler):
                 ),
             }
 
-        ###################################################
-        # Entire video generation happens here
-        ###################################################
-
-        result = await self.pipeline.run(
-            best_trend
-        )
-
-        ###################################################
-
         return {
             "agent": self.name,
             "task": "analyze_trends",
             "command_id": command_id,
-            "provider_count": len(manager.providers),
-            "raw_trend_count": len(raw_trends),
-            "final_trend_count": len(ranked_trends),
+            "provider_count": len(
+                manager.providers
+            ),
+            "raw_trend_count": len(
+                raw_trends
+            ),
+            "final_trend_count": len(
+                ranked_trends
+            ),
             "best_trend": best_trend,
-            "generated_content": result["generated"].to_dict(),
-            "production_package": result["production_package"],
             "status": "success",
         }
 
     async def _create_video(
         self,
         command_id: str,
+        **kwargs,
     ) -> dict:
 
+        trend = kwargs.get("trend")
+
+        if not isinstance(trend, dict):
+            return {
+                "agent": self.name,
+                "task": "create_video",
+                "command_id": command_id,
+                "status": "invalid_parameters",
+                "error": (
+                    "create_video requires a "
+                    "trend dictionary."
+                ),
+            }
+
+        title = str(
+            trend.get("title", "")
+        ).strip()
+
+        if not title:
+            return {
+                "agent": self.name,
+                "task": "create_video",
+                "command_id": command_id,
+                "status": "invalid_parameters",
+                "error": (
+                    "trend.title is required."
+                ),
+            }
+
+        result = await self.pipeline.run(
+            trend
+        )
+
         return {
-            "status": "coming_soon",
+            "agent": self.name,
+            "task": "create_video",
             "command_id": command_id,
+            "trend": trend,
+            "generated_content": (
+                result["generated"].to_dict()
+            ),
+            "production_package": (
+                result["production_package"]
+            ),
+            "status": "success",
         }
 
     async def _upload_video(

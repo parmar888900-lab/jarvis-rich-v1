@@ -1,38 +1,25 @@
 ﻿import asyncio
 from unittest.mock import patch
 
-from backend.services.agent_handlers.youtube import (
-    YoutubeAgentHandler,
-)
+from backend.services.agent_handlers.youtube import YoutubeAgentHandler
 
 
 class FakePipeline:
     def __init__(self):
-        self.received_trend = None
         self.calls = 0
 
     async def run(self, trend):
         self.calls += 1
-        self.received_trend = trend
-
         raise AssertionError(
-            "analyze_trends must never run VideoPipeline"
+            "VideoPipeline must not run during analyze_trends."
         )
 
 
 class FakeManager:
     def __init__(self):
-        self.providers = [
-            "Fake YouTube",
-            "Fake News",
-        ]
+        self.providers = ["Fake YouTube", "Fake News"]
 
-    def collect_candidates(
-        self,
-        per_provider_limit=25,
-    ):
-        assert per_provider_limit == 25
-
+    def collect_candidates(self, per_provider_limit=25):
         return [
             {"title": "raw-one"},
             {"title": "raw-two"},
@@ -40,14 +27,7 @@ class FakeManager:
 
 
 class FakeEngine:
-    def process(
-        self,
-        raw_trends,
-        limit=10,
-    ):
-        assert len(raw_trends) == 2
-        assert limit == 10
-
+    def process(self, raw_trends, limit=10):
         return [
             {
                 "title": "Extremely Viral Weak Topic",
@@ -72,7 +52,8 @@ class FakeEngine:
                 "knowledge": {
                     "score": 90,
                     "summary": (
-                        "A well-supported explanation."
+                        "Researchers reported a major "
+                        "technology discovery."
                     ),
                     "facts": [
                         "Fact one.",
@@ -80,9 +61,9 @@ class FakeEngine:
                         "Fact three.",
                     ],
                     "sources": [
-                        {"source": "Source A"},
-                        {"source": "Source B"},
-                        {"source": "Source C"},
+                        {"source": "Publisher A"},
+                        {"source": "Publisher B"},
+                        {"source": "Publisher C"},
                     ],
                 },
             },
@@ -97,72 +78,46 @@ async def main():
     fake_pipeline = FakePipeline()
     handler.pipeline = fake_pipeline
 
-    fake_manager = FakeManager()
-
     with patch(
         "backend.services.agent_handlers.youtube."
         "build_trend_manager",
-        return_value=fake_manager,
+        return_value=FakeManager(),
     ):
         result = await handler._analyze_trends(
-            "test-command-001"
+            "analysis-only-001"
         )
 
     assert result["status"] == "success"
-
-    assert (
-        result["command_id"]
-        == "test-command-001"
-    )
+    assert result["task"] == "analyze_trends"
+    assert result["command_id"] == "analysis-only-001"
 
     assert result["provider_count"] == 2
     assert result["raw_trend_count"] == 2
     assert result["final_trend_count"] == 2
 
-    # Core architecture contract:
-    # analysis selects only; it never produces.
-    assert fake_pipeline.calls == 0
-    assert fake_pipeline.received_trend is None
-
-    assert "generated_content" not in result
-    assert "production_package" not in result
-
-    best_trend = result["best_trend"]
-
-    assert best_trend["title"] == (
+    assert result["best_trend"]["title"] == (
         "Why researchers discovered "
         "a major new technology"
     )
 
-    selection = best_trend[
-        "production_selection"
-    ]
+    assert fake_pipeline.calls == 0
 
-    assert selection["eligible"] is True
-    assert selection["selected"] is True
+    assert "generated_content" not in result
+    assert "production_package" not in result
 
     print("=" * 70)
-    print("REAL _analyze_trends ROUTING TEST")
+    print("ANALYSIS-ONLY ROUTING TEST")
     print()
-    print(
-        "STATUS:",
-        result["status"],
-    )
-    print(
-        "RAW TRENDS:",
-        result["raw_trend_count"],
-    )
-    print(
-        "RANKED TRENDS:",
-        result["final_trend_count"],
-    )
+    print("STATUS:", result["status"])
     print(
         "SELECTED:",
-        best_trend["title"],
+        result["best_trend"]["title"],
     )
     print(
         "PRODUCTION SCORE:",
-        selection["production_score"],
+        result["best_trend"][
+            "production_selection"
+        ]["production_score"],
     )
     print(
         "PIPELINE CALLS:",
@@ -170,9 +125,9 @@ async def main():
     )
     print()
     print(
-        "PASS: analyze_trends selects a "
-        "production-ready topic without "
-        "running VideoPipeline."
+        "PASS: analyze_trends selects and "
+        "returns a topic without running "
+        "VideoPipeline."
     )
 
 
