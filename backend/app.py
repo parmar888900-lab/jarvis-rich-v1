@@ -16,6 +16,9 @@ from backend.routes import (
     production,
     settings as settings_routes,
 )
+from backend.services.orchestration.production_scheduler import (
+    ProductionScheduler,
+)
 from backend.services.production_cycle_service import (
     ProductionCycleService,
 )
@@ -24,6 +27,9 @@ from backend.services.production_cycle_service import (
 PRODUCTION_STALE_AFTER = timedelta(
     hours=6
 )
+
+AUTONOMOUS_PRODUCTION_ENABLED = False
+AUTONOMOUS_PRODUCTION_INTERVAL_SECONDS = 3600
 
 
 @asynccontextmanager
@@ -45,7 +51,24 @@ async def lifespan(app: FastAPI):
             )
         )
 
-    yield
+    production_scheduler = ProductionScheduler(
+        production.orchestrator,
+        interval_seconds=(
+            AUTONOMOUS_PRODUCTION_INTERVAL_SECONDS
+        ),
+        enabled=AUTONOMOUS_PRODUCTION_ENABLED,
+    )
+
+    production_scheduler.start()
+
+    app.state.production_scheduler = (
+        production_scheduler
+    )
+
+    try:
+        yield
+    finally:
+        await production_scheduler.stop()
 
 
 app = FastAPI(
