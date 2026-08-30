@@ -7,6 +7,9 @@ from fastapi.testclient import TestClient
 
 from backend.app import app
 from backend.routes import production
+from backend.services.orchestration.production_runtime import (
+    production_lock,
+)
 
 
 class FakeProductionOrchestrator:
@@ -103,7 +106,7 @@ def test_production_cycle_http_failure():
             == "production_cycle_failed"
         )
 
-        assert not production.production_lock.locked()
+        assert not production_lock.locked()
 
         print()
         print("=" * 70)
@@ -112,7 +115,7 @@ def test_production_cycle_http_failure():
         print("HTTP STATUS:", response.status_code)
         print(
             "LOCKED AFTER FAILURE:",
-            production.production_lock.locked(),
+            production_lock.locked(),
         )
         print()
         print(
@@ -178,7 +181,7 @@ def test_production_cycle_concurrency():
             "did not start."
         )
 
-        assert production.production_lock.locked()
+        assert production_lock.locked()
 
         with TestClient(app) as client:
             second_response = client.post(
@@ -216,7 +219,7 @@ def test_production_cycle_concurrency():
             == 200
         )
 
-        assert not production.production_lock.locked()
+        assert not production_lock.locked()
 
         print()
         print("=" * 70)
@@ -232,7 +235,7 @@ def test_production_cycle_concurrency():
         )
         print(
             "LOCKED AFTER COMPLETION:",
-            production.production_lock.locked(),
+            production_lock.locked(),
         )
         print()
         print(
@@ -271,7 +274,7 @@ def test_lock_reusable_after_completion():
         assert first.status_code == 200
         assert second.status_code == 200
         assert len(fake.calls) == 2
-        assert not production.production_lock.locked()
+        assert not production_lock.locked()
 
         print()
         print("=" * 70)
@@ -305,3 +308,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

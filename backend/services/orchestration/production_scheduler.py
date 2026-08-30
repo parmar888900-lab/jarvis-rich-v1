@@ -3,10 +3,10 @@
 import asyncio
 import logging
 from typing import Any
-from uuid import uuid4
 
-from backend.services.orchestration.production_runtime import (
-    production_lock,
+from backend.services.orchestration.production_runner import (
+    ProductionCycleBusyError,
+    ProductionRunner,
 )
 
 logger = logging.getLogger(__name__)
@@ -29,6 +29,10 @@ class ProductionScheduler:
             )
 
         self.orchestrator = orchestrator
+        self.runner = ProductionRunner(
+            orchestrator
+        )
+
         self.interval_seconds = float(
             interval_seconds
         )
@@ -91,20 +95,14 @@ class ProductionScheduler:
     async def run_once(self) -> dict:
         """Attempt one autonomous production cycle."""
 
-        if production_lock.locked():
+        try:
+            return await self.runner.run_cycle()
+
+        except ProductionCycleBusyError:
             return {
                 "status": "skipped",
                 "reason": "production_busy",
             }
-
-        await production_lock.acquire()
-
-        cycle_id = str(uuid4())
-
-        try:
-            return await self.orchestrator.run_cycle(
-                cycle_id
-            )
 
         except asyncio.CancelledError:
             raise
@@ -115,13 +113,9 @@ class ProductionScheduler:
             )
 
             return {
-                "cycle_id": cycle_id,
                 "status": "scheduler_failed",
                 "reason": "production_cycle_failed",
             }
-
-        finally:
-            production_lock.release()
 
     async def _run_loop(self) -> None:
         """Run scheduled cycles until cancelled."""

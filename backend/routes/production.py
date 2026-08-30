@@ -1,15 +1,14 @@
 ﻿"""Production orchestration API routes."""
 
-from uuid import uuid4
-
 from fastapi import APIRouter, HTTPException
 
 from backend.database import async_session
 from backend.services.orchestration.production_orchestrator import (
     ProductionOrchestrator,
 )
-from backend.services.orchestration.production_runtime import (
-    production_lock,
+from backend.services.orchestration.production_runner import (
+    ProductionCycleBusyError,
+    ProductionRunner,
 )
 from backend.services.production_cycle_service import (
     ProductionCycleService,
@@ -27,28 +26,21 @@ orchestrator = ProductionOrchestrator(
 async def run_production_cycle():
     """Run one complete analyze-to-production cycle."""
 
-    if production_lock.locked():
+    runner = ProductionRunner(
+        orchestrator
+    )
+
+    try:
+        return await runner.run_cycle()
+
+    except ProductionCycleBusyError as exc:
         raise HTTPException(
             status_code=409,
             detail={
                 "error": "production_cycle_busy",
-                "detail": (
-                    "Another production cycle "
-                    "is already running."
-                ),
+                "detail": str(exc),
             },
-        )
-
-    await production_lock.acquire()
-
-    cycle_id = str(uuid4())
-
-    try:
-        result = await orchestrator.run_cycle(
-            cycle_id
-        )
-
-        return result
+        ) from exc
 
     except Exception as exc:
         raise HTTPException(
@@ -58,6 +50,3 @@ async def run_production_cycle():
                 "detail": "Production cycle failed",
             },
         ) from exc
-
-    finally:
-        production_lock.release()
