@@ -1,7 +1,7 @@
 ﻿"""Persistence service for production cycles."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -192,6 +192,85 @@ class ProductionCycleService:
         await session.refresh(cycle)
 
         return cycle
+
+    async def recover_stale_cycles(
+        self,
+        session: AsyncSession,
+        *,
+        stale_after: timedelta,
+        now: datetime | None = None,
+    ) -> list[ProductionCycleRecord]:
+        """Mark abandoned STARTED cycles as FAILED."""
+
+        if stale_after.total_seconds() <= 0:
+            raise ValueError(
+                "stale_after must be greater than zero."
+            )
+
+        recovery_time = now or datetime.now()
+        cutoff = recovery_time - stale_after
+
+        statement = (
+            select(
+                ProductionCycleRecord
+            )
+            .where(
+                ProductionCycleRecord.status
+                == ProductionCycleStatus.STARTED
+            )
+            .where(
+                ProductionCycleRecord.started_at
+                <= cutoff
+            )
+            .order_by(
+                ProductionCycleRecord.started_at.asc()
+            )
+        )
+
+        query_result = await session.execute(
+            statement
+        )
+
+        stale_cycles = list(
+            query_result.scalars().all()
+        )
+
+        for cycle in stale_cycles:
+            cycle.status = (
+                ProductionCycleStatus.FAILED
+            )
+            cycle.completed_at = recovery_time
+            cycle.result = json.dumps(
+                {
+                    "cycle_id": cycle.id,
+                    "status": "orchestration_failed",
+                    "error": "stale_cycle_recovered",
+                    "recovery": {
+                        "reason": (
+                            "Production cycle remained "
+                            "STARTED beyond the allowed "
+                            "stale interval."
+                        ),
+                        "stale_after_seconds": (
+                            stale_after.total_seconds()
+                        ),
+                        "recovered_at": (
+                            recovery_time.isoformat()
+                        ),
+                    },
+                },
+                ensure_ascii=False,
+            )
+
+        if stale_cycles:
+            await session.commit()
+
+            for cycle in stale_cycles:
+                await session.refresh(
+                    cycle
+                )
+
+        return stale_cycles
 
     @staticmethod
     def _require_started(
