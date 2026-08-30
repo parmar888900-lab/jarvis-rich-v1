@@ -26,7 +26,7 @@ async_session = async_sessionmaker(
 
 async def init_db() -> None:
     """Create all database tables."""
-    from backend.models import agent, command, conversation, goal, memory, production_cycle  # noqa: F401
+    from backend.models import agent, command, conversation, goal, memory, production_cycle, production_operation  # noqa: F401
 
     settings.database_url  # ensure database dir exists via config path
     async with engine.begin() as conn:
