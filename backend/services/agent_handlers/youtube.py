@@ -1,130 +1,126 @@
 """YouTube agent handler."""
 
 from backend.services.agent_handlers.base import BaseAgentHandler
-from backend.services.llm_service import LLMService
-from backend.services.reddit_service import RedditService
+from backend.services.intelligence.trend_engine import TrendEngine
+from backend.services.providers.registry import build_trend_manager
+from backend.services.pipelines import VideoPipeline
 
 
 class YoutubeAgentHandler(BaseAgentHandler):
+    """
+    Handles YouTube automation tasks.
+
+    Responsibilities:
+        - Collect trends
+        - Rank trends
+        - Launch the VideoPipeline
+
+    It should NEVER know how videos are built.
+    """
+
     name = "youtube"
+
     supported_tasks = frozenset(
         {
+            "analyze_trends",
             "create_video",
             "upload_video",
-            "analyze_trends",
         }
     )
 
-    async def execute(self, task: str, command_id: str, **kwargs) -> dict:
-        if task != "create_video":
-            return {
-                "agent": self.name,
-                "task": task,
-                "command_id": command_id,
-                "message": "Task not implemented yet.",
-            }
+    def __init__(self):
 
-        llm = LLMService()
-        reddit = RedditService()
+        self.engine = TrendEngine()
 
-        posts = reddit.get_top_posts(limit=25)
+        self.pipeline = VideoPipeline()
 
-        best_post = max(
-            posts,
-            key=lambda p: p["score"] + (p["comments"] * 5)
+    async def execute(
+        self,
+        task: str,
+        command_id: str,
+        **kwargs,
+    ) -> dict:
+
+        if task == "analyze_trends":
+            return await self._analyze_trends(command_id)
+
+        if task == "create_video":
+            return await self._create_video(command_id)
+
+        if task == "upload_video":
+            return await self._upload_video(command_id)
+
+        return {
+            "status": "unsupported_task",
+            "task": task,
+        }
+
+    async def _analyze_trends(
+        self,
+        command_id: str,
+    ) -> dict:
+
+        manager = build_trend_manager()
+
+        raw_trends = manager.collect_candidates(
+            per_provider_limit=25,
         )
 
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "You are one of the world's best YouTube Shorts writers. "
-                    "You specialize in transforming REAL Reddit stories into "
-                    "high-retention viral YouTube Shorts. "
-                    "Never invent major events that did not happen."
-                ),
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"Here is a REAL Reddit post.\n\n"
-                    f"Title: {best_post['title']}\n\n"
-                    f"Story:\n{best_post['body']}\n\n"
+        ranked_trends = self.engine.process(
+            raw_trends,
+            limit=10,
+        )
 
-                    "Rewrite this into an addictive 45-60 second YouTube Shorts.\n\n"
+        if not ranked_trends:
 
-                    "Rules:\n"
-                    "- Keep the facts true.\n"
-                    "- Do not invent major events.\n"
-                    "- Hook the viewer in the first sentence.\n"
-                    "- Build suspense every few seconds.\n"
-                    "- Make it conversational.\n"
-                    "- End with a question that encourages comments.\n\n"
+            return {
+                "agent": self.name,
+                "task": "analyze_trends",
+                "command_id": command_id,
+                "status": "no_trends_found",
+            }
 
-                    "Return EXACTLY this format:\n\n"
+        best_trend = ranked_trends[0]
 
-                    "TITLE:\n"
-                    "<title>\n\n"
+        ###################################################
+        # Entire video generation happens here
+        ###################################################
 
-                    "SCRIPT:\n"
-                    "<script>\n\n"
+        result = await self.pipeline.run(
+            best_trend
+        )
 
-                    "DESCRIPTION:\n"
-                    "<description>\n\n"
-
-                    "HASHTAGS:\n"
-                    "<hashtags>"
-                ),
-            },
-        ]
-
-        response = await llm.chat(messages)
-
-        title = ""
-        script = ""
-        description = ""
-        hashtags = ""
-
-        current = None
-
-        for line in response.splitlines():
-            text = line.strip()
-
-            if text == "TITLE:":
-                current = "title"
-                continue
-
-            if text == "SCRIPT:":
-                current = "script"
-                continue
-
-            if text == "DESCRIPTION:":
-                current = "description"
-                continue
-
-            if text == "HASHTAGS:":
-                current = "hashtags"
-                continue
-
-            if current == "title":
-                title += line + "\n"
-            elif current == "script":
-                script += line + "\n"
-            elif current == "description":
-                description += line + "\n"
-            elif current == "hashtags":
-                hashtags += line + "\n"
+        ###################################################
 
         return {
             "agent": self.name,
-            "task": task,
+            "task": "analyze_trends",
             "command_id": command_id,
-            "title": title.strip(),
-            "script": script.strip(),
-            "description": description.strip(),
-            "hashtags": hashtags.strip(),
-            "reddit_title": best_post["title"],
-            "reddit_score": best_post["score"],
-            "reddit_comments": best_post["comments"],
-            "reddit_url": best_post["url"],
+            "provider_count": len(manager.providers),
+            "raw_trend_count": len(raw_trends),
+            "final_trend_count": len(ranked_trends),
+            "best_trend": best_trend,
+            "generated_content": result["generated"].to_dict(),
+            "production_package": result["production_package"],
+            "status": "success",
+        }
+
+    async def _create_video(
+        self,
+        command_id: str,
+    ) -> dict:
+
+        return {
+            "status": "coming_soon",
+            "command_id": command_id,
+        }
+
+    async def _upload_video(
+        self,
+        command_id: str,
+    ) -> dict:
+
+        return {
+            "status": "coming_soon",
+            "command_id": command_id,
         }
