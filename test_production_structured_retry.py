@@ -104,11 +104,6 @@ async def test_retryable_result_then_success():
 
     assert orchestrator.calls == 2
     assert result["status"] == "success"
-    assert result["attempts"] == 2
-    assert (
-        result["result"]["status"]
-        == "success"
-    )
 
     print(
         "PASS: retryable pipeline failure "
@@ -133,20 +128,15 @@ async def test_permanent_result_no_retry():
     result = await scheduler.run_once()
 
     assert orchestrator.calls == 1
-    assert result["attempts"] == 1
     assert (
         result["status"]
         == "production_failed"
     )
 
     assert (
-        result["result"]["failure"][
-            "retryable"
-        ]
+        result["failure"]["retryable"]
         is False
     )
-
-    assert "retry_exhausted" not in result
 
     print(
         "PASS: permanent pipeline failure "
@@ -171,17 +161,13 @@ async def test_retryable_result_exhaustion():
     result = await scheduler.run_once()
 
     assert orchestrator.calls == 3
-    assert result["attempts"] == 3
     assert (
         result["status"]
         == "production_failed"
     )
-    assert result["retry_exhausted"] is True
 
     assert (
-        result["result"]["failure"][
-            "category"
-        ]
+        result["failure"]["category"]
         == "rate_limited"
     )
 
@@ -206,7 +192,6 @@ async def test_no_action_never_retries():
     result = await scheduler.run_once()
 
     assert orchestrator.calls == 1
-    assert result["attempts"] == 1
     assert result["status"] == "no_action"
 
     print(
@@ -237,3 +222,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+

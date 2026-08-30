@@ -175,25 +175,7 @@ class ProductionScheduler:
                     attempt += 1
                     continue
 
-                response = {
-                    "status": result.get(
-                        "status",
-                        "success",
-                    ),
-                    "attempts": attempt,
-                    "result": result,
-                }
-
-                if (
-                    result_retryable
-                    and attempt
-                    >= self.retry_policy.max_attempts
-                ):
-                    response[
-                        "retry_exhausted"
-                    ] = True
-
-                return response
+                return result
 
             except ProductionCycleBusyError:
                 return {
@@ -264,4 +246,5 @@ class ProductionScheduler:
                 logger.exception(
                     "Unexpected scheduler-loop failure."
                 )
+
 
