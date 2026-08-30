@@ -5,6 +5,91 @@ from backend.services.orchestration.production_orchestrator import (
 )
 
 
+class FakeSession:
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type,
+        exc,
+        traceback,
+    ):
+        return False
+
+
+class FakeSessionFactory:
+    def __call__(self):
+        return FakeSession()
+
+
+class FakeCycleService:
+    def __init__(self):
+        self.calls = []
+
+    async def start_cycle(
+        self,
+        session,
+        *,
+        cycle_id,
+    ):
+        self.calls.append(
+            {
+                "method": "start_cycle",
+                "cycle_id": cycle_id,
+            }
+        )
+
+    async def complete_cycle(
+        self,
+        session,
+        cycle_id,
+        *,
+        selected_topic,
+        production_score,
+        result,
+    ):
+        self.calls.append(
+            {
+                "method": "complete_cycle",
+                "cycle_id": cycle_id,
+                "selected_topic": selected_topic,
+                "production_score": production_score,
+                "result": result,
+            }
+        )
+
+    async def mark_no_action(
+        self,
+        session,
+        cycle_id,
+        *,
+        result,
+    ):
+        self.calls.append(
+            {
+                "method": "mark_no_action",
+                "cycle_id": cycle_id,
+                "result": result,
+            }
+        )
+
+    async def fail_cycle(
+        self,
+        session,
+        cycle_id,
+        *,
+        result,
+    ):
+        self.calls.append(
+            {
+                "method": "fail_cycle",
+                "cycle_id": cycle_id,
+                "result": result,
+            }
+        )
+
+
 class FakeCommander:
     def __init__(self):
         self.calls = []
@@ -60,11 +145,24 @@ class FakeCommander:
         )
 
 
-async def test_success():
-    fake_commander = FakeCommander()
+def build_orchestrator(
+    commander,
+    cycle_service,
+):
+    return ProductionOrchestrator(
+        commander=commander,
+        cycle_service=cycle_service,
+        session_factory=FakeSessionFactory(),
+    )
 
-    orchestrator = ProductionOrchestrator(
-        commander=fake_commander,
+
+async def test_success():
+    commander = FakeCommander()
+    cycle_service = FakeCycleService()
+
+    orchestrator = build_orchestrator(
+        commander,
+        cycle_service,
     )
 
     result = await orchestrator.run_cycle(
@@ -72,72 +170,61 @@ async def test_success():
     )
 
     assert result["status"] == "success"
+    assert len(commander.calls) == 2
 
-    assert len(fake_commander.calls) == 2
+    assert [
+        call["method"]
+        for call in cycle_service.calls
+    ] == [
+        "start_cycle",
+        "complete_cycle",
+    ]
 
-    analyze_call = fake_commander.calls[0]
-    produce_call = fake_commander.calls[1]
+    completion = cycle_service.calls[1]
 
-    assert analyze_call["agent"] == "youtube"
-    assert analyze_call["task"] == "analyze_trends"
     assert (
-        analyze_call["command_id"]
-        == "cycle-test-001:analyze"
-    )
-    assert analyze_call["parameters"] is None
-
-    assert produce_call["agent"] == "youtube"
-    assert produce_call["task"] == "create_video"
-    assert (
-        produce_call["command_id"]
-        == "cycle-test-001:produce"
+        completion["selected_topic"]
+        == "Why researchers discovered "
+        "a major new technology"
     )
 
-    trend = result["selected_trend"]
+    assert (
+        completion["production_score"]
+        == 85.15
+    )
+
+    assert (
+        completion["result"]
+        == result
+    )
+
+    produce_call = commander.calls[1]
 
     assert (
         produce_call["parameters"]["trend"]
-        == trend
-    )
-
-    assert (
-        trend["production_selection"][
-            "selected"
-        ]
-        is True
+        == result["selected_trend"]
     )
 
     print("=" * 70)
-    print("PRODUCTION ORCHESTRATOR SUCCESS TEST")
+    print("SUCCESS -> COMPLETED TEST")
     print()
+    print("STATUS:", result["status"])
     print(
-        "STATUS:",
-        result["status"],
-    )
-    print(
-        "ROUTE CALLS:",
-        len(fake_commander.calls),
-    )
-    print(
-        "SELECTED:",
-        trend["title"],
-    )
-    print(
-        "PRODUCTION SCORE:",
-        trend["production_selection"][
-            "production_score"
+        "PERSISTENCE:",
+        [
+            call["method"]
+            for call in cycle_service.calls
         ],
     )
     print()
     print(
-        "PASS: orchestrator performs "
-        "analyze_trends -> create_video "
-        "with the exact selected trend."
+        "PASS: successful production is "
+        "persisted as COMPLETED."
     )
 
 
-async def test_analysis_failure():
-    class AnalysisFailureCommander:
+async def test_no_action_analysis():
+    class NoActionCommander:
         def __init__(self):
             self.calls = 0
 
@@ -156,39 +243,92 @@ async def test_analysis_failure():
                 ),
             }
 
-    commander = AnalysisFailureCommander()
+    commander = NoActionCommander()
+    cycle_service = FakeCycleService()
 
-    orchestrator = ProductionOrchestrator(
-        commander=commander,
+    orchestrator = build_orchestrator(
+        commander,
+        cycle_service,
     )
 
     result = await orchestrator.run_cycle(
         "cycle-test-002"
     )
 
+    assert result["status"] == "no_action"
     assert (
-        result["status"]
-        == "analysis_failed"
+        result["reason"]
+        == "no_production_ready_topic"
     )
-
     assert commander.calls == 1
+
+    assert [
+        call["method"]
+        for call in cycle_service.calls
+    ] == [
+        "start_cycle",
+        "mark_no_action",
+    ]
 
     print()
     print("=" * 70)
-    print("ANALYSIS FAILURE TEST")
+    print("NO ACTION ANALYSIS TEST")
+    print()
+    print("STATUS:", result["status"])
+    print("REASON:", result["reason"])
     print()
     print(
-        "STATUS:",
-        result["status"],
+        "PASS: lack of a production-ready "
+        "topic is persisted as NO_ACTION."
     )
-    print(
-        "ROUTE CALLS:",
-        commander.calls,
+
+
+async def test_missing_trend():
+    class MissingTrendCommander:
+        async def route(
+            self,
+            agent,
+            task,
+            command_id,
+            parameters=None,
+        ):
+            return {
+                "status": "success",
+            }
+
+    cycle_service = FakeCycleService()
+
+    orchestrator = build_orchestrator(
+        MissingTrendCommander(),
+        cycle_service,
     )
+
+    result = await orchestrator.run_cycle(
+        "cycle-test-003"
+    )
+
+    assert (
+        result["status"]
+        == "no_selected_trend"
+    )
+
+    assert [
+        call["method"]
+        for call in cycle_service.calls
+    ] == [
+        "start_cycle",
+        "mark_no_action",
+    ]
+
+    print()
+    print("=" * 70)
+    print("MISSING TREND TEST")
+    print()
+    print("STATUS:", result["status"])
     print()
     print(
-        "PASS: failed analysis stops "
-        "before production."
+        "PASS: missing selected trend is "
+        "persisted as NO_ACTION."
     )
 
 
@@ -223,13 +363,15 @@ async def test_unauthorized_trend():
             )
 
     commander = UnauthorizedCommander()
+    cycle_service = FakeCycleService()
 
-    orchestrator = ProductionOrchestrator(
-        commander=commander,
+    orchestrator = build_orchestrator(
+        commander,
+        cycle_service,
     )
 
     result = await orchestrator.run_cycle(
-        "cycle-test-003"
+        "cycle-test-004"
     )
 
     assert (
@@ -241,32 +383,74 @@ async def test_unauthorized_trend():
         "analyze_trends"
     ]
 
+    assert [
+        call["method"]
+        for call in cycle_service.calls
+    ] == [
+        "start_cycle",
+        "mark_no_action",
+    ]
+
     print()
     print("=" * 70)
     print("AUTHORIZATION GATE TEST")
     print()
-    print(
-        "STATUS:",
-        result["status"],
-    )
-    print(
-        "ROUTE CALLS:",
-        commander.calls,
-    )
+    print("STATUS:", result["status"])
     print()
     print(
-        "PASS: non-authorized trends "
-        "never reach create_video."
+        "PASS: unauthorized trend is "
+        "persisted as NO_ACTION."
     )
 
 
-async def main():
-    await test_success()
-    await test_analysis_failure()
-    await test_unauthorized_trend()
+async def test_analysis_failure():
+    class AnalysisFailureCommander:
+        async def route(
+            self,
+            agent,
+            task,
+            command_id,
+            parameters=None,
+        ):
+            return {
+                "status": "provider_failure",
+            }
 
+    cycle_service = FakeCycleService()
 
-asyncio.run(main())
+    orchestrator = build_orchestrator(
+        AnalysisFailureCommander(),
+        cycle_service,
+    )
+
+    result = await orchestrator.run_cycle(
+        "cycle-test-005"
+    )
+
+    assert (
+        result["status"]
+        == "analysis_failed"
+    )
+
+    assert [
+        call["method"]
+        for call in cycle_service.calls
+    ] == [
+        "start_cycle",
+        "fail_cycle",
+    ]
+
+    print()
+    print("=" * 70)
+    print("ANALYSIS FAILURE TEST")
+    print()
+    print("STATUS:", result["status"])
+    print()
+    print(
+        "PASS: genuine analysis failure is "
+        "persisted as FAILED."
+    )
+
 
 async def test_production_failure():
     class ProductionFailureCommander:
@@ -280,25 +464,17 @@ async def test_production_failure():
             command_id,
             parameters=None,
         ):
-            self.calls.append(
-                {
-                    "task": task,
-                    "parameters": parameters,
-                }
-            )
+            self.calls.append(task)
 
             if task == "analyze_trends":
                 return {
                     "status": "success",
                     "best_trend": {
-                        "title": (
-                            "Why researchers discovered "
-                            "a major new technology"
-                        ),
+                        "title": "Production failure topic",
                         "production_selection": {
                             "eligible": True,
                             "selected": True,
-                            "production_score": 85.15,
+                            "production_score": 81.0,
                         },
                     },
                 }
@@ -306,7 +482,7 @@ async def test_production_failure():
             if task == "create_video":
                 return {
                     "status": "production_error",
-                    "error": "Fake production failure",
+                    "error": "Fake failure",
                 }
 
             raise AssertionError(
@@ -314,13 +490,15 @@ async def test_production_failure():
             )
 
     commander = ProductionFailureCommander()
+    cycle_service = FakeCycleService()
 
-    orchestrator = ProductionOrchestrator(
-        commander=commander,
+    orchestrator = build_orchestrator(
+        commander,
+        cycle_service,
     )
 
     result = await orchestrator.run_cycle(
-        "cycle-test-004"
+        "cycle-test-006"
     )
 
     assert (
@@ -328,45 +506,107 @@ async def test_production_failure():
         == "production_failed"
     )
 
-    assert len(commander.calls) == 2
+    assert commander.calls == [
+        "analyze_trends",
+        "create_video",
+    ]
 
-    assert (
-        commander.calls[0]["task"]
-        == "analyze_trends"
-    )
-
-    assert (
-        commander.calls[1]["task"]
-        == "create_video"
-    )
-
-    assert (
-        result["production"]["status"]
-        == "production_error"
-    )
+    assert [
+        call["method"]
+        for call in cycle_service.calls
+    ] == [
+        "start_cycle",
+        "fail_cycle",
+    ]
 
     print()
     print("=" * 70)
     print("PRODUCTION FAILURE TEST")
     print()
-    print(
-        "STATUS:",
-        result["status"],
-    )
-    print(
-        "ROUTE CALLS:",
-        len(commander.calls),
-    )
-    print(
-        "PRODUCTION STATUS:",
-        result["production"]["status"],
-    )
+    print("STATUS:", result["status"])
     print()
     print(
         "PASS: production failure is "
-        "returned without reporting the "
-        "cycle as successful."
+        "persisted as FAILED."
     )
 
 
-asyncio.run(test_production_failure())
+async def test_unexpected_exception():
+    class ExplodingCommander:
+        async def route(
+            self,
+            agent,
+            task,
+            command_id,
+            parameters=None,
+        ):
+            raise RuntimeError(
+                "Unexpected fake crash"
+            )
+
+    cycle_service = FakeCycleService()
+
+    orchestrator = build_orchestrator(
+        ExplodingCommander(),
+        cycle_service,
+    )
+
+    try:
+        await orchestrator.run_cycle(
+            "cycle-test-007"
+        )
+    except RuntimeError as exc:
+        assert (
+            str(exc)
+            == "Unexpected fake crash"
+        )
+    else:
+        raise AssertionError(
+            "Unexpected exception was swallowed."
+        )
+
+    assert [
+        call["method"]
+        for call in cycle_service.calls
+    ] == [
+        "start_cycle",
+        "fail_cycle",
+    ]
+
+    failure = cycle_service.calls[1]
+
+    assert (
+        failure["result"]["status"]
+        == "orchestration_failed"
+    )
+
+    print()
+    print("=" * 70)
+    print("UNEXPECTED EXCEPTION TEST")
+    print()
+    print(
+        "PERSISTENCE:",
+        [
+            call["method"]
+            for call in cycle_service.calls
+        ],
+    )
+    print()
+    print(
+        "PASS: unexpected exceptions are "
+        "persisted as FAILED and re-raised."
+    )
+
+
+async def main():
+    await test_success()
+    await test_no_action_analysis()
+    await test_missing_trend()
+    await test_unauthorized_trend()
+    await test_analysis_failure()
+    await test_production_failure()
+    await test_unexpected_exception()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
