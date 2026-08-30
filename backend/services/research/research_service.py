@@ -2,6 +2,7 @@
 
 import re
 
+from backend.services.research.confidence import ResearchConfidenceScorer
 from backend.services.research.knowledge_pack import KnowledgePack
 from backend.services.research.providers.news import NewsProvider
 from backend.services.research.providers.registry import ResearchRegistry
@@ -63,6 +64,7 @@ class ResearchService:
 
         # Research memory (RAM for now, SQLite later)
         self.memory = ResearchMemory()
+        self.confidence = ResearchConfidenceScorer()
 
     def research(self, topic: str) -> KnowledgePack:
         """
@@ -115,8 +117,13 @@ class ResearchService:
         # Category
         pack.category = self._classify_topic(clean_query)
 
-        # Future scoring placeholder
-        pack.score = self._calculate_research_score(pack)
+        # Deterministic research confidence.
+        confidence = self.confidence.score(
+            clean_query,
+            pack.sources,
+        )
+
+        pack.score = confidence["score"]
 
         # Save for future requests
         self.memory.save(

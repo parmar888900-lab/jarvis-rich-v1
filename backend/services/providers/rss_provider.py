@@ -1,5 +1,7 @@
-"""Google News RSS trend provider."""
+﻿"""Google News RSS trend provider."""
 
+from datetime import timezone
+from email.utils import parsedate_to_datetime
 from urllib.request import Request, urlopen
 from xml.etree import ElementTree
 
@@ -13,7 +15,10 @@ class RSSProvider(TrendProvider):
     def name(self) -> str:
         return "Google News RSS"
 
-    def get_trends(self, limit: int = 10):
+    def get_trends(
+        self,
+        limit: int = 10,
+    ) -> list[dict]:
         url = (
             "https://news.google.com/rss"
             "?hl=en-IN"
@@ -35,46 +40,58 @@ class RSSProvider(TrendProvider):
         )
 
         try:
-            with urlopen(request, timeout=15) as response:
+            with urlopen(
+                request,
+                timeout=15,
+            ) as response:
                 xml_data = response.read()
 
-            root = ElementTree.fromstring(xml_data)
+            root = ElementTree.fromstring(
+                xml_data
+            )
 
-        except Exception as e:
-            print(f"[RSSProvider] Failed to fetch Google News RSS: {e}")
+        except Exception as exc:
+            print(
+                "[RSSProvider] Failed to fetch "
+                f"Google News RSS: {exc}"
+            )
             return []
 
         trends = []
 
-        for index, item in enumerate(root.findall(".//item")):
+        for index, item in enumerate(
+            root.findall(".//item")
+        ):
             if index >= limit:
                 break
 
-            title_element = item.find("title")
-            link_element = item.find("link")
-            description_element = item.find("description")
-
-            title = (
-                title_element.text.strip()
-                if title_element is not None and title_element.text
-                else ""
+            title = self._text(
+                item,
+                "title",
             )
-
-            link = (
-                link_element.text.strip()
-                if link_element is not None and link_element.text
-                else ""
+            link = self._text(
+                item,
+                "link",
             )
-
-            description = (
-                description_element.text.strip()
-                if description_element is not None
-                and description_element.text
-                else ""
+            description = self._text(
+                item,
+                "description",
+            )
+            pub_date = self._text(
+                item,
+                "pubDate",
             )
 
             if not title:
                 continue
+
+            published = self._parse_published(
+                pub_date
+            )
+
+            publisher = self._extract_publisher(
+                title
+            )
 
             trends.append(
                 {
@@ -84,11 +101,76 @@ class RSSProvider(TrendProvider):
                     "category": "News",
                     "url": link,
                     "description": description,
+                    "published": published,
+                    "publisher": publisher,
                 }
             )
 
         print(
-            f"[RSSProvider] Retrieved {len(trends)} Google News trends"
+            f"[RSSProvider] Retrieved "
+            f"{len(trends)} Google News trends"
         )
 
         return trends
+
+    @staticmethod
+    def _text(
+        item,
+        tag: str,
+    ) -> str:
+        element = item.find(tag)
+
+        if (
+            element is None
+            or not element.text
+        ):
+            return ""
+
+        return element.text.strip()
+
+    @staticmethod
+    def _parse_published(
+        value: str,
+    ) -> str:
+        """Convert RSS pubDate to UTC ISO-8601."""
+
+        if not value:
+            return ""
+
+        try:
+            published = parsedate_to_datetime(
+                value
+            )
+
+            if published.tzinfo is None:
+                published = published.replace(
+                    tzinfo=timezone.utc
+                )
+            else:
+                published = (
+                    published.astimezone(
+                        timezone.utc
+                    )
+                )
+
+            return published.isoformat()
+
+        except (TypeError, ValueError):
+            return ""
+
+    @staticmethod
+    def _extract_publisher(
+        title: str,
+    ) -> str:
+        """
+        Extract the publisher from Google's
+        common 'headline - publisher' format.
+        """
+
+        if " - " not in title:
+            return ""
+
+        return title.rsplit(
+            " - ",
+            1,
+        )[1].strip()

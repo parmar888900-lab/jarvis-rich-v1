@@ -1,6 +1,7 @@
-"""Google News research provider."""
+﻿"""Google News research provider."""
 
 from html import unescape
+from urllib.parse import quote_plus
 from urllib.request import Request, urlopen
 from xml.etree import ElementTree
 
@@ -19,7 +20,10 @@ class NewsProvider(ResearchProvider):
     def name(self) -> str:
         return "Google News Research"
 
-    def research(self, topic: str) -> list[dict]:
+    def research(
+        self,
+        topic: str,
+    ) -> list[dict]:
         if not topic or not topic.strip():
             return []
 
@@ -45,10 +49,15 @@ class NewsProvider(ResearchProvider):
         )
 
         try:
-            with urlopen(request, timeout=15) as response:
+            with urlopen(
+                request,
+                timeout=15,
+            ) as response:
                 xml_data = response.read()
 
-            root = ElementTree.fromstring(xml_data)
+            root = ElementTree.fromstring(
+                xml_data
+            )
 
         except Exception as exc:
             print(
@@ -60,20 +69,31 @@ class NewsProvider(ResearchProvider):
         results = []
 
         for item in root.findall(".//item"):
-            title_element = item.find("title")
-            link_element = item.find("link")
-            description_element = item.find("description")
-            pub_date_element = item.find("pubDate")
-
-            title = self._text(title_element)
-            link = self._text(link_element)
-            description = self._clean_text(
-                self._text(description_element)
+            title = self._text(
+                item.find("title")
             )
-            published = self._text(pub_date_element)
+            link = self._text(
+                item.find("link")
+            )
+            description = self._clean_text(
+                self._text(
+                    item.find("description")
+                )
+            )
+            published = self._text(
+                item.find("pubDate")
+            )
 
             if not title:
                 continue
+
+            publisher = self._extract_publisher(
+                title
+            )
+
+            headline = self._extract_headline(
+                title
+            )
 
             content_parts = []
 
@@ -85,13 +105,14 @@ class NewsProvider(ResearchProvider):
                     f"Published: {published}"
                 )
 
-            content = "\n".join(content_parts)
-
             results.append(
                 {
-                    "title": title,
-                    "content": content,
+                    "title": headline,
+                    "content": "\n".join(
+                        content_parts
+                    ),
                     "source": "Google News",
+                    "publisher": publisher,
                     "url": link,
                     "published": published,
                     "confidence": 0.80,
@@ -103,27 +124,59 @@ class NewsProvider(ResearchProvider):
 
         print(
             f"[NewsProvider] Retrieved "
-            f"{len(results)} research results for '{topic}'"
+            f"{len(results)} research results "
+            f"for '{topic}'"
         )
 
         return results
 
     @staticmethod
     def _text(element) -> str:
-        if element is None or not element.text:
+        if (
+            element is None
+            or not element.text
+        ):
             return ""
 
         return element.text.strip()
 
     @staticmethod
-    def _clean_text(value: str) -> str:
+    def _clean_text(
+        value: str,
+    ) -> str:
         if not value:
             return ""
 
         return unescape(value).strip()
 
     @staticmethod
-    def _encode_query(value: str) -> str:
-        from urllib.parse import quote_plus
+    def _extract_publisher(
+        title: str,
+    ) -> str:
+        if " - " not in title:
+            return ""
 
-        return quote_plus(value.strip())
+        return title.rsplit(
+            " - ",
+            1,
+        )[1].strip()
+
+    @staticmethod
+    def _extract_headline(
+        title: str,
+    ) -> str:
+        if " - " not in title:
+            return title.strip()
+
+        return title.rsplit(
+            " - ",
+            1,
+        )[0].strip()
+
+    @staticmethod
+    def _encode_query(
+        value: str,
+    ) -> str:
+        return quote_plus(
+            value.strip()
+        )
