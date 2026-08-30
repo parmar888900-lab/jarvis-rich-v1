@@ -63,3 +63,7 @@ coverage/
 # Misc
 *.bak
 *.tmp
+secrets/
+*.youtube-token.json
+youtube_token.json
+youtube_client_secret.json
