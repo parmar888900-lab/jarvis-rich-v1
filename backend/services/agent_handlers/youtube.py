@@ -1,6 +1,9 @@
 """YouTube agent handler."""
 
 from backend.services.agent_handlers.base import BaseAgentHandler
+from backend.services.intelligence.production_selector import (
+    ProductionTopicSelector,
+)
 from backend.services.intelligence.trend_engine import TrendEngine
 from backend.services.providers.registry import build_trend_manager
 from backend.services.pipelines import VideoPipeline
@@ -31,6 +34,8 @@ class YoutubeAgentHandler(BaseAgentHandler):
     def __init__(self):
 
         self.engine = TrendEngine()
+
+        self.selector = ProductionTopicSelector()
 
         self.pipeline = VideoPipeline()
 
@@ -80,7 +85,29 @@ class YoutubeAgentHandler(BaseAgentHandler):
                 "status": "no_trends_found",
             }
 
-        best_trend = ranked_trends[0]
+        best_trend = self.selector.select(
+            ranked_trends
+        )
+
+        if best_trend is None:
+
+            return {
+                "agent": self.name,
+                "task": "analyze_trends",
+                "command_id": command_id,
+                "provider_count": len(
+                    manager.providers
+                ),
+                "raw_trend_count": len(
+                    raw_trends
+                ),
+                "final_trend_count": len(
+                    ranked_trends
+                ),
+                "status": (
+                    "no_production_ready_topic"
+                ),
+            }
 
         ###################################################
         # Entire video generation happens here
