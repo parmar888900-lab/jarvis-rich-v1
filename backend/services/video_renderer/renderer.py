@@ -8,6 +8,11 @@ MoviePy 2.x compatible.
 
 from pathlib import Path
 
+from backend.services.runtime.runtime_config import RuntimeConfig
+from backend.services.video_renderer.moviepy_runtime import (
+    configure_moviepy_ffmpeg,
+)
+
 from moviepy import (
     AudioFileClip,
     CompositeVideoClip,
@@ -28,10 +33,26 @@ class VideoRenderer:
     HEIGHT = 1920
     FPS = 30
 
-    def __init__(self):
+    def __init__(
+        self,
+        runtime_config: RuntimeConfig | None = None,
+    ):
 
-        self.output_dir = Path(
-            "generated/videos"
+        config = (
+            runtime_config
+            if runtime_config is not None
+            else RuntimeConfig.from_environment()
+        )
+
+        self.ffmpeg_executable = (
+            configure_moviepy_ffmpeg(
+                config.ffmpeg_executable
+            )
+        )
+
+        self.output_dir = (
+            Path(config.generated_dir)
+            / "videos"
         )
 
         self.output_dir.mkdir(
