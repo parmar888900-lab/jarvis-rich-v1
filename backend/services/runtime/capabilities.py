@@ -104,7 +104,44 @@ class RuntimeCapabilityService:
 
         config = self.config
 
+        image_provider = (
+            config.image_provider
+            .strip()
+            .lower()
+        )
+
+        comfyui_selected = (
+            image_provider
+            in {
+                "comfyui",
+                "flux",
+                "flux-comfyui",
+            }
+        )
+
+        cloudflare_selected = (
+            image_provider
+            in {
+                "cloudflare",
+                "flux-cloudflare",
+            }
+        )
+
+        image_provider_supported = (
+            comfyui_selected
+            or cloudflare_selected
+        )
+
         capabilities = (
+            self._configured_text(
+                name="image_provider",
+                value=(
+                    image_provider
+                    if image_provider_supported
+                    else ""
+                ),
+                required=True,
+            ),
             self._configured_url(
                 name="ollama",
                 value=config.ollama_base_url,
@@ -118,17 +155,32 @@ class RuntimeCapabilityService:
             self._configured_url(
                 name="comfyui",
                 value=config.comfyui_url,
-                required=True,
+                required=comfyui_selected,
             ),
             self._directory(
                 name="comfyui_output_dir",
                 path=config.comfyui_output_dir,
-                required=True,
+                required=comfyui_selected,
             ),
             self._file(
                 name="flux_workflow",
                 path=config.flux_workflow_path,
-                required=True,
+                required=comfyui_selected,
+            ),
+            self._configured_text(
+                name="cloudflare_account_id",
+                value=config.cloudflare_account_id,
+                required=cloudflare_selected,
+            ),
+            self._configured_text(
+                name="cloudflare_api_token",
+                value=config.cloudflare_api_token,
+                required=cloudflare_selected,
+            ),
+            self._configured_text(
+                name="cloudflare_flux_model",
+                value=config.cloudflare_flux_model,
+                required=cloudflare_selected,
             ),
             self._file_or_command(
                 name="piper_executable",
@@ -192,14 +244,28 @@ class RuntimeCapabilityService:
             model=self.config.ollama_model,
         )
 
-        comfyui = health.probe_comfyui(
-            base_url=self.config.comfyui_url,
-        )
-
         live_by_name = {
             ollama.name: ollama,
-            comfyui.name: comfyui,
         }
+
+        image_provider = (
+            self.config.image_provider
+            .strip()
+            .lower()
+        )
+
+        if image_provider in {
+            "comfyui",
+            "flux",
+            "flux-comfyui",
+        }:
+            comfyui = health.probe_comfyui(
+                base_url=self.config.comfyui_url,
+            )
+
+            live_by_name[
+                comfyui.name
+            ] = comfyui
 
         capabilities = tuple(
             Capability(

@@ -54,6 +54,7 @@ class RuntimeConfig:
     comfyui_output_dir: Path
     flux_workflow_path: Path
 
+
     piper_executable: Path
     piper_model_path: Path
 
@@ -64,6 +65,17 @@ class RuntimeConfig:
 
     youtube_token_path: Path
     youtube_client_secret_path: Path
+
+    # Optional cloud image provider configuration.
+    # Defaults preserve compatibility with existing
+    # RuntimeConfig(...) callers.
+    image_provider: str = "comfyui"
+    cloudflare_account_id: str = ""
+    cloudflare_api_token: str = ""
+    cloudflare_flux_model: str = (
+        "@cf/black-forest-labs/"
+        "flux-1-schnell"
+    )
 
     @classmethod
     def from_environment(
@@ -95,6 +107,25 @@ class RuntimeConfig:
                 default=(
                     "configs/workflows/"
                     "flux_api.json"
+                ),
+            ),
+            image_provider=_read_text(
+                "JARVIS_IMAGE_PROVIDER",
+                default="comfyui",
+            ),
+            cloudflare_account_id=_read_text(
+                "JARVIS_CLOUDFLARE_ACCOUNT_ID",
+                default="",
+            ),
+            cloudflare_api_token=_read_text(
+                "JARVIS_CLOUDFLARE_API_TOKEN",
+                default="",
+            ),
+            cloudflare_flux_model=_read_text(
+                "JARVIS_CLOUDFLARE_FLUX_MODEL",
+                default=(
+                    "@cf/black-forest-labs/"
+                    "flux-1-schnell"
                 ),
             ),
             piper_executable=_read_path(
