@@ -31,16 +31,32 @@ from pathlib import Path
 
 from backend.models.generated_content import GeneratedContent
 from backend.services.storyboard.scene import Scene
+from backend.services.runtime.runtime_config import RuntimeConfig
 from backend.services.video.voice_generator import VoiceGenerator
 
 
 class ProductionPackageBuilder:
 
-    def __init__(self):
+    def __init__(
+        self,
+        runtime_config: RuntimeConfig | None = None,
+    ):
 
-        self.voice = VoiceGenerator()
+        config = (
+            runtime_config
+            if runtime_config is not None
+            else RuntimeConfig.from_environment()
+        )
 
-        self.base_dir = Path("generated/packages")
+        self.voice = VoiceGenerator(
+            runtime_config=config
+        )
+
+        self.base_dir = (
+            Path(config.generated_dir)
+            / "packages"
+        )
+
         self.base_dir.mkdir(
             parents=True,
             exist_ok=True,
