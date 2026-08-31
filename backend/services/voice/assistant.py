@@ -23,6 +23,9 @@ from backend.services.voice.transcriber import (
 from backend.services.voice.wake_phrase import (
     WakePhraseParser,
 )
+from backend.services.voice.confirmation import (
+    VoiceConfirmationManager,
+)
 from backend.services.voice.response_formatter import VoiceResponseFormatter
 from backend.services.voice.response_speaker import VoiceResponseSpeaker
 
@@ -75,6 +78,7 @@ class VoiceAssistant:
         audio_capture: Any | None = None,
         response_formatter: Any | None = None,
         response_speaker: Any | None = None,
+        confirmation_manager: Any | None = None,
     ) -> None:
         self.commander = (
             commander
@@ -128,24 +132,253 @@ class VoiceAssistant:
             else VoiceResponseSpeaker()
         )
 
+        self.confirmation_manager = (
+            confirmation_manager
+            if confirmation_manager is not None
+            else VoiceConfirmationManager()
+        )
 
-    async def respond_once(
+
+
+
+    async def listen_for_confirmation(
         self,
         audio_path: str | Path,
         *,
-        duration_seconds: float = 5.0,
-        confirmed: bool = False,
+        duration_seconds: float = 4.0,
         on_ready=None,
+    ) -> VoiceAssistantResult:
+        """Capture and resolve one pending confirmation utterance."""
+
+        # Do not open the microphone unless a valid,
+        # unexpired confirmation is actually pending.
+        if not self.confirmation_manager.has_pending:
+            return VoiceAssistantResult(
+                status="confirmation_not_pending",
+                transcript="",
+                command_text="",
+                reason="no_pending_confirmation",
+            )
+
+        try:
+            capture_result = self.audio_capture.record(
+                audio_path,
+                duration_seconds=duration_seconds,
+                on_ready=on_ready,
+            )
+        except Exception as exc:
+            self.confirmation_manager.clear()
+
+            return VoiceAssistantResult(
+                status="capture_failed",
+                transcript="",
+                command_text="",
+                reason=(
+                    "confirmation_audio_capture_exception:"
+                    f"{type(exc).__name__}"
+                ),
+            )
+
+        if not isinstance(
+            capture_result,
+            dict,
+        ):
+            self.confirmation_manager.clear()
+
+            return VoiceAssistantResult(
+                status="capture_failed",
+                transcript="",
+                command_text="",
+                reason=(
+                    "invalid_confirmation_audio_capture_result"
+                ),
+            )
+
+        if (
+            capture_result.get("status")
+            != "success"
+        ):
+            self.confirmation_manager.clear()
+
+            return VoiceAssistantResult(
+                status="capture_failed",
+                transcript="",
+                command_text="",
+                reason=str(
+                    capture_result.get(
+                        "reason",
+                        "confirmation_audio_capture_not_successful",
+                    )
+                ),
+            )
+
+        try:
+            transcription = self.transcriber.transcribe(
+                audio_path
+            )
+        except Exception as exc:
+            self.confirmation_manager.clear()
+
+            return VoiceAssistantResult(
+                status="no_speech",
+                transcript="",
+                command_text="",
+                reason=(
+                    "confirmation_transcription_exception:"
+                    f"{type(exc).__name__}"
+                ),
+            )
+
+        if not isinstance(
+            transcription,
+            dict,
+        ):
+            self.confirmation_manager.clear()
+
+            return VoiceAssistantResult(
+                status="no_speech",
+                transcript="",
+                command_text="",
+                reason=(
+                    "invalid_confirmation_transcription_result"
+                ),
+            )
+
+        transcript = str(
+            transcription.get(
+                "text",
+                "",
+            )
+            or ""
+        ).strip()
+
+        if (
+            transcription.get("status")
+            != "success"
+            or not transcript
+        ):
+            self.confirmation_manager.clear()
+
+            return VoiceAssistantResult(
+                status="no_speech",
+                transcript=transcript,
+                command_text="",
+                reason=(
+                    "confirmation_transcription_not_successful"
+                ),
+            )
+
+        # Deliberately no wake-phrase parsing here.
+        # The assistant already requested confirmation,
+        # and the confirmation manager accepts only its
+        # narrow confirmation/cancellation vocabulary.
+        return await self.resolve_confirmation(
+            transcript
+        )
+
+    async def resolve_confirmation(
+        self,
+        transcript: str | None,
+    ) -> VoiceAssistantResult:
+        """Resolve and execute one pending voice confirmation."""
+
+        decision = self.confirmation_manager.resolve(
+            transcript
+        )
+
+        normalized_transcript = str(
+            transcript
+            or ""
+        ).strip()
+
+        if decision.status == "no_pending":
+            return VoiceAssistantResult(
+                status="confirmation_not_pending",
+                transcript=normalized_transcript,
+                command_text="",
+                reason=decision.reason,
+            )
+
+        if decision.status == "expired":
+            return VoiceAssistantResult(
+                status="confirmation_expired",
+                transcript=normalized_transcript,
+                command_text="",
+                reason=decision.reason,
+            )
+
+        if decision.status == "cancelled":
+            return VoiceAssistantResult(
+                status="confirmation_cancelled",
+                transcript=normalized_transcript,
+                command_text="",
+                reason=decision.reason,
+            )
+
+        if decision.status == "blocked":
+            return VoiceAssistantResult(
+                status="blocked",
+                transcript=normalized_transcript,
+                command_text="",
+                reason=decision.reason,
+            )
+
+        if decision.status != "confirmed":
+            return VoiceAssistantResult(
+                status="confirmation_rejected",
+                transcript=normalized_transcript,
+                command_text="",
+                reason=(
+                    decision.reason
+                    or "confirmation_not_understood"
+                ),
+            )
+
+        command = decision.command
+
+        if command is None:
+            return VoiceAssistantResult(
+                status="execution_failed",
+                transcript=normalized_transcript,
+                command_text="",
+                reason="confirmed_command_missing",
+            )
+
+        execution = await self.executor.execute(
+            command,
+            confirmed=True,
+        )
+
+        if execution.status != "completed":
+            return VoiceAssistantResult(
+                status="execution_failed",
+                transcript=normalized_transcript,
+                command_text=command.transcript,
+                agent=command.agent,
+                task=command.task,
+                requires_confirmation=True,
+                execution=execution,
+                reason=execution.reason,
+            )
+
+        return VoiceAssistantResult(
+            status="completed",
+            transcript=normalized_transcript,
+            command_text=command.transcript,
+            agent=command.agent,
+            task=command.task,
+            requires_confirmation=True,
+            execution=execution,
+        )
+
+
+    async def _respond_to_result(
+        self,
+        assistant_result: VoiceAssistantResult,
+        *,
         response_filename: str = "jarvis_response",
     ) -> VoiceAssistantResponse:
-        """Listen, execute, format, and attempt a spoken response."""
-
-        assistant_result = await self.listen_once(
-            audio_path,
-            duration_seconds=duration_seconds,
-            confirmed=confirmed,
-            on_ready=on_ready,
-        )
+        """Format and attempt speech without changing command status."""
 
         try:
             response_text = self.response_formatter.format(
@@ -218,12 +451,10 @@ class VoiceAssistant:
                 response_text=response_text,
                 speech_status="failed",
                 speech=speech,
-                speech_reason=(
-                    str(
-                        speech.get(
-                            "reason",
-                            "speech_not_successful",
-                        )
+                speech_reason=str(
+                    speech.get(
+                        "reason",
+                        "speech_not_successful",
                     )
                 ),
             )
@@ -233,6 +464,109 @@ class VoiceAssistant:
             response_text=response_text,
             speech_status=speech_status,
             speech=speech,
+        )
+
+    async def respond_once(
+        self,
+        audio_path: str | Path,
+        *,
+        duration_seconds: float = 5.0,
+        confirmed: bool = False,
+        on_ready=None,
+        response_filename: str = "jarvis_response",
+    ) -> VoiceAssistantResponse:
+        """Listen, execute, format, and attempt a spoken response."""
+
+        assistant_result = await self.listen_once(
+            audio_path,
+            duration_seconds=duration_seconds,
+            confirmed=confirmed,
+            on_ready=on_ready,
+        )
+
+        return await self._respond_to_result(
+            assistant_result,
+            response_filename=response_filename,
+        )
+
+
+    async def interact_once(
+        self,
+        audio_path: str | Path,
+        *,
+        confirmation_audio_path: str | Path | None = None,
+        duration_seconds: float = 5.0,
+        confirmation_duration_seconds: float = 4.0,
+        on_ready=None,
+        on_confirmation_ready=None,
+        response_filename: str = "jarvis_response",
+        confirmation_response_filename: str = (
+            "jarvis_confirmation_response"
+        ),
+    ) -> VoiceAssistantResponse:
+        """Run one complete voice interaction, including confirmation."""
+
+        first_response = await self.respond_once(
+            audio_path,
+            duration_seconds=duration_seconds,
+            confirmed=False,
+            on_ready=on_ready,
+            response_filename=response_filename,
+        )
+
+        if (
+            first_response.assistant_result.status
+            != "confirmation_required"
+        ):
+            return first_response
+
+        if confirmation_audio_path is None:
+            self.confirmation_manager.clear()
+
+            missing_result = VoiceAssistantResult(
+                status="confirmation_cancelled",
+                transcript="",
+                command_text=(
+                    first_response
+                    .assistant_result
+                    .command_text
+                ),
+                agent=(
+                    first_response
+                    .assistant_result
+                    .agent
+                ),
+                task=(
+                    first_response
+                    .assistant_result
+                    .task
+                ),
+                requires_confirmation=True,
+                reason="confirmation_audio_path_required",
+            )
+
+            return await self._respond_to_result(
+                missing_result,
+                response_filename=(
+                    confirmation_response_filename
+                ),
+            )
+
+        confirmation_result = (
+            await self.listen_for_confirmation(
+                confirmation_audio_path,
+                duration_seconds=(
+                    confirmation_duration_seconds
+                ),
+                on_ready=on_confirmation_ready,
+            )
+        )
+
+        return await self._respond_to_result(
+            confirmation_result,
+            response_filename=(
+                confirmation_response_filename
+            ),
         )
 
     async def listen_once(
@@ -375,6 +709,25 @@ class VoiceAssistant:
         )
 
         if execution.status == "confirmation_required":
+            pending = self.confirmation_manager.request(
+                command
+            )
+
+            if pending.status != "pending":
+                return VoiceAssistantResult(
+                    status="execution_failed",
+                    transcript=transcript,
+                    command_text=command_text,
+                    agent=command.agent,
+                    task=command.task,
+                    requires_confirmation=True,
+                    execution=execution,
+                    reason=(
+                        pending.reason
+                        or "confirmation_state_failed"
+                    ),
+                )
+
             return VoiceAssistantResult(
                 status="confirmation_required",
                 transcript=transcript,

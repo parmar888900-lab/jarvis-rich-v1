@@ -1,5 +1,10 @@
 """Voice-assistant services for Jarvis."""
 
+from backend.services.voice.confirmation import (
+    VoiceConfirmationDecision,
+    VoiceConfirmationManager,
+)
+
 from backend.services.voice.assistant import (
     VoiceAssistant,
     VoiceAssistantResult,
@@ -36,6 +41,8 @@ __all__ = [
     "WakePhraseParser",
     "WhisperTranscriber",
     "VoiceAssistantResponse",
+    "VoiceConfirmationDecision",
+    "VoiceConfirmationManager",
 ]
 
 from backend.services.voice.audio_player import AudioPlayer
