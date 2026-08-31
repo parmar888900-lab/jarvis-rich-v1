@@ -1,4 +1,4 @@
-﻿"""YouTube agent handler."""
+"""YouTube agent handler."""
 
 import asyncio
 import hashlib
@@ -17,6 +17,9 @@ from backend.services.intelligence.production_selector import (
     ProductionTopicSelector,
 )
 from backend.services.intelligence.trend_engine import TrendEngine
+from backend.services.orchestration.goal_production_strategy_service import (
+    GoalProductionStrategyService,
+)
 from backend.services.providers.registry import build_trend_manager
 from backend.services.orchestration.idempotency import (
     OperationType,
@@ -65,6 +68,7 @@ class YoutubeAgentHandler(BaseAgentHandler):
         *,
         performance_collector=None,
         performance_evidence_service=None,
+        goal_strategy_service=None,
         session_factory=None,
     ):
         self.engine = TrendEngine()
@@ -82,6 +86,11 @@ class YoutubeAgentHandler(BaseAgentHandler):
         self.performance_evidence_service = (
             performance_evidence_service
             or YoutubePerformanceEvidenceService()
+        )
+
+        self.goal_strategy_service = (
+            goal_strategy_service
+            or GoalProductionStrategyService()
         )
 
         self.session_factory = (
@@ -243,6 +252,142 @@ class YoutubeAgentHandler(BaseAgentHandler):
                 },
             )
 
+    async def _goal_strategy(
+        self,
+    ) -> tuple[
+        dict,
+        dict,
+    ]:
+        """
+        Build production strategy from active goals.
+
+        Goals are an optimization signal, not a production
+        dependency. Goal persistence or evaluation failures
+        therefore fail neutral and cannot block topic selection.
+
+        Goal strategy does not control scheduler cadence.
+        """
+
+        try:
+            async with self.session_factory() as session:
+                strategy = (
+                    await self.goal_strategy_service.build(
+                        session
+                    )
+                )
+
+            if not isinstance(strategy, dict):
+                raise TypeError(
+                    "Goal strategy service returned "
+                    "a non-dictionary result."
+                )
+
+            status = str(
+                strategy.get(
+                    "status",
+                    "neutral",
+                )
+            )
+
+            return (
+                strategy,
+                {
+                    "status": "success",
+                    "strategy_status": status,
+                    "goal_guided": (
+                        status == "goal_guided"
+                    ),
+                    "active_goal_count": int(
+                        strategy.get(
+                            "active_goal_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "target_metric": (
+                        strategy.get(
+                            "target_metric"
+                        )
+                    ),
+                    "trajectory": (
+                        strategy.get(
+                            "trajectory"
+                        )
+                    ),
+                    "production_priority": float(
+                        strategy.get(
+                            "production_priority",
+                            50.0,
+                        )
+                        or 0.0
+                    ),
+                    "exploration_bias": float(
+                        strategy.get(
+                            "exploration_bias",
+                            0.5,
+                        )
+                        or 0.0
+                    ),
+                    "exploitation_bias": float(
+                        strategy.get(
+                            "exploitation_bias",
+                            0.5,
+                        )
+                        or 0.0
+                    ),
+                    "scheduler_interval_multiplier": float(
+                        strategy.get(
+                            "scheduler_interval_multiplier",
+                            1.0,
+                        )
+                        or 1.0
+                    ),
+                },
+            )
+
+        except Exception as exc:
+            logger.warning(
+                "Goal production strategy unavailable; "
+                "continuing with neutral goal evidence: %s",
+                exc,
+            )
+
+            neutral_strategy = {
+                "status": "neutral",
+                "active_goal_count": 0,
+                "primary_goal": None,
+                "target_metric": None,
+                "trajectory": None,
+                "urgency": 0.0,
+                "production_priority": 50.0,
+                "exploration_bias": 0.5,
+                "exploitation_bias": 0.5,
+                "scheduler_interval_multiplier": 1.0,
+                "rationale": (
+                    "Goal strategy unavailable; production "
+                    "continues with neutral goal influence."
+                ),
+            }
+
+            return (
+                neutral_strategy,
+                {
+                    "status": "unavailable",
+                    "strategy_status": "neutral",
+                    "goal_guided": False,
+                    "active_goal_count": 0,
+                    "target_metric": None,
+                    "trajectory": None,
+                    "production_priority": 50.0,
+                    "exploration_bias": 0.5,
+                    "exploitation_bias": 0.5,
+                    "scheduler_interval_multiplier": 1.0,
+                    "error_type": type(
+                        exc
+                    ).__name__,
+                },
+            )
+
     async def _analyze_trends(
         self,
         command_id: str,
@@ -272,9 +417,15 @@ class YoutubeAgentHandler(BaseAgentHandler):
             analytics,
         ) = await self._performance_evidence()
 
+        (
+            goal_strategy,
+            goal_strategy_status,
+        ) = await self._goal_strategy()
+
         best_trend = self.selector.select(
             ranked_trends,
             performance=performance,
+            goal_strategy=goal_strategy,
         )
 
         if best_trend is None:
@@ -292,6 +443,9 @@ class YoutubeAgentHandler(BaseAgentHandler):
                     ranked_trends
                 ),
                 "analytics": analytics,
+                "goal_strategy": (
+                    goal_strategy_status
+                ),
                 "status": (
                     "no_production_ready_topic"
                 ),
@@ -311,6 +465,9 @@ class YoutubeAgentHandler(BaseAgentHandler):
                 ranked_trends
             ),
             "analytics": analytics,
+            "goal_strategy": (
+                goal_strategy_status
+            ),
             "best_trend": best_trend,
             "status": "success",
         }

@@ -7,6 +7,9 @@ from typing import Any
 from backend.services.analytics.youtube_historical_intelligence import (
     YoutubeHistoricalIntelligence,
 )
+from backend.services.intelligence.goal_topic_intelligence import (
+    GoalTopicIntelligence,
+)
 from backend.services.intelligence.suitability import (
     TopicSuitabilityScorer,
 )
@@ -21,6 +24,10 @@ class ProductionTopicSelector:
     The selector rejects candidates that do not meet minimum research
     confidence or suitability requirements, then ranks the remaining
     candidates using a bounded composite production score.
+
+    Historical evidence and active production goals may apply bounded
+    ranking adjustments after the base score is calculated. Neither can
+    change production eligibility.
     """
 
     MIN_SUITABILITY = 40.0
@@ -36,22 +43,19 @@ class ProductionTopicSelector:
         self.historical_intelligence = (
             YoutubeHistoricalIntelligence()
         )
+        self.goal_intelligence = (
+            GoalTopicIntelligence()
+        )
 
     def select(
         self,
         trends: list[dict[str, Any]],
         *,
         performance: dict[str, Any] | None = None,
+        goal_strategy: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """
         Return the strongest production-ready trend.
-
-        Each candidate receives:
-            - viral score
-            - research confidence
-            - suitability score
-            - production score
-            - selection metadata
 
         Rejected candidates remain annotated so callers can explain why
         they were not selected.
@@ -66,6 +70,7 @@ class ProductionTopicSelector:
             self._evaluate(
                 trend,
                 performance=performance,
+                goal_strategy=goal_strategy,
             )
 
             selection = trend["production_selection"]
@@ -112,6 +117,7 @@ class ProductionTopicSelector:
         trends: list[dict[str, Any]],
         *,
         performance: dict[str, Any] | None = None,
+        goal_strategy: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """
         Evaluate and rank all candidates.
@@ -125,6 +131,7 @@ class ProductionTopicSelector:
             self._evaluate(
                 trend,
                 performance=performance,
+                goal_strategy=goal_strategy,
             )
             evaluated.append(trend)
 
@@ -146,6 +153,7 @@ class ProductionTopicSelector:
         trend: dict[str, Any],
         *,
         performance: dict[str, Any] | None = None,
+        goal_strategy: dict[str, Any] | None = None,
     ) -> None:
 
         suitability = self.suitability.score(
@@ -191,6 +199,9 @@ class ProductionTopicSelector:
                 "low_context_media"
             )
 
+        # Eligibility is decided before either intelligence modifier.
+        # Historical evidence and goals can rank candidates, but cannot
+        # authorize a candidate that failed production safety/quality gates.
         eligible = not rejection_reasons
 
         base_production_score = (
@@ -216,10 +227,26 @@ class ProductionTopicSelector:
             or 0.0
         )
 
+        goal_evidence = (
+            self.goal_intelligence.evaluate(
+                trend,
+                goal_strategy,
+            )
+        )
+
+        goal_adjustment = float(
+            goal_evidence.get(
+                "adjustment",
+                0.0,
+            )
+            or 0.0
+        )
+
         production_score = min(
             max(
                 base_production_score
-                + historical_adjustment,
+                + historical_adjustment
+                + goal_adjustment,
                 0.0,
             ),
             100.0,
@@ -248,6 +275,10 @@ class ProductionTopicSelector:
                 historical_adjustment,
                 2,
             ),
+            "goal_adjustment": round(
+                goal_adjustment,
+                2,
+            ),
             "production_score": round(
                 production_score,
                 2,
@@ -255,6 +286,7 @@ class ProductionTopicSelector:
             "historical_evidence": (
                 historical_evidence
             ),
+            "goal_evidence": goal_evidence,
             "rejection_reasons": (
                 rejection_reasons
             ),

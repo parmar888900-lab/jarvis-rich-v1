@@ -66,6 +66,33 @@ class FakeCollector:
         }
 
 
+class FakeGoalStrategyService:
+    """Neutral goal dependency for analytics-only tests."""
+
+    async def build(
+        self,
+        session,
+        *,
+        now=None,
+    ):
+        return {
+            "status": "neutral",
+            "active_goal_count": 0,
+            "primary_goal": None,
+            "target_metric": None,
+            "trajectory": None,
+            "urgency": 0.0,
+            "production_priority": 50.0,
+            "exploration_bias": 0.5,
+            "exploitation_bias": 0.5,
+            "scheduler_interval_multiplier": 1.0,
+            "rationale": (
+                "Analytics regression uses neutral "
+                "goal strategy."
+            ),
+        }
+
+
 class FakeEvidenceService:
     def __init__(
         self,
@@ -212,6 +239,7 @@ async def run_success_case():
         performance_evidence_service=(
             evidence_service
         ),
+        goal_strategy_service=FakeGoalStrategyService(),
         session_factory=session_factory,
     )
 
@@ -273,7 +301,7 @@ async def run_success_case():
 
     assert collector.calls == 1
     assert evidence_service.calls == 1
-    assert session_factory.open_count == 1
+    assert session_factory.open_count == 2
 
     print(
         "PASS: runtime analytics evidence "
@@ -311,6 +339,7 @@ async def run_not_ready_case():
                 evidence
             )
         ),
+        goal_strategy_service=FakeGoalStrategyService(),
         session_factory=FakeSessionFactory(),
     )
 
@@ -387,6 +416,7 @@ async def run_failure_case():
         performance_evidence_service=(
             evidence_service
         ),
+        goal_strategy_service=FakeGoalStrategyService(),
         session_factory=FakeSessionFactory(),
     )
 

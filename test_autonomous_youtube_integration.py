@@ -98,6 +98,7 @@ class FakeSelector:
         ranked_trends,
         *,
         performance=None,
+        goal_strategy=None,
     ):
         self.calls.append(
             ranked_trends
