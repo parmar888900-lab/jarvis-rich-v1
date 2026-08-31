@@ -208,6 +208,7 @@ class FakePublisher:
         tags,
         privacy_status,
         category_id,
+        operation_tag=None,
     ):
         call = {
             "video_path": str(

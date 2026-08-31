@@ -15,6 +15,12 @@ from backend.services.orchestration.idempotency import (
 from backend.services.orchestration.production_operation_service import (
     ProductionOperationService,
 )
+from backend.services.orchestration.production_operation_recovery import (
+    ProductionOperationRecoveryService,
+)
+from backend.services.orchestration.uncertain_side_effect import (
+    UncertainSideEffectError,
+)
 
 
 class IdempotentOperationExecutor:
@@ -25,12 +31,18 @@ class IdempotentOperationExecutor:
         session_factory: Any,
         *,
         operation_service: ProductionOperationService | None = None,
+        recovery_service: ProductionOperationRecoveryService | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.operation_service = (
             operation_service
             if operation_service is not None
             else ProductionOperationService()
+        )
+        self.recovery_service = (
+            recovery_service
+            if recovery_service is not None
+            else ProductionOperationRecoveryService()
         )
 
     @staticmethod
@@ -196,6 +208,10 @@ class IdempotentOperationExecutor:
             result = await operation()
 
         except asyncio.CancelledError:
+            # Cancellation does not prove that an external
+            # provider side effect stopped. For example,
+            # asyncio.to_thread() cannot forcibly terminate
+            # an already-running upload thread.
             async with self.session_factory() as session:
                 current = (
                     await self.operation_service.get_by_key(
@@ -211,10 +227,39 @@ class IdempotentOperationExecutor:
                     .IN_PROGRESS
                     .value
                 ):
-                    await self.operation_service.fail(
+                    await self.recovery_service.mark_reconciliation_required(
                         session,
                         current,
-                        error="operation_cancelled",
+                        reason=(
+                            "operation_cancelled_external_state_uncertain"
+                        ),
+                    )
+
+            raise
+
+        except UncertainSideEffectError as exc:
+            async with self.session_factory() as session:
+                current = (
+                    await self.operation_service.get_by_key(
+                        session,
+                        key,
+                    )
+                )
+
+                if (
+                    current is not None
+                    and current.status
+                    == ProductionOperationStatus
+                    .IN_PROGRESS
+                    .value
+                ):
+                    await self.recovery_service.mark_reconciliation_required(
+                        session,
+                        current,
+                        reason=(
+                            "external_side_effect_uncertain:"
+                            f"{exc}"
+                        ),
                     )
 
             raise

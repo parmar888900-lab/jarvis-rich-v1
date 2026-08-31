@@ -39,6 +39,7 @@ class FakePublisher:
         tags=None,
         privacy_status="private",
         category_id="22",
+        operation_tag=None,
     ):
         self.upload_calls.append(
             {

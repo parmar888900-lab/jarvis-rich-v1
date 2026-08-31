@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,10 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
+
+from backend.services.orchestration.uncertain_side_effect import (
+    UncertainSideEffectError,
+)
 
 
 YOUTUBE_SCOPES = [
@@ -28,6 +33,34 @@ class YoutubeAuthorizationRequired(
     YoutubePublisherError
 ):
     """Raised when no usable OAuth authorization exists."""
+
+
+class YoutubeUploadUncertainError(
+    UncertainSideEffectError
+):
+    """Raised when YouTube may have accepted an upload."""
+
+
+def build_youtube_operation_tag(
+    idempotency_key: str,
+) -> str:
+    """Build a deterministic provider-visible marker."""
+
+    clean_key = idempotency_key.strip()
+
+    if not clean_key:
+        raise ValueError(
+            "idempotency_key cannot be empty."
+        )
+
+    digest = hashlib.sha256(
+        clean_key.encode("utf-8")
+    ).hexdigest()
+
+    return (
+        "jarvis-op-"
+        f"{digest[:32]}"
+    )
 
 
 @dataclass(frozen=True)
@@ -249,6 +282,7 @@ class YoutubePublisher:
         tags: list[str] | None,
         privacy_status: str,
         category_id: str,
+        operation_tag: str | None = None,
     ) -> dict:
         path = self._validate_video_path(
             video_path
@@ -287,6 +321,20 @@ class YoutubePublisher:
             if tag.strip()
         ]
 
+        clean_operation_tag = (
+            operation_tag.strip()
+            if operation_tag is not None
+            else ""
+        )
+
+        if (
+            clean_operation_tag
+            and clean_operation_tag not in cleaned_tags
+        ):
+            cleaned_tags.append(
+                clean_operation_tag
+            )
+
         if cleaned_tags:
             snippet["tags"] = cleaned_tags
 
@@ -315,16 +363,31 @@ class YoutubePublisher:
             response = None
 
             while response is None:
-                _, response = request.next_chunk()
+                try:
+                    _, response = request.next_chunk()
+
+                except Exception as exc:
+                    # Once transfer execution has begun,
+                    # a client-side failure does not prove
+                    # whether YouTube accepted the upload.
+                    raise YoutubeUploadUncertainError(
+                        "YouTube upload outcome is uncertain: "
+                        f"{exc}"
+                    ) from exc
 
         video_id = str(
             response.get("id", "")
         ).strip()
 
         if not video_id:
-            raise YoutubePublisherError(
-                "YouTube upload completed without "
-                "returning a video ID."
+            # The provider returned from the resumable
+            # upload flow, so the external video may
+            # already exist even though its ID was not
+            # returned to Jarvis. Never classify this as
+            # a definitely failed upload.
+            raise YoutubeUploadUncertainError(
+                "YouTube upload returned without "
+                "a video ID; provider state is uncertain."
             )
 
         return {
@@ -333,6 +396,216 @@ class YoutubePublisher:
             "privacy_status": privacy_status,
             "title": cleaned_title,
         }
+
+    def find_uploaded_video_by_operation_tag(
+        self,
+        operation_tag: str,
+        *,
+        max_items: int = 200,
+    ) -> dict | None:
+        """Find a recent authorized-channel upload by marker.
+
+        Absence from this bounded scan is not proof
+        that the upload never occurred.
+        """
+
+        tag = operation_tag.strip()
+
+        if not tag:
+            raise ValueError(
+                "operation_tag cannot be empty."
+            )
+
+        if max_items <= 0:
+            raise ValueError(
+                "max_items must be positive."
+            )
+
+        client = self._build_client()
+
+        channel_response = (
+            client.channels()
+            .list(
+                part="id,contentDetails",
+                mine=True,
+            )
+            .execute()
+        )
+
+        channel_items = channel_response.get(
+            "items",
+            [],
+        )
+
+        if not channel_items:
+            raise YoutubePublisherError(
+                "Authorized channel was not returned "
+                "during reconciliation."
+            )
+
+        channel = channel_items[0]
+
+        channel_id = str(
+            channel.get(
+                "id",
+                "",
+            )
+        ).strip()
+
+        uploads_playlist_id = str(
+            channel.get(
+                "contentDetails",
+                {},
+            )
+            .get(
+                "relatedPlaylists",
+                {},
+            )
+            .get(
+                "uploads",
+                "",
+            )
+        ).strip()
+
+        if not channel_id:
+            raise YoutubePublisherError(
+                "Authorized channel ID is missing "
+                "during reconciliation."
+            )
+
+        if not uploads_playlist_id:
+            raise YoutubePublisherError(
+                "Authorized channel uploads playlist "
+                "is missing."
+            )
+
+        video_ids: list[str] = []
+
+        page_token = None
+
+        while len(video_ids) < max_items:
+
+            request_kwargs = {
+                "part": "contentDetails",
+                "playlistId": uploads_playlist_id,
+                "maxResults": min(
+                    50,
+                    max_items - len(video_ids),
+                ),
+            }
+
+            if page_token:
+                request_kwargs[
+                    "pageToken"
+                ] = page_token
+
+            response = (
+                client.playlistItems()
+                .list(
+                    **request_kwargs
+                )
+                .execute()
+            )
+
+            for item in response.get(
+                "items",
+                [],
+            ):
+                video_id = str(
+                    item.get(
+                        "contentDetails",
+                        {},
+                    ).get(
+                        "videoId",
+                        "",
+                    )
+                ).strip()
+
+                if video_id:
+                    video_ids.append(
+                        video_id
+                    )
+
+                if len(video_ids) >= max_items:
+                    break
+
+            page_token = response.get(
+                "nextPageToken"
+            )
+
+            if not page_token:
+                break
+
+        for offset in range(
+            0,
+            len(video_ids),
+            50,
+        ):
+
+            batch = video_ids[
+                offset:offset + 50
+            ]
+
+            if not batch:
+                continue
+
+            response = (
+                client.videos()
+                .list(
+                    part="snippet",
+                    id=",".join(batch),
+                    maxResults=len(batch),
+                )
+                .execute()
+            )
+
+            for item in response.get(
+                "items",
+                [],
+            ):
+
+                snippet = item.get(
+                    "snippet",
+                    {},
+                )
+
+                tags = [
+                    str(value).strip()
+                    for value in (
+                        snippet.get(
+                            "tags",
+                            [],
+                        )
+                        or []
+                    )
+                ]
+
+                if tag not in tags:
+                    continue
+
+                video_id = str(
+                    item.get(
+                        "id",
+                        "",
+                    )
+                ).strip()
+
+                if not video_id:
+                    continue
+
+                return {
+                    "channel_id": channel_id,
+                    "video_id": video_id,
+                    "title": str(
+                        snippet.get(
+                            "title",
+                            "",
+                        )
+                    ).strip(),
+                    "operation_tag": tag,
+                }
+
+        return None
 
     async def upload_video(
         self,
@@ -343,6 +616,7 @@ class YoutubePublisher:
         tags: list[str] | None = None,
         privacy_status: str = "private",
         category_id: str = "22",
+        operation_tag: str | None = None,
     ) -> dict:
         """Upload without blocking the async event loop."""
 
@@ -354,4 +628,5 @@ class YoutubePublisher:
             tags=tags,
             privacy_status=privacy_status,
             category_id=category_id,
+            operation_tag=operation_tag,
         )

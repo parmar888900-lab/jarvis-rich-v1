@@ -13,6 +13,7 @@ from backend.services.intelligence.trend_engine import TrendEngine
 from backend.services.providers.registry import build_trend_manager
 from backend.services.orchestration.idempotency import (
     OperationType,
+    build_idempotency_key,
 )
 from backend.services.orchestration.idempotent_operation_executor import (
     IdempotentOperationExecutor,
@@ -20,6 +21,7 @@ from backend.services.orchestration.idempotent_operation_executor import (
 from backend.services.pipelines import VideoPipeline
 from backend.services.providers.youtube_publisher import (
     YoutubePublisher,
+    build_youtube_operation_tag,
 )
 
 
@@ -315,6 +317,19 @@ class YoutubeAgentHandler(BaseAgentHandler):
             f"{video_hash}"
         )
 
+        idempotency_key = (
+            build_idempotency_key(
+                OperationType.UPLOAD_VIDEO,
+                resource_id,
+            )
+        )
+
+        operation_tag = (
+            build_youtube_operation_tag(
+                idempotency_key
+            )
+        )
+
         async def upload() -> dict:
             return await self.publisher.upload_video(
                 video_path=path,
@@ -325,6 +340,7 @@ class YoutubeAgentHandler(BaseAgentHandler):
                 category_id=str(
                     category_id
                 ),
+                operation_tag=operation_tag,
             )
 
         operation_result = (

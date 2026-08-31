@@ -15,6 +15,12 @@ from backend.services.orchestration.operation_reconciliation import (
 from backend.services.orchestration.production_operation_service import (
     ProductionOperationService,
 )
+from backend.services.providers.youtube_publisher import (
+    YoutubePublisher,
+)
+from backend.services.providers.youtube_upload_reconciler import (
+    YoutubeUploadReconciler,
+)
 
 
 class ProductionOperationReconciliationService:
@@ -24,6 +30,7 @@ class ProductionOperationReconciliationService:
         self,
         *,
         operation_service: ProductionOperationService | None = None,
+        youtube_reconciler: OperationReconciler | None = None,
     ) -> None:
         self.operation_service = (
             operation_service
@@ -31,11 +38,19 @@ class ProductionOperationReconciliationService:
             else ProductionOperationService()
         )
 
+        self.youtube_reconciler = (
+            youtube_reconciler
+            if youtube_reconciler is not None
+            else YoutubeUploadReconciler(
+                YoutubePublisher()
+            )
+        )
+
     async def reconcile(
         self,
         session: AsyncSession,
         record: ProductionOperationRecord,
-        reconciler: OperationReconciler,
+        reconciler: OperationReconciler | None = None,
     ) -> dict:
         """Reconcile one explicitly uncertain operation."""
 
@@ -50,10 +65,34 @@ class ProductionOperationReconciliationService:
                 "can be reconciled."
             )
 
-        reconciliation = await reconciler.reconcile(
+        selected_reconciler = reconciler
+
+        if selected_reconciler is None:
+            if (
+                record.operation_type
+                == "upload_video"
+                and record.resource_id.startswith(
+                    "youtube:"
+                )
+            ):
+                selected_reconciler = (
+                    self.youtube_reconciler
+                )
+
+            else:
+                raise ValueError(
+                    "No automatic reconciler is "
+                    "registered for operation "
+                    f"{record.operation_type!r} "
+                    f"resource {record.resource_id!r}."
+                )
+
+        reconciliation = (
+            await selected_reconciler.reconcile(
             operation_type=record.operation_type,
             resource_id=record.resource_id,
             idempotency_key=record.idempotency_key,
+            )
         )
 
         if (

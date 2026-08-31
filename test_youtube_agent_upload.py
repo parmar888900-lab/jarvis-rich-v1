@@ -33,6 +33,7 @@ class FakePublisher:
         tags=None,
         privacy_status="private",
         category_id="22",
+        operation_tag=None,
     ):
         self.upload_calls.append(
             {
@@ -42,6 +43,7 @@ class FakePublisher:
                 "tags": tags,
                 "privacy_status": privacy_status,
                 "category_id": category_id,
+                "operation_tag": operation_tag,
             }
         )
 
@@ -165,6 +167,21 @@ async def main():
         assert (
             upload["title"]
             == "Jarvis Test Video"
+        )
+
+        assert (
+            isinstance(
+                upload["operation_tag"],
+                str,
+            )
+        )
+
+        assert (
+            upload[
+                "operation_tag"
+            ].startswith(
+                "jarvis-op-"
+            )
         )
 
         assert len(
