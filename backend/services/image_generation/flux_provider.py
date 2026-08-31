@@ -9,23 +9,36 @@ import aiohttp
 
 from backend.services.image_generation.base_provider import BaseImageProvider
 from backend.services.image_generation.models import GeneratedImage
+from backend.services.runtime.runtime_config import RuntimeConfig
 
 
 class FluxProvider(BaseImageProvider):
 
-    def __init__(self):
-        self.comfyui_url = "http://127.0.0.1:8188"
+    def __init__(
+        self,
+        runtime_config: RuntimeConfig | None = None,
+    ):
+        config = (
+            runtime_config
+            if runtime_config is not None
+            else RuntimeConfig.from_environment()
+        )
+
+        self.comfyui_url = (
+            config.comfyui_url.rstrip("/")
+        )
 
         self.workflow_path = Path(
-            "configs/workflows/flux_api.json"
+            config.flux_workflow_path
         )
 
         self.comfyui_output_dir = Path(
-            r"C:\Users\hp\ComfyUI\output"
+            config.comfyui_output_dir
         )
 
-        self.jarvis_output_dir = Path(
-            "generated/images"
+        self.jarvis_output_dir = (
+            Path(config.generated_dir)
+            / "images"
         )
 
         self.jarvis_output_dir.mkdir(
