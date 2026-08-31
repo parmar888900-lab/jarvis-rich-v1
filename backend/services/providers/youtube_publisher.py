@@ -894,6 +894,245 @@ class YoutubePublisher:
 
         return None
 
+    def get_video_status(
+        self,
+        video_id: str,
+    ) -> dict:
+        """Return ownership and privacy state for one video."""
+
+        clean_video_id = str(
+            video_id
+        ).strip()
+
+        if not clean_video_id:
+            raise ValueError(
+                "video_id cannot be empty."
+            )
+
+        channel = self.get_authorized_channel()
+
+        client = self._build_client()
+
+        response = (
+            client.videos()
+            .list(
+                part="id,snippet,status",
+                id=clean_video_id,
+                maxResults=1,
+            )
+            .execute()
+        )
+
+        items = response.get(
+            "items",
+            [],
+        )
+
+        if not items:
+            return {
+                "status": "not_found",
+                "video_id": clean_video_id,
+                "authorized_channel_id": (
+                    channel["channel_id"]
+                ),
+            }
+
+        video = items[0]
+
+        snippet = video.get(
+            "snippet",
+            {},
+        )
+
+        status = video.get(
+            "status",
+            {},
+        )
+
+        channel_id = str(
+            snippet.get(
+                "channelId",
+                "",
+            )
+        ).strip()
+
+        privacy_status = str(
+            status.get(
+                "privacyStatus",
+                "",
+            )
+        ).strip().lower()
+
+        return {
+            "status": "found",
+            "video_id": str(
+                video.get(
+                    "id",
+                    clean_video_id,
+                )
+            ).strip(),
+            "channel_id": channel_id,
+            "authorized_channel_id": (
+                channel["channel_id"]
+            ),
+            "privacy_status": privacy_status,
+        }
+
+    def _set_video_privacy_sync(
+        self,
+        *,
+        video_id: str,
+        privacy_status: str,
+    ) -> dict:
+        """Change privacy for an owned YouTube video."""
+
+        clean_video_id = str(
+            video_id
+        ).strip()
+
+        if not clean_video_id:
+            raise ValueError(
+                "video_id cannot be empty."
+            )
+
+        privacy = str(
+            privacy_status
+        ).strip().lower()
+
+        if privacy not in {
+            "private",
+            "unlisted",
+            "public",
+        }:
+            raise ValueError(
+                "privacy_status must be private, "
+                "unlisted, or public."
+            )
+
+        channel = self.get_authorized_channel()
+
+        current = self.get_video_status(
+            clean_video_id
+        )
+
+        if current.get("status") != "found":
+            raise YoutubePublisherError(
+                "YouTube video was not found."
+            )
+
+        actual_channel_id = str(
+            current.get(
+                "channel_id",
+                "",
+            )
+        ).strip()
+
+        expected_channel_id = str(
+            channel.get(
+                "channel_id",
+                "",
+            )
+        ).strip()
+
+        if (
+            not actual_channel_id
+            or actual_channel_id
+            != expected_channel_id
+        ):
+            raise YoutubePublisherError(
+                "YouTube video does not belong to "
+                "the authorized channel."
+            )
+
+        current_privacy = str(
+            current.get(
+                "privacy_status",
+                "",
+            )
+        ).strip().lower()
+
+        if current_privacy == privacy:
+            return {
+                "status": "updated",
+                "video_id": clean_video_id,
+                "privacy_status": privacy,
+                "already_in_state": True,
+            }
+
+        client = self._build_client()
+
+        request = client.videos().update(
+            part="status",
+            body={
+                "id": clean_video_id,
+                "status": {
+                    "privacyStatus": privacy,
+                },
+            },
+        )
+
+        try:
+            response = request.execute()
+
+        except Exception as exc:
+            # Once videos.update() is executed, a transport
+            # failure cannot prove whether YouTube applied
+            # the privacy transition.
+            raise YoutubeUploadUncertainError(
+                "YouTube privacy update outcome is uncertain: "
+                f"{exc}"
+            ) from exc
+
+        returned_id = str(
+            response.get(
+                "id",
+                "",
+            )
+        ).strip()
+
+        returned_status = response.get(
+            "status",
+            {},
+        )
+
+        returned_privacy = str(
+            returned_status.get(
+                "privacyStatus",
+                "",
+            )
+        ).strip().lower()
+
+        if (
+            returned_id != clean_video_id
+            or returned_privacy != privacy
+        ):
+            raise YoutubeUploadUncertainError(
+                "YouTube privacy update returned an "
+                "ambiguous provider response."
+            )
+
+        return {
+            "status": "updated",
+            "video_id": clean_video_id,
+            "privacy_status": privacy,
+            "already_in_state": False,
+        }
+
+    async def set_video_privacy(
+        self,
+        *,
+        video_id: str,
+        privacy_status: str,
+    ) -> dict:
+        """Change video privacy without blocking the event loop."""
+
+        return await asyncio.to_thread(
+            self._set_video_privacy_sync,
+            video_id=video_id,
+            privacy_status=privacy_status,
+        )
+
+
     async def upload_video(
         self,
         *,

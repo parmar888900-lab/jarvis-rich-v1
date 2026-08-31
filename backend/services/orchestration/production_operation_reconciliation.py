@@ -21,6 +21,9 @@ from backend.services.providers.youtube_publisher import (
 from backend.services.providers.youtube_upload_reconciler import (
     YoutubeUploadReconciler,
 )
+from backend.services.providers.youtube_publish_reconciler import (
+    YoutubePublishReconciler,
+)
 
 
 class ProductionOperationReconciliationService:
@@ -31,6 +34,7 @@ class ProductionOperationReconciliationService:
         *,
         operation_service: ProductionOperationService | None = None,
         youtube_reconciler: OperationReconciler | None = None,
+        youtube_publish_reconciler: OperationReconciler | None = None,
     ) -> None:
         self.operation_service = (
             operation_service
@@ -42,6 +46,14 @@ class ProductionOperationReconciliationService:
             youtube_reconciler
             if youtube_reconciler is not None
             else YoutubeUploadReconciler(
+                YoutubePublisher()
+            )
+        )
+
+        self.youtube_publish_reconciler = (
+            youtube_publish_reconciler
+            if youtube_publish_reconciler is not None
+            else YoutubePublishReconciler(
                 YoutubePublisher()
             )
         )
@@ -77,6 +89,17 @@ class ProductionOperationReconciliationService:
             ):
                 selected_reconciler = (
                     self.youtube_reconciler
+                )
+
+            elif (
+                record.operation_type
+                == "publish_video"
+                and record.resource_id.startswith(
+                    "youtube-publish:"
+                )
+            ):
+                selected_reconciler = (
+                    self.youtube_publish_reconciler
                 )
 
             else:

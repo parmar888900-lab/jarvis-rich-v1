@@ -559,7 +559,6 @@ class YoutubeAgentHandler(BaseAgentHandler):
         tags: list[str] | None = None,
         privacy_status: str = "private",
         category_id: str = "22",
-        allow_public: bool = False,
     ) -> dict:
         """Upload a video through the idempotent boundary."""
 
@@ -599,14 +598,11 @@ class YoutubeAgentHandler(BaseAgentHandler):
 
         # Public publishing stays fail-closed until
         # the autonomous release policy is added.
-        if (
-            privacy == "public"
-            and not allow_public
-        ):
+        if privacy == "public":
             raise ValueError(
-                "Public YouTube publishing is locked. "
-                "Set allow_public=true only through an "
-                "authorized release policy."
+                "Direct public YouTube upload is forbidden. "
+                "Upload privately, then use the protected "
+                "release operation."
             )
 
         clean_tags = []

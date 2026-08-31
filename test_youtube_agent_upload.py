@@ -245,8 +245,8 @@ async def main():
 
         except ValueError as exc:
             assert (
-                "Public YouTube publishing "
-                "is locked"
+                "Direct public YouTube upload "
+                "is forbidden"
                 in str(exc)
             )
 
