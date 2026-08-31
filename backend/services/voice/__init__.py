@@ -3,6 +3,7 @@
 from backend.services.voice.assistant import (
     VoiceAssistant,
     VoiceAssistantResult,
+    VoiceAssistantResponse,
 )
 from backend.services.voice.audio_capture import (
     AudioCapture,
@@ -34,6 +35,7 @@ __all__ = [
     "WakePhraseMatch",
     "WakePhraseParser",
     "WhisperTranscriber",
+    "VoiceAssistantResponse",
 ]
 
 from backend.services.voice.audio_player import AudioPlayer

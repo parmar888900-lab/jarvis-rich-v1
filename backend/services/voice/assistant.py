@@ -23,6 +23,8 @@ from backend.services.voice.transcriber import (
 from backend.services.voice.wake_phrase import (
     WakePhraseParser,
 )
+from backend.services.voice.response_formatter import VoiceResponseFormatter
+from backend.services.voice.response_speaker import VoiceResponseSpeaker
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,26 @@ class VoiceAssistantResult:
     reason: str | None = None
 
 
+
+
+
+@dataclass(frozen=True)
+class VoiceAssistantResponse:
+    """Combined command and user-response result."""
+
+    assistant_result: VoiceAssistantResult
+    response_text: str
+    speech_status: str
+    speech: dict | None = None
+    speech_reason: str | None = None
+
+    @property
+    def status(self) -> str:
+        """Preserve the authoritative command status."""
+
+        return self.assistant_result.status
+
+
 class VoiceAssistant:
     """Coordinate STT, wake detection, routing, and execution."""
 
@@ -51,6 +73,8 @@ class VoiceAssistant:
         router: Any | None = None,
         executor: Any | None = None,
         audio_capture: Any | None = None,
+        response_formatter: Any | None = None,
+        response_speaker: Any | None = None,
     ) -> None:
         self.commander = (
             commander
@@ -90,6 +114,125 @@ class VoiceAssistant:
             audio_capture
             if audio_capture is not None
             else AudioCapture()
+        )
+
+        self.response_formatter = (
+            response_formatter
+            if response_formatter is not None
+            else VoiceResponseFormatter()
+        )
+
+        self.response_speaker = (
+            response_speaker
+            if response_speaker is not None
+            else VoiceResponseSpeaker()
+        )
+
+
+    async def respond_once(
+        self,
+        audio_path: str | Path,
+        *,
+        duration_seconds: float = 5.0,
+        confirmed: bool = False,
+        on_ready=None,
+        response_filename: str = "jarvis_response",
+    ) -> VoiceAssistantResponse:
+        """Listen, execute, format, and attempt a spoken response."""
+
+        assistant_result = await self.listen_once(
+            audio_path,
+            duration_seconds=duration_seconds,
+            confirmed=confirmed,
+            on_ready=on_ready,
+        )
+
+        try:
+            response_text = self.response_formatter.format(
+                assistant_result
+            )
+        except Exception as exc:
+            return VoiceAssistantResponse(
+                assistant_result=assistant_result,
+                response_text="",
+                speech_status="not_attempted",
+                speech_reason=(
+                    "response_format_exception:"
+                    f"{type(exc).__name__}"
+                ),
+            )
+
+        response_text = str(
+            response_text
+            or ""
+        ).strip()
+
+        if not response_text:
+            return VoiceAssistantResponse(
+                assistant_result=assistant_result,
+                response_text="",
+                speech_status="silent",
+                speech_reason="empty_response",
+            )
+
+        try:
+            speech = await self.response_speaker.speak(
+                response_text,
+                filename=response_filename,
+            )
+        except Exception as exc:
+            return VoiceAssistantResponse(
+                assistant_result=assistant_result,
+                response_text=response_text,
+                speech_status="failed",
+                speech_reason=(
+                    "speech_exception:"
+                    f"{type(exc).__name__}"
+                ),
+            )
+
+        if not isinstance(
+            speech,
+            dict,
+        ):
+            return VoiceAssistantResponse(
+                assistant_result=assistant_result,
+                response_text=response_text,
+                speech_status="failed",
+                speech_reason="invalid_speech_result",
+            )
+
+        speech_status = str(
+            speech.get(
+                "status",
+                "failed",
+            )
+        )
+
+        if speech_status not in {
+            "success",
+            "silent",
+        }:
+            return VoiceAssistantResponse(
+                assistant_result=assistant_result,
+                response_text=response_text,
+                speech_status="failed",
+                speech=speech,
+                speech_reason=(
+                    str(
+                        speech.get(
+                            "reason",
+                            "speech_not_successful",
+                        )
+                    )
+                ),
+            )
+
+        return VoiceAssistantResponse(
+            assistant_result=assistant_result,
+            response_text=response_text,
+            speech_status=speech_status,
+            speech=speech,
         )
 
     async def listen_once(
