@@ -21,6 +21,9 @@ from backend.services.orchestration.operation_reconciliation import (
 from backend.services.orchestration.production_operation_reconciliation import (
     ProductionOperationReconciliationService,
 )
+from backend.services.orchestration.production_operation_recovery import (
+    ProductionOperationRecoveryService,
+)
 from backend.services.orchestration.production_operation_service import (
     ProductionOperationService,
 )
@@ -104,6 +107,10 @@ async def main():
         )
     )
 
+    recovery_service = (
+        ProductionOperationRecoveryService()
+    )
+
     try:
         async with engine.begin() as conn:
             await conn.run_sync(
@@ -118,6 +125,19 @@ async def main():
                 operation_service,
                 session,
                 "confirmed-video",
+            )
+
+            record = (
+                await recovery_service
+                .mark_reconciliation_required(
+                    session,
+                    record,
+                )
+            )
+
+            assert (
+                record.status
+                == "reconciliation_required"
             )
 
             reconciler = FakeReconciler(
@@ -163,6 +183,19 @@ async def main():
                 "missing-video",
             )
 
+            record = (
+                await recovery_service
+                .mark_reconciliation_required(
+                    session,
+                    record,
+                )
+            )
+
+            assert (
+                record.status
+                == "reconciliation_required"
+            )
+
             reconciler = FakeReconciler(
                 ReconciliationResult(
                     status=(
@@ -184,6 +217,7 @@ async def main():
             assert result["status"] == "failed"
             assert result["safe_to_retry"] is True
             assert record.status == "failed"
+            assert record.retry_authorized is True
 
             assert (
                 record.error
@@ -206,6 +240,19 @@ async def main():
                 operation_service,
                 session,
                 "unknown-video",
+            )
+
+            record = (
+                await recovery_service
+                .mark_reconciliation_required(
+                    session,
+                    record,
+                )
+            )
+
+            assert (
+                record.status
+                == "reconciliation_required"
             )
 
             reconciler = FakeReconciler(
@@ -232,6 +279,7 @@ async def main():
             assert result["status"] == "failed"
             assert result["safe_to_retry"] is False
             assert record.status == "failed"
+            assert record.retry_authorized is False
 
             assert record.error.startswith(
                 "reconciliation_unknown:"

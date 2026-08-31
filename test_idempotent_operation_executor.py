@@ -15,6 +15,13 @@ from backend.models.production_operation import (
 )
 from backend.services.orchestration.idempotency import (
     OperationType,
+    build_idempotency_key,
+)
+from backend.services.orchestration.production_operation_recovery import (
+    ProductionOperationRecoveryService,
+)
+from backend.services.orchestration.production_operation_service import (
+    ProductionOperationService,
 )
 from backend.services.orchestration.idempotent_operation_executor import (
     IdempotentOperationExecutor,
@@ -144,6 +151,94 @@ async def main():
         print(
             "PASS: failed operation is "
             "not blindly re-executed."
+        )
+
+        # --------------------------------------------------
+        # An unresolved external operation must stay blocked
+        # until reconciliation supplies provider evidence.
+        # --------------------------------------------------
+
+        operation_service = (
+            ProductionOperationService()
+        )
+
+        recovery_service = (
+            ProductionOperationRecoveryService()
+        )
+
+        uncertain_resource = (
+            "video-reconciliation-required"
+        )
+
+        uncertain_key = build_idempotency_key(
+            OperationType.UPLOAD_VIDEO,
+            uncertain_resource,
+        )
+
+        async with session_factory() as session:
+            uncertain_record, created = (
+                await operation_service.claim(
+                    session,
+                    idempotency_key=uncertain_key,
+                    operation_type=(
+                        OperationType
+                        .UPLOAD_VIDEO
+                        .value
+                    ),
+                    resource_id=uncertain_resource,
+                )
+            )
+
+            assert created is True
+
+            uncertain_record = (
+                await recovery_service
+                .mark_reconciliation_required(
+                    session,
+                    uncertain_record,
+                )
+            )
+
+            assert (
+                uncertain_record.status
+                == "reconciliation_required"
+            )
+
+        uncertain_calls = 0
+
+        async def uncertain_operation():
+            nonlocal uncertain_calls
+            uncertain_calls += 1
+
+            return {
+                "should_not": "execute",
+            }
+
+        uncertain_again = (
+            await executor.execute(
+                operation_type=(
+                    OperationType.UPLOAD_VIDEO
+                ),
+                resource_id=uncertain_resource,
+                operation=uncertain_operation,
+            )
+        )
+
+        assert (
+            uncertain_again["status"]
+            == "reconciliation_required"
+        )
+
+        assert (
+            uncertain_again["executed"]
+            is False
+        )
+
+        assert uncertain_calls == 0
+
+        print(
+            "PASS: reconciliation-required "
+            "operation cannot execute again."
         )
 
         cancellation_started = (

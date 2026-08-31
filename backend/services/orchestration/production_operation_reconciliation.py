@@ -37,16 +37,16 @@ class ProductionOperationReconciliationService:
         record: ProductionOperationRecord,
         reconciler: OperationReconciler,
     ) -> dict:
-        """Reconcile one uncertain in-progress operation."""
+        """Reconcile one explicitly uncertain operation."""
 
         if (
             record.status
             != ProductionOperationStatus
-            .IN_PROGRESS
+            .RECONCILIATION_REQUIRED
             .value
         ):
             raise ValueError(
-                "Only in-progress operations "
+                "Only reconciliation-required operations "
                 "can be reconciled."
             )
 
@@ -62,7 +62,7 @@ class ProductionOperationReconciliationService:
             .CONFIRMED_COMPLETED
         ):
             completed = (
-                await self.operation_service.complete(
+                await self.operation_service.complete_reconciled(
                     session,
                     record,
                     result={
@@ -92,18 +92,15 @@ class ProductionOperationReconciliationService:
             .CONFIRMED_NOT_FOUND
         ):
             failed = (
-                await self.operation_service.fail(
+                await self.operation_service.fail_reconciled(
                     session,
                     record,
                     error=(
                         "reconciliation_confirmed_not_found"
                     ),
+                    retry_authorized=True,
                 )
             )
-
-            failed.retry_authorized = True
-            await session.commit()
-            await session.refresh(failed)
 
             return {
                 "status": "failed",
@@ -112,7 +109,7 @@ class ProductionOperationReconciliationService:
             }
 
         failed = (
-            await self.operation_service.fail(
+            await self.operation_service.fail_reconciled(
                 session,
                 record,
                 error=(
@@ -122,12 +119,9 @@ class ProductionOperationReconciliationService:
                         or "provider_state_uncertain"
                     )
                 ),
+                retry_authorized=False,
             )
         )
-
-        failed.retry_authorized = False
-        await session.commit()
-        await session.refresh(failed)
 
         return {
             "status": "failed",

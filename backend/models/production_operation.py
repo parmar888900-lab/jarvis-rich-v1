@@ -20,6 +20,7 @@ class ProductionOperationStatus(str, Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+    RECONCILIATION_REQUIRED = "reconciliation_required"
     FAILED = "failed"
 
 

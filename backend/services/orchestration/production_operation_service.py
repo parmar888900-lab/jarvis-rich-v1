@@ -223,3 +223,83 @@ class ProductionOperationService:
 
         return record
 
+
+    async def complete_reconciled(
+        self,
+        session: AsyncSession,
+        record: ProductionOperationRecord,
+        *,
+        result: dict | None = None,
+    ) -> ProductionOperationRecord:
+        """Complete an operation using provider reconciliation evidence."""
+
+        if (
+            record.status
+            != ProductionOperationStatus
+            .RECONCILIATION_REQUIRED
+            .value
+        ):
+            raise ValueError(
+                "Only a reconciliation-required operation "
+                "can be reconciliation-completed."
+            )
+
+        record.status = (
+            ProductionOperationStatus
+            .COMPLETED
+            .value
+        )
+
+        record.result = (
+            json.dumps(result)
+            if result is not None
+            else None
+        )
+
+        record.error = None
+        record.retry_authorized = False
+        record.completed_at = self._utc_now()
+
+        await session.commit()
+        await session.refresh(record)
+
+        return record
+
+    async def fail_reconciled(
+        self,
+        session: AsyncSession,
+        record: ProductionOperationRecord,
+        *,
+        error: str,
+        retry_authorized: bool,
+    ) -> ProductionOperationRecord:
+        """Terminally fail a reconciled uncertain operation."""
+
+        if (
+            record.status
+            != ProductionOperationStatus
+            .RECONCILIATION_REQUIRED
+            .value
+        ):
+            raise ValueError(
+                "Only a reconciliation-required operation "
+                "can be reconciliation-failed."
+            )
+
+        record.status = (
+            ProductionOperationStatus
+            .FAILED
+            .value
+        )
+
+        record.error = error
+        record.retry_authorized = bool(
+            retry_authorized
+        )
+        record.completed_at = self._utc_now()
+
+        await session.commit()
+        await session.refresh(record)
+
+        return record
+

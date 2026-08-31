@@ -90,14 +90,16 @@ class ProductionOperationRecoveryService:
 
         record.status = (
             ProductionOperationStatus
-            .FAILED
+            .RECONCILIATION_REQUIRED
             .value
         )
 
         record.error = reason
-        record.completed_at = (
-            self._utc_now()
-        )
+        record.retry_authorized = False
+
+        # Reconciliation-required is an unresolved
+        # external state, not a terminal completion.
+        record.completed_at = None
 
         await session.commit()
         await session.refresh(record)

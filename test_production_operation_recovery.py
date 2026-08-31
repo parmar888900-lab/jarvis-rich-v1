@@ -133,7 +133,15 @@ async def main():
                 )
             )
 
-            assert recovered.status == "failed"
+            assert (
+                recovered.status
+                == "reconciliation_required"
+            )
+
+            assert (
+                recovered.retry_authorized
+                is False
+            )
 
             assert (
                 recovered.error

@@ -112,6 +112,19 @@ class IdempotentOperationExecutor:
                 if (
                     record.status
                     == ProductionOperationStatus
+                    .RECONCILIATION_REQUIRED
+                    .value
+                ):
+                    return {
+                        "status": "reconciliation_required",
+                        "executed": False,
+                        "idempotency_key": key,
+                        "error": record.error,
+                    }
+
+                if (
+                    record.status
+                    == ProductionOperationStatus
                     .FAILED
                     .value
                 ):
