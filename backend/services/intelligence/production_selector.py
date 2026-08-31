@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from backend.services.analytics.youtube_historical_intelligence import (
+    YoutubeHistoricalIntelligence,
+)
 from backend.services.intelligence.suitability import (
     TopicSuitabilityScorer,
 )
@@ -30,10 +33,15 @@ class ProductionTopicSelector:
 
     def __init__(self) -> None:
         self.suitability = TopicSuitabilityScorer()
+        self.historical_intelligence = (
+            YoutubeHistoricalIntelligence()
+        )
 
     def select(
         self,
         trends: list[dict[str, Any]],
+        *,
+        performance: dict[str, Any] | None = None,
     ) -> dict[str, Any] | None:
         """
         Return the strongest production-ready trend.
@@ -55,7 +63,10 @@ class ProductionTopicSelector:
         eligible: list[dict[str, Any]] = []
 
         for trend in trends:
-            self._evaluate(trend)
+            self._evaluate(
+                trend,
+                performance=performance,
+            )
 
             selection = trend["production_selection"]
 
@@ -99,6 +110,8 @@ class ProductionTopicSelector:
     def rank(
         self,
         trends: list[dict[str, Any]],
+        *,
+        performance: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """
         Evaluate and rank all candidates.
@@ -109,7 +122,10 @@ class ProductionTopicSelector:
         evaluated: list[dict[str, Any]] = []
 
         for trend in trends:
-            self._evaluate(trend)
+            self._evaluate(
+                trend,
+                performance=performance,
+            )
             evaluated.append(trend)
 
         return sorted(
@@ -128,6 +144,8 @@ class ProductionTopicSelector:
     def _evaluate(
         self,
         trend: dict[str, Any],
+        *,
+        performance: dict[str, Any] | None = None,
     ) -> None:
 
         suitability = self.suitability.score(
@@ -175,12 +193,36 @@ class ProductionTopicSelector:
 
         eligible = not rejection_reasons
 
-        production_score = (
+        base_production_score = (
             viral_score * self.VIRAL_WEIGHT
             + suitability_score
             * self.SUITABILITY_WEIGHT
             + research_score
             * self.RESEARCH_WEIGHT
+        )
+
+        historical_evidence = (
+            self.historical_intelligence.evaluate(
+                trend,
+                performance,
+            )
+        )
+
+        historical_adjustment = float(
+            historical_evidence.get(
+                "adjustment",
+                0.0,
+            )
+            or 0.0
+        )
+
+        production_score = min(
+            max(
+                base_production_score
+                + historical_adjustment,
+                0.0,
+            ),
+            100.0,
         )
 
         trend["production_selection"] = {
@@ -198,9 +240,20 @@ class ProductionTopicSelector:
                 suitability_score,
                 2,
             ),
+            "base_production_score": round(
+                base_production_score,
+                2,
+            ),
+            "historical_adjustment": round(
+                historical_adjustment,
+                2,
+            ),
             "production_score": round(
                 production_score,
                 2,
+            ),
+            "historical_evidence": (
+                historical_evidence
             ),
             "rejection_reasons": (
                 rejection_reasons
