@@ -255,6 +255,155 @@ class YoutubePublisher:
             cache_discovery=False,
         )
 
+    def get_video_statistics(
+        self,
+        video_ids: list[str],
+    ) -> list[dict]:
+        """Return normalized statistics for YouTube videos."""
+
+        cleaned_ids: list[str] = []
+
+        for video_id in video_ids:
+            clean_id = str(
+                video_id
+            ).strip()
+
+            if (
+                clean_id
+                and clean_id not in cleaned_ids
+            ):
+                cleaned_ids.append(
+                    clean_id
+                )
+
+        if not cleaned_ids:
+            return []
+
+        client = self._build_client()
+
+        results: list[dict] = []
+
+        for offset in range(
+            0,
+            len(cleaned_ids),
+            50,
+        ):
+            batch = cleaned_ids[
+                offset:offset + 50
+            ]
+
+            response = (
+                client.videos()
+                .list(
+                    part=(
+                        "id,snippet,statistics,"
+                        "status"
+                    ),
+                    id=",".join(batch),
+                    maxResults=len(batch),
+                )
+                .execute()
+            )
+
+            for item in response.get(
+                "items",
+                [],
+            ):
+                video_id = str(
+                    item.get(
+                        "id",
+                        "",
+                    )
+                ).strip()
+
+                if not video_id:
+                    continue
+
+                snippet = item.get(
+                    "snippet",
+                    {},
+                )
+
+                statistics = item.get(
+                    "statistics",
+                    {},
+                )
+
+                status = item.get(
+                    "status",
+                    {},
+                )
+
+                def parse_count(
+                    key: str,
+                ) -> int:
+                    try:
+                        return max(
+                            int(
+                                statistics.get(
+                                    key,
+                                    0,
+                                )
+                                or 0
+                            ),
+                            0,
+                        )
+                    except (
+                        TypeError,
+                        ValueError,
+                    ):
+                        return 0
+
+                results.append(
+                    {
+                        "video_id": video_id,
+                        "channel_id": str(
+                            snippet.get(
+                                "channelId",
+                                "",
+                            )
+                        ).strip(),
+                        "title": str(
+                            snippet.get(
+                                "title",
+                                "",
+                            )
+                        ).strip(),
+                        "published_at": str(
+                            snippet.get(
+                                "publishedAt",
+                                "",
+                            )
+                        ).strip(),
+                        "privacy_status": str(
+                            status.get(
+                                "privacyStatus",
+                                "",
+                            )
+                        ).strip(),
+                        "views": parse_count(
+                            "viewCount"
+                        ),
+                        "likes": parse_count(
+                            "likeCount"
+                        ),
+                        "comments": parse_count(
+                            "commentCount"
+                        ),
+                    }
+                )
+
+        result_by_id = {
+            item["video_id"]: item
+            for item in results
+        }
+
+        return [
+            result_by_id[video_id]
+            for video_id in cleaned_ids
+            if video_id in result_by_id
+        ]
+
     @staticmethod
     def _validate_video_path(
         video_path: Path,
