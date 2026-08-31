@@ -96,6 +96,8 @@ class FakeSelector:
     def select(
         self,
         ranked_trends,
+        *,
+        performance=None,
     ):
         self.calls.append(
             ranked_trends

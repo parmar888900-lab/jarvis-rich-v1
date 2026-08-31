@@ -2,10 +2,17 @@
 
 import asyncio
 import hashlib
+import logging
 from pathlib import Path
 
 from backend.database import async_session
 from backend.services.agent_handlers.base import BaseAgentHandler
+from backend.services.analytics.youtube_performance_collector import (
+    YoutubePerformanceCollector,
+)
+from backend.services.analytics.youtube_performance_evidence_service import (
+    YoutubePerformanceEvidenceService,
+)
 from backend.services.intelligence.production_selector import (
     ProductionTopicSelector,
 )
@@ -22,6 +29,11 @@ from backend.services.pipelines import VideoPipeline
 from backend.services.providers.youtube_publisher import (
     YoutubePublisher,
     build_youtube_operation_tag,
+)
+
+
+logger = logging.getLogger(
+    "jarvis.youtube.agent"
 )
 
 
@@ -48,11 +60,35 @@ class YoutubeAgentHandler(BaseAgentHandler):
         }
     )
 
-    def __init__(self):
+    def __init__(
+        self,
+        *,
+        performance_collector=None,
+        performance_evidence_service=None,
+        session_factory=None,
+    ):
         self.engine = TrendEngine()
         self.selector = ProductionTopicSelector()
         self.pipeline = VideoPipeline()
         self.publisher = YoutubePublisher()
+
+        self.performance_collector = (
+            performance_collector
+            or YoutubePerformanceCollector(
+                publisher=self.publisher
+            )
+        )
+
+        self.performance_evidence_service = (
+            performance_evidence_service
+            or YoutubePerformanceEvidenceService()
+        )
+
+        self.session_factory = (
+            session_factory
+            or async_session
+        )
+
         self.operation_executor = (
             IdempotentOperationExecutor(
                 async_session
@@ -88,6 +124,125 @@ class YoutubeAgentHandler(BaseAgentHandler):
             "task": task,
         }
 
+    async def _performance_evidence(
+        self,
+    ) -> tuple[
+        dict | None,
+        dict,
+    ]:
+        """
+        Refresh channel analytics and build strategy evidence.
+
+        Analytics is an optimization signal, not a production
+        dependency. Provider or persistence failures therefore
+        fail neutral and cannot block topic selection.
+        """
+
+        try:
+            async with self.session_factory() as session:
+                collection = (
+                    await self.performance_collector.collect(
+                        session,
+                        max_items=50,
+                    )
+                )
+
+                channel_id = str(
+                    collection.get(
+                        "channel_id",
+                        "",
+                    )
+                ).strip()
+
+                if not channel_id:
+                    raise ValueError(
+                        "Performance collection returned "
+                        "an empty channel ID."
+                    )
+
+                evidence = (
+                    await self.performance_evidence_service.build(
+                        session,
+                        channel_id,
+                    )
+                )
+
+            return (
+                evidence,
+                {
+                    "status": "success",
+                    "channel_id": channel_id,
+                    "collected_video_count": int(
+                        collection.get(
+                            "collected_video_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "snapshot_count": int(
+                        collection.get(
+                            "snapshot_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "unique_video_count": int(
+                        evidence.get(
+                            "unique_video_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "eligible_video_count": int(
+                        evidence.get(
+                            "video_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "total_views": int(
+                        evidence.get(
+                            "total_views",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "confidence": float(
+                        evidence.get(
+                            "confidence",
+                            0.0,
+                        )
+                        or 0.0
+                    ),
+                    "strategy_ready": (
+                        evidence.get(
+                            "strategy_ready"
+                        )
+                        is True
+                    ),
+                },
+            )
+
+        except Exception as exc:
+            logger.warning(
+                "YouTube performance analytics "
+                "unavailable; continuing with neutral "
+                "historical evidence: %s",
+                exc,
+            )
+
+            return (
+                None,
+                {
+                    "status": "unavailable",
+                    "strategy_ready": False,
+                    "confidence": 0.0,
+                    "error_type": type(
+                        exc
+                    ).__name__,
+                },
+            )
+
     async def _analyze_trends(
         self,
         command_id: str,
@@ -112,8 +267,14 @@ class YoutubeAgentHandler(BaseAgentHandler):
                 "status": "no_trends_found",
             }
 
+        (
+            performance,
+            analytics,
+        ) = await self._performance_evidence()
+
         best_trend = self.selector.select(
-            ranked_trends
+            ranked_trends,
+            performance=performance,
         )
 
         if best_trend is None:
@@ -130,6 +291,7 @@ class YoutubeAgentHandler(BaseAgentHandler):
                 "final_trend_count": len(
                     ranked_trends
                 ),
+                "analytics": analytics,
                 "status": (
                     "no_production_ready_topic"
                 ),
@@ -148,6 +310,7 @@ class YoutubeAgentHandler(BaseAgentHandler):
             "final_trend_count": len(
                 ranked_trends
             ),
+            "analytics": analytics,
             "best_trend": best_trend,
             "status": "success",
         }
