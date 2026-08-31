@@ -7,13 +7,26 @@ import wave
 from pathlib import Path
 
 from backend.services.storyboard.scene import Scene
+from backend.services.runtime.runtime_config import RuntimeConfig
 
 
 class VoiceGenerator:
 
-    def __init__(self):
+    def __init__(
+        self,
+        runtime_config: RuntimeConfig | None = None,
+    ):
 
-        self.output_dir = Path("generated/audio")
+        config = (
+            runtime_config
+            if runtime_config is not None
+            else RuntimeConfig.from_environment()
+        )
+
+        self.output_dir = (
+            Path(config.generated_dir)
+            / "audio"
+        )
 
         self.output_dir.mkdir(
             parents=True,
@@ -21,12 +34,11 @@ class VoiceGenerator:
         )
 
         self.model_path = Path(
-            "models/piper/"
-            "en_GB-northern_english_male-medium.onnx"
+            config.piper_model_path
         )
 
         self.piper_executable = Path(
-            "venv/Scripts/piper.exe"
+            config.piper_executable
         )
 
     async def generate(
