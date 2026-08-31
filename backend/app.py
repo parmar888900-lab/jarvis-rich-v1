@@ -80,14 +80,20 @@ async def lifespan(app: FastAPI):
         RuntimeConfig.from_environment()
     )
 
-    capability_report = (
+    capability_service = (
         RuntimeCapabilityService(
             runtime_config
-        ).inspect()
+        )
     )
 
     autonomous_requested = (
         autonomous_production_enabled()
+    )
+
+    capability_report = (
+        capability_service.inspect_live()
+        if autonomous_requested
+        else capability_service.inspect()
     )
 
     readiness = (

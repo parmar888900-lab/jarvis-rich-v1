@@ -12,6 +12,10 @@ from backend.services.runtime.production_gate import (
     ProductionReadinessDecision,
     evaluate_production_readiness,
 )
+from backend.services.runtime.provider_health import (
+    ProviderHealth,
+    ProviderHealthService,
+)
 
 __all__ = [
     "Capability",
@@ -20,4 +24,6 @@ __all__ = [
     "RuntimeConfig",
     "ProductionReadinessDecision",
     "evaluate_production_readiness",
+    "ProviderHealth",
+    "ProviderHealthService",
 ]

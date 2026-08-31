@@ -10,6 +10,9 @@ from pathlib import Path
 from backend.services.runtime.runtime_config import (
     RuntimeConfig,
 )
+from backend.services.runtime.provider_health import (
+    ProviderHealthService,
+)
 
 
 @dataclass(frozen=True)
@@ -165,6 +168,58 @@ class RuntimeCapabilityService:
                 path=config.youtube_client_secret_path,
                 required=False,
             ),
+        )
+
+        return RuntimeCapabilityReport(
+            capabilities=capabilities
+        )
+
+    def inspect_live(
+        self,
+        *,
+        timeout_seconds: float = 3.0,
+    ) -> RuntimeCapabilityReport:
+        """Combine static checks with bounded live provider probes."""
+
+        static_report = self.inspect()
+
+        health = ProviderHealthService(
+            timeout_seconds=timeout_seconds
+        )
+
+        ollama = health.probe_ollama(
+            base_url=self.config.ollama_base_url,
+            model=self.config.ollama_model,
+        )
+
+        comfyui = health.probe_comfyui(
+            base_url=self.config.comfyui_url,
+        )
+
+        live_by_name = {
+            ollama.name: ollama,
+            comfyui.name: comfyui,
+        }
+
+        capabilities = tuple(
+            Capability(
+                name=item.name,
+                available=(
+                    live_by_name[item.name].available
+                    if item.name in live_by_name
+                    else item.available
+                ),
+                required_for_production=(
+                    item.required_for_production
+                ),
+                detail=(
+                    live_by_name[item.name].detail
+                    if item.name in live_by_name
+                    else item.detail
+                ),
+            )
+            for item
+            in static_report.capabilities
         )
 
         return RuntimeCapabilityReport(
