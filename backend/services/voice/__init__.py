@@ -35,3 +35,7 @@ __all__ = [
     "WakePhraseParser",
     "WhisperTranscriber",
 ]
+
+from backend.services.voice.audio_player import AudioPlayer
+from backend.services.voice.response_formatter import VoiceResponseFormatter
+from backend.services.voice.response_speaker import VoiceResponseSpeaker
