@@ -104,6 +104,34 @@ class RuntimeCapabilityService:
 
         config = self.config
 
+        llm_provider = (
+            config.llm_provider
+            .strip()
+            .lower()
+        )
+
+        ollama_selected = (
+            llm_provider
+            in {
+                "ollama",
+                "local",
+            }
+        )
+
+        cloudflare_llm_selected = (
+            llm_provider
+            in {
+                "cloudflare",
+                "workers-ai",
+                "workers_ai",
+            }
+        )
+
+        llm_provider_supported = (
+            ollama_selected
+            or cloudflare_llm_selected
+        )
+
         image_provider = (
             config.image_provider
             .strip()
@@ -134,10 +162,10 @@ class RuntimeCapabilityService:
 
         capabilities = (
             self._configured_text(
-                name="image_provider",
+                name="llm_provider",
                 value=(
-                    image_provider
-                    if image_provider_supported
+                    llm_provider
+                    if llm_provider_supported
                     else ""
                 ),
                 required=True,
@@ -145,11 +173,25 @@ class RuntimeCapabilityService:
             self._configured_url(
                 name="ollama",
                 value=config.ollama_base_url,
-                required=True,
+                required=ollama_selected,
             ),
             self._configured_text(
                 name="ollama_model",
                 value=config.ollama_model,
+                required=ollama_selected,
+            ),
+            self._configured_text(
+                name="cloudflare_llm_model",
+                value=config.cloudflare_llm_model,
+                required=cloudflare_llm_selected,
+            ),
+            self._configured_text(
+                name="image_provider",
+                value=(
+                    image_provider
+                    if image_provider_supported
+                    else ""
+                ),
                 required=True,
             ),
             self._configured_url(
@@ -170,12 +212,18 @@ class RuntimeCapabilityService:
             self._configured_text(
                 name="cloudflare_account_id",
                 value=config.cloudflare_account_id,
-                required=cloudflare_selected,
+                required=(
+                    cloudflare_selected
+                    or cloudflare_llm_selected
+                ),
             ),
             self._configured_text(
                 name="cloudflare_api_token",
                 value=config.cloudflare_api_token,
-                required=cloudflare_selected,
+                required=(
+                    cloudflare_selected
+                    or cloudflare_llm_selected
+                ),
             ),
             self._configured_text(
                 name="cloudflare_flux_model",
@@ -239,14 +287,26 @@ class RuntimeCapabilityService:
             timeout_seconds=timeout_seconds
         )
 
-        ollama = health.probe_ollama(
-            base_url=self.config.ollama_base_url,
-            model=self.config.ollama_model,
+        live_by_name = {}
+
+        llm_provider = (
+            self.config.llm_provider
+            .strip()
+            .lower()
         )
 
-        live_by_name = {
-            ollama.name: ollama,
-        }
+        if llm_provider in {
+            "ollama",
+            "local",
+        }:
+            ollama = health.probe_ollama(
+                base_url=self.config.ollama_base_url,
+                model=self.config.ollama_model,
+            )
+
+            live_by_name[
+                ollama.name
+            ] = ollama
 
         image_provider = (
             self.config.image_provider

@@ -77,6 +77,14 @@ class RuntimeConfig:
         "flux-1-schnell"
     )
 
+    # Optional cloud LLM provider configuration.
+    # Ollama remains the development default.
+    llm_provider: str = "ollama"
+    cloudflare_llm_model: str = (
+        "@cf/meta/"
+        "llama-3.1-8b-instruct-fast"
+    )
+
     @classmethod
     def from_environment(
         cls,
@@ -126,6 +134,17 @@ class RuntimeConfig:
                 default=(
                     "@cf/black-forest-labs/"
                     "flux-1-schnell"
+                ),
+            ),
+            llm_provider=_read_text(
+                "JARVIS_LLM_PROVIDER",
+                default="ollama",
+            ),
+            cloudflare_llm_model=_read_text(
+                "JARVIS_CLOUDFLARE_LLM_MODEL",
+                default=(
+                    "@cf/meta/"
+                    "llama-3.1-8b-instruct-fast"
                 ),
             ),
             piper_executable=_read_path(

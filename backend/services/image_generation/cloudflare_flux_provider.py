@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import base64
 import uuid
+from io import BytesIO
 from pathlib import Path
 from typing import Callable
 
 import aiohttp
+from PIL import Image
 
 from backend.services.image_generation.base_provider import (
     BaseImageProvider,
@@ -106,7 +108,7 @@ class CloudflareFluxProvider(BaseImageProvider):
 
         payload = {
             "prompt": prompt,
-            "num_steps": 4,
+            "steps": 4,
         }
 
         headers = {
@@ -163,20 +165,126 @@ class CloudflareFluxProvider(BaseImageProvider):
 
         output_path = (
             self.output_dir
-            / f"jarvis_cf_{uuid.uuid4().hex}.png"
+            / f"jarvis_cf_{uuid.uuid4().hex}.jpg"
         )
 
-        output_path.write_bytes(
-            image_bytes
+        self._write_portrait_image(
+            image_bytes=image_bytes,
+            output_path=output_path,
         )
 
         return GeneratedImage(
             prompt=prompt,
             image_path=str(output_path),
             provider="flux-cloudflare",
-            width=512,
-            height=512,
+            width=720,
+            height=1280,
         )
+
+    @staticmethod
+    def _write_portrait_image(
+        *,
+        image_bytes: bytes,
+        output_path: Path,
+    ) -> None:
+        """Normalize Cloudflare output to Jarvis portrait assets."""
+
+        try:
+            with Image.open(
+                BytesIO(image_bytes)
+            ) as source:
+
+                image = source.convert(
+                    "RGB"
+                )
+
+                width, height = image.size
+
+                if width <= 0 or height <= 0:
+                    raise RuntimeError(
+                        "Cloudflare returned invalid "
+                        "image dimensions."
+                    )
+
+                target_ratio = 9 / 16
+                source_ratio = width / height
+
+                if source_ratio > target_ratio:
+                    crop_width = max(
+                        1,
+                        round(
+                            height
+                            * target_ratio
+                        ),
+                    )
+
+                    left = max(
+                        0,
+                        (width - crop_width) // 2,
+                    )
+
+                    right = min(
+                        width,
+                        left + crop_width,
+                    )
+
+                    image = image.crop(
+                        (
+                            left,
+                            0,
+                            right,
+                            height,
+                        )
+                    )
+
+                elif source_ratio < target_ratio:
+                    crop_height = max(
+                        1,
+                        round(
+                            width
+                            / target_ratio
+                        ),
+                    )
+
+                    top = max(
+                        0,
+                        (height - crop_height) // 2,
+                    )
+
+                    bottom = min(
+                        height,
+                        top + crop_height,
+                    )
+
+                    image = image.crop(
+                        (
+                            0,
+                            top,
+                            width,
+                            bottom,
+                        )
+                    )
+
+                image = image.resize(
+                    (720, 1280),
+                    Image.Resampling.LANCZOS,
+                )
+
+                image.save(
+                    output_path,
+                    format="JPEG",
+                    quality=95,
+                    optimize=True,
+                )
+
+        except RuntimeError:
+            raise
+
+        except Exception as exc:
+            raise RuntimeError(
+                "Cloudflare returned image data "
+                "that could not be processed."
+            ) from exc
 
     @staticmethod
     def _extract_image(

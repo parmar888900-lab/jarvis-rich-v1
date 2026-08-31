@@ -1,7 +1,10 @@
 ﻿import asyncio
 import base64
 import tempfile
+from io import BytesIO
 from pathlib import Path
+
+from PIL import Image
 
 from backend.services.image_generation.cloudflare_flux_provider import (
     CloudflareFluxProvider,
@@ -9,10 +12,23 @@ from backend.services.image_generation.cloudflare_flux_provider import (
 from backend.services.runtime.runtime_config import RuntimeConfig
 
 
-PNG_BYTES = (
-    b"\x89PNG\r\n\x1a\n"
-    b"jarvis-cloudflare-provider-test"
-)
+def make_square_jpeg() -> bytes:
+
+    buffer = BytesIO()
+
+    image = Image.new(
+        "RGB",
+        (1024, 1024),
+        (120, 130, 140),
+    )
+
+    image.save(
+        buffer,
+        format="JPEG",
+        quality=90,
+    )
+
+    return buffer.getvalue()
 
 
 class FakeResponse:
@@ -136,7 +152,7 @@ async def test_success():
         root = Path(temp)
 
         encoded = base64.b64encode(
-            PNG_BYTES
+            make_square_jpeg()
         ).decode("ascii")
 
         response = FakeResponse(
@@ -163,15 +179,22 @@ async def test_success():
 
         assert image.prompt == "Jarvis provider test"
         assert image.provider == "flux-cloudflare"
-        assert image.width == 512
-        assert image.height == 512
+        assert image.width == 720
+        assert image.height == 1280
 
         output = Path(
             image.image_path
         )
 
         assert output.exists()
-        assert output.read_bytes() == PNG_BYTES
+        assert output.suffix.lower() == ".jpg"
+
+        with Image.open(output) as saved:
+            assert saved.size == (
+                720,
+                1280,
+            )
+            assert saved.format == "JPEG"
 
         calls = factory.session.calls
 
@@ -184,7 +207,7 @@ async def test_success():
             == "Jarvis provider test"
         )
 
-        assert call["json"]["num_steps"] == 4
+        assert call["json"]["steps"] == 4
 
         assert (
             call["headers"]["Authorization"]
@@ -205,7 +228,13 @@ async def test_success():
         )
 
         print(
-            "PASS: Cloudflare image persisted."
+            "PASS: square provider output normalized "
+            "to 720x1280 portrait JPEG."
+        )
+
+        print(
+            "PASS: GeneratedImage dimensions "
+            "match persisted image."
         )
 
 
@@ -310,11 +339,61 @@ async def test_bad_response():
         )
 
 
+async def test_invalid_image_bytes():
+
+    with tempfile.TemporaryDirectory() as temp:
+
+        root = Path(temp)
+
+        encoded = base64.b64encode(
+            b"not-an-image"
+        ).decode("ascii")
+
+        response = FakeResponse(
+            payload={
+                "success": True,
+                "result": {
+                    "image": encoded,
+                },
+            }
+        )
+
+        factory = FakeSessionFactory(
+            response
+        )
+
+        provider = CloudflareFluxProvider(
+            runtime_config=make_config(root),
+            session_factory=factory,
+        )
+
+        try:
+            await provider.generate(
+                "test"
+            )
+        except RuntimeError as exc:
+            assert (
+                "could not be processed"
+                in str(exc).lower()
+            )
+        else:
+            raise AssertionError(
+                "Invalid image bytes "
+                "did not fail closed."
+            )
+
+        print(
+            "PASS: invalid decoded image "
+            "fails closed."
+        )
+
+
 async def main():
 
     await test_success()
     await test_missing_credentials()
     await test_bad_response()
+    await test_invalid_image_bytes()
 
     print(
         "\nPASS: Cloudflare FLUX provider "
