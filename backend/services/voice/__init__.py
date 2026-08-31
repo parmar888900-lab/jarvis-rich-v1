@@ -1,5 +1,9 @@
 """Voice-assistant services for Jarvis."""
 
+from backend.services.voice.assistant import (
+    VoiceAssistant,
+    VoiceAssistantResult,
+)
 from backend.services.voice.audio_capture import (
     AudioCapture,
 )
@@ -20,6 +24,8 @@ from backend.services.voice.wake_phrase import (
 )
 
 __all__ = [
+    "VoiceAssistant",
+    "VoiceAssistantResult",
     "VoiceCommandExecutor",
     "VoiceExecutionResult",
     "VoiceCommand",
