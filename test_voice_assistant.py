@@ -1,4 +1,4 @@
-﻿"""Regression tests for the Jarvis VoiceAssistant coordinator."""
+"""Regression tests for the Jarvis VoiceAssistant coordinator."""
 
 import asyncio
 
@@ -52,6 +52,65 @@ class FakeTranscriber:
             "status": self.status,
             "text": self.text,
         }
+
+
+class FakeAudioCapture:
+    def __init__(
+        self,
+        *,
+        status="success",
+        reason=None,
+    ):
+        self.status = status
+        self.reason = reason
+        self.calls = []
+
+    def record(
+        self,
+        audio_path,
+        *,
+        duration_seconds,
+        on_ready=None,
+    ):
+        self.calls.append(
+            {
+                "audio_path": str(audio_path),
+                "duration_seconds": duration_seconds,
+                "on_ready": on_ready,
+            }
+        )
+
+        if on_ready is not None:
+            on_ready()
+
+        return {
+            "status": self.status,
+            "reason": self.reason,
+        }
+
+
+class InvalidAudioCapture:
+    def record(
+        self,
+        audio_path,
+        *,
+        duration_seconds,
+        on_ready=None,
+    ):
+        return "invalid"
+
+
+class ExplodingAudioCapture:
+    def record(
+        self,
+        audio_path,
+        *,
+        duration_seconds,
+        on_ready=None,
+    ):
+        raise RuntimeError(
+            "microphone unavailable"
+        )
 
 
 async def run_case(
@@ -248,6 +307,198 @@ async def main():
         "PASS: STT normalization is not general fuzzy matching."
     )
 
+
+
+
+    commander = FakeCommander()
+    capture = FakeAudioCapture()
+
+    assistant = VoiceAssistant(
+        commander=commander,
+        transcriber=FakeTranscriber(
+            text=(
+                "Hey Jarvis, "
+                "analyze today's trends."
+            )
+        ),
+        audio_capture=capture,
+    )
+
+    ready_calls = []
+
+    result = await assistant.listen_once(
+        "fake-listen.wav",
+        duration_seconds=4.5,
+        on_ready=lambda: ready_calls.append(
+            True
+        ),
+    )
+
+    assert result.status == "completed"
+    assert result.task == "analyze_trends"
+    assert len(commander.calls) == 1
+    assert len(capture.calls) == 1
+    assert (
+        capture.calls[0]["duration_seconds"]
+        == 4.5
+    )
+    assert ready_calls == [True]
+
+    print(
+        "PASS: listen_once captures and "
+        "processes one utterance."
+    )
+
+
+    commander = FakeCommander()
+    capture = FakeAudioCapture(
+        status="failed",
+        reason="microphone_unavailable",
+    )
+
+    assistant = VoiceAssistant(
+        commander=commander,
+        transcriber=FakeTranscriber(
+            text=(
+                "Hey Jarvis, "
+                "analyze today's trends."
+            )
+        ),
+        audio_capture=capture,
+    )
+
+    result = await assistant.listen_once(
+        "fake-listen.wav"
+    )
+
+    assert result.status == "capture_failed"
+    assert (
+        result.reason
+        == "microphone_unavailable"
+    )
+    assert len(commander.calls) == 0
+
+    print(
+        "PASS: failed microphone capture "
+        "never reaches Commander."
+    )
+
+
+    commander = FakeCommander()
+
+    assistant = VoiceAssistant(
+        commander=commander,
+        transcriber=FakeTranscriber(
+            text=(
+                "Hey Jarvis, "
+                "analyze today's trends."
+            )
+        ),
+        audio_capture=InvalidAudioCapture(),
+    )
+
+    result = await assistant.listen_once(
+        "fake-listen.wav"
+    )
+
+    assert result.status == "capture_failed"
+    assert (
+        result.reason
+        == "invalid_audio_capture_result"
+    )
+    assert len(commander.calls) == 0
+
+    print(
+        "PASS: malformed capture result "
+        "fails closed."
+    )
+
+
+    commander = FakeCommander()
+
+    assistant = VoiceAssistant(
+        commander=commander,
+        transcriber=FakeTranscriber(
+            text=(
+                "Hey Jarvis, "
+                "analyze today's trends."
+            )
+        ),
+        audio_capture=ExplodingAudioCapture(),
+    )
+
+    result = await assistant.listen_once(
+        "fake-listen.wav"
+    )
+
+    assert result.status == "capture_failed"
+    assert (
+        result.reason
+        == "audio_capture_exception:RuntimeError"
+    )
+    assert len(commander.calls) == 0
+
+    print(
+        "PASS: microphone exception fails closed."
+    )
+
+
+    commander = FakeCommander()
+    capture = FakeAudioCapture()
+
+    assistant = VoiceAssistant(
+        commander=commander,
+        transcriber=FakeTranscriber(
+            text=(
+                "Hey Jarvis, "
+                "upload the video."
+            )
+        ),
+        audio_capture=capture,
+    )
+
+    result = await assistant.listen_once(
+        "fake-listen.wav"
+    )
+
+    assert (
+        result.status
+        == "confirmation_required"
+    )
+    assert len(commander.calls) == 0
+
+    print(
+        "PASS: listen_once cannot bypass "
+        "upload confirmation."
+    )
+
+
+    commander = FakeCommander()
+    capture = FakeAudioCapture()
+
+    assistant = VoiceAssistant(
+        commander=commander,
+        transcriber=FakeTranscriber(
+            text=(
+                "Hey Jarvis, "
+                "publish the video."
+            )
+        ),
+        audio_capture=capture,
+    )
+
+    result = await assistant.listen_once(
+        "fake-listen.wav",
+        confirmed=True,
+    )
+
+    assert result.status == "blocked"
+    assert len(commander.calls) == 0
+
+    print(
+        "PASS: listen_once cannot authorize "
+        "public publication."
+    )
 
     print()
     print(

@@ -1,4 +1,4 @@
-﻿"""High-level coordinator for Jarvis voice commands."""
+"""High-level coordinator for Jarvis voice commands."""
 
 from __future__ import annotations
 
@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import Any
 
 from backend.services.commander import Commander
+from backend.services.voice.audio_capture import (
+    AudioCapture,
+)
 from backend.services.voice.command_executor import (
     VoiceCommandExecutor,
     VoiceExecutionResult,
@@ -47,6 +50,7 @@ class VoiceAssistant:
         wake_parser: Any | None = None,
         router: Any | None = None,
         executor: Any | None = None,
+        audio_capture: Any | None = None,
     ) -> None:
         self.commander = (
             commander
@@ -80,6 +84,73 @@ class VoiceAssistant:
             else VoiceCommandExecutor(
                 self.commander
             )
+        )
+
+        self.audio_capture = (
+            audio_capture
+            if audio_capture is not None
+            else AudioCapture()
+        )
+
+    async def listen_once(
+        self,
+        audio_path: str | Path,
+        *,
+        duration_seconds: float = 5.0,
+        confirmed: bool = False,
+        on_ready=None,
+    ) -> VoiceAssistantResult:
+        """Capture and process one synchronized microphone utterance."""
+
+        try:
+            capture_result = self.audio_capture.record(
+                audio_path,
+                duration_seconds=duration_seconds,
+                on_ready=on_ready,
+            )
+        except Exception as exc:
+            return VoiceAssistantResult(
+                status="capture_failed",
+                transcript="",
+                command_text="",
+                reason=(
+                    "audio_capture_exception:"
+                    f"{type(exc).__name__}"
+                ),
+            )
+
+        if not isinstance(
+            capture_result,
+            dict,
+        ):
+            return VoiceAssistantResult(
+                status="capture_failed",
+                transcript="",
+                command_text="",
+                reason="invalid_audio_capture_result",
+            )
+
+        if (
+            capture_result.get("status")
+            != "success"
+        ):
+            return VoiceAssistantResult(
+                status="capture_failed",
+                transcript="",
+                command_text="",
+                reason=(
+                    str(
+                        capture_result.get(
+                            "reason",
+                            "audio_capture_not_successful",
+                        )
+                    )
+                ),
+            )
+
+        return await self.process_audio(
+            audio_path,
+            confirmed=confirmed,
         )
 
     async def process_audio(
