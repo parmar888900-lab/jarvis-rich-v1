@@ -68,6 +68,36 @@ class ProductionOperationRecoveryService:
             result.scalars().all()
         )
 
+    async def find_reconciliation_required(
+        self,
+        session: AsyncSession,
+    ) -> list[ProductionOperationRecord]:
+        """Return unresolved operations requiring provider reconciliation."""
+
+        statement = (
+            select(
+                ProductionOperationRecord
+            )
+            .where(
+                ProductionOperationRecord.status
+                == ProductionOperationStatus
+                .RECONCILIATION_REQUIRED
+                .value
+            )
+            .order_by(
+                ProductionOperationRecord.started_at
+                .asc()
+            )
+        )
+
+        result = await session.execute(
+            statement
+        )
+
+        return list(
+            result.scalars().all()
+        )
+
     async def mark_reconciliation_required(
         self,
         session: AsyncSession,

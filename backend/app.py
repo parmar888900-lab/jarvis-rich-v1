@@ -16,6 +16,9 @@ from backend.routes import (
     production,
     settings as settings_routes,
 )
+from backend.services.orchestration.production_operation_recovery_runner import (
+    ProductionOperationRecoveryRunner,
+)
 from backend.services.orchestration.production_scheduler import (
     ProductionScheduler,
 )
@@ -30,6 +33,10 @@ from backend.services.production_cycle_service import (
 
 PRODUCTION_STALE_AFTER = timedelta(
     hours=6
+)
+
+PRODUCTION_OPERATION_STALE_AFTER_SECONDS = (
+    PRODUCTION_STALE_AFTER.total_seconds()
 )
 
 
@@ -50,6 +57,18 @@ async def lifespan(app: FastAPI):
                 session,
                 stale_after=PRODUCTION_STALE_AFTER,
             )
+        )
+
+    operation_recovery_runner = (
+        ProductionOperationRecoveryRunner()
+    )
+
+    async with async_session() as session:
+        await operation_recovery_runner.run(
+            session,
+            stale_after_seconds=(
+                PRODUCTION_OPERATION_STALE_AFTER_SECONDS
+            ),
         )
 
     production_scheduler = ProductionScheduler(
