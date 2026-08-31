@@ -16,6 +16,7 @@ class YoutubePerformanceAnalyzer:
 
     MIN_AGE_HOURS = 1.0
     CONFIDENCE_SAMPLE_TARGET = 20
+    CONFIDENCE_VIEW_TARGET = 100
 
     @staticmethod
     def _parse_datetime(
@@ -209,7 +210,7 @@ class YoutubePerformanceAnalyzer:
     ) -> dict[str, Any]:
         """Analyze video performance relative to the channel baseline."""
 
-        normalized = [
+        normalized_all = [
             self.normalize_video(
                 video,
                 collected_at=collected_at,
@@ -217,10 +218,43 @@ class YoutubePerformanceAnalyzer:
             for video in videos
         ]
 
+        normalized = [
+            video
+            for video in normalized_all
+            if (
+                str(
+                    video.get(
+                        "privacy_status",
+                        "",
+                    )
+                ).strip().lower()
+                == "public"
+                and video.get(
+                    "age_hours"
+                )
+                is not None
+            )
+        ]
+
+        excluded_video_count = (
+            len(normalized_all)
+            - len(normalized)
+        )
+
         if not normalized:
             return {
                 "video_count": 0,
+                "source_video_count": len(
+                    normalized_all
+                ),
+                "excluded_video_count": (
+                    excluded_video_count
+                ),
+                "total_views": 0,
+                "sample_confidence": 0.0,
+                "audience_confidence": 0.0,
                 "confidence": 0.0,
+                "strategy_ready": False,
                 "baseline_views_per_hour": 0.0,
                 "baseline_engagement_rate": 0.0,
                 "videos": [],
@@ -252,12 +286,45 @@ class YoutubePerformanceAnalyzer:
             )
         )
 
-        confidence = min(
+        sample_confidence = min(
             len(normalized)
             / float(
                 self.CONFIDENCE_SAMPLE_TARGET
             ),
             1.0,
+        )
+
+        total_views = sum(
+            max(
+                int(
+                    video.get(
+                        "views",
+                        0,
+                    )
+                    or 0
+                ),
+                0,
+            )
+            for video in normalized
+        )
+
+        audience_confidence = min(
+            total_views
+            / float(
+                self.CONFIDENCE_VIEW_TARGET
+            ),
+            1.0,
+        )
+
+        confidence = (
+            sample_confidence
+            * audience_confidence
+        )
+
+        strategy_ready = (
+            total_views
+            >= self.CONFIDENCE_VIEW_TARGET
+            and len(normalized) >= 2
         )
 
         analyzed: list[dict[str, Any]] = []
@@ -372,10 +439,26 @@ class YoutubePerformanceAnalyzer:
             "video_count": len(
                 analyzed
             ),
+            "source_video_count": len(
+                normalized_all
+            ),
+            "excluded_video_count": (
+                excluded_video_count
+            ),
+            "total_views": total_views,
+            "sample_confidence": round(
+                sample_confidence,
+                4,
+            ),
+            "audience_confidence": round(
+                audience_confidence,
+                4,
+            ),
             "confidence": round(
                 confidence,
                 4,
             ),
+            "strategy_ready": strategy_ready,
             "baseline_views_per_hour": round(
                 baseline_views,
                 4,

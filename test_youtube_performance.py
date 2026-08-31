@@ -285,7 +285,13 @@ def main():
 
     assert empty == {
         "video_count": 0,
+        "source_video_count": 0,
+        "excluded_video_count": 0,
+        "total_views": 0,
+        "sample_confidence": 0.0,
+        "audience_confidence": 0.0,
         "confidence": 0.0,
+        "strategy_ready": False,
         "baseline_views_per_hour": 0.0,
         "baseline_engagement_rate": 0.0,
         "videos": [],
