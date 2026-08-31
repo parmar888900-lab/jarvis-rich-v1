@@ -3,6 +3,10 @@
 from backend.services.voice.audio_capture import (
     AudioCapture,
 )
+from backend.services.voice.command_executor import (
+    VoiceCommandExecutor,
+    VoiceExecutionResult,
+)
 from backend.services.voice.command_router import (
     VoiceCommand,
     VoiceCommandRouter,
@@ -16,6 +20,8 @@ from backend.services.voice.wake_phrase import (
 )
 
 __all__ = [
+    "VoiceCommandExecutor",
+    "VoiceExecutionResult",
     "VoiceCommand",
     "VoiceCommandRouter",
     "AudioCapture",
