@@ -29,6 +29,11 @@ from backend.services.orchestration.production_scheduler_config import (
 from backend.services.production_cycle_service import (
     ProductionCycleService,
 )
+from backend.services.runtime import (
+    RuntimeCapabilityService,
+    RuntimeConfig,
+    evaluate_production_readiness,
+)
 
 
 PRODUCTION_STALE_AFTER = timedelta(
@@ -71,13 +76,39 @@ async def lifespan(app: FastAPI):
             ),
         )
 
+    runtime_config = (
+        RuntimeConfig.from_environment()
+    )
+
+    capability_report = (
+        RuntimeCapabilityService(
+            runtime_config
+        ).inspect()
+    )
+
+    autonomous_requested = (
+        autonomous_production_enabled()
+    )
+
+    readiness = (
+        evaluate_production_readiness(
+            autonomous_requested=(
+                autonomous_requested
+            ),
+            report=capability_report,
+        )
+    )
+
     production_scheduler = ProductionScheduler(
         production.orchestrator,
         interval_seconds=(
             autonomous_production_interval_seconds()
         ),
         enabled=(
-            autonomous_production_enabled()
+            readiness.scheduler_enabled
+        ),
+        production_allowed=(
+            readiness.production_ready
         ),
     )
 
@@ -85,6 +116,14 @@ async def lifespan(app: FastAPI):
 
     app.state.production_scheduler = (
         production_scheduler
+    )
+
+    app.state.production_capabilities = (
+        capability_report
+    )
+
+    app.state.production_readiness = (
+        readiness
     )
 
     try:

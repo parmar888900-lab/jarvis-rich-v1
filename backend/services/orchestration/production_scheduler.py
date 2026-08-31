@@ -25,6 +25,7 @@ class ProductionScheduler:
         interval_seconds: float,
         enabled: bool = False,
         retry_policy: AutonomousRetryPolicy | None = None,
+        production_allowed: bool = True,
     ) -> None:
 
         if interval_seconds <= 0:
@@ -40,7 +41,13 @@ class ProductionScheduler:
         self.interval_seconds = float(
             interval_seconds
         )
-        self.enabled = enabled
+        self.production_allowed = bool(
+            production_allowed
+        )
+        self.enabled = (
+            bool(enabled)
+            and self.production_allowed
+        )
         self.retry_policy = (
             retry_policy
             if retry_policy is not None
@@ -56,7 +63,10 @@ class ProductionScheduler:
         )
 
     def start(self) -> bool:
-        """Start the scheduler when enabled."""
+        """Start only when enabled and production-ready."""
+
+        if not self.production_allowed:
+            return False
 
         if not self.enabled:
             return False
@@ -102,7 +112,11 @@ class ProductionScheduler:
         return True
 
     def enable(self) -> bool:
-        """Enable autonomous production and start scheduling."""
+        """Enable production only when runtime readiness allows it."""
+
+        if not self.production_allowed:
+            self.enabled = False
+            return False
 
         was_enabled = self.enabled
         self.enabled = True

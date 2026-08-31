@@ -72,6 +72,7 @@ async def test_busy_skip():
         assert result == {
             "status": "skipped",
             "reason": "production_busy",
+            "attempts": 1,
         }
 
         assert fake.calls == []
