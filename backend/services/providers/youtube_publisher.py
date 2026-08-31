@@ -546,6 +546,144 @@ class YoutubePublisher:
             "title": cleaned_title,
         }
 
+    def get_recent_upload_video_ids(
+        self,
+        *,
+        max_items: int = 50,
+    ) -> dict:
+        """Return recent uploads for the authorized channel."""
+
+        if max_items <= 0:
+            raise ValueError(
+                "max_items must be positive."
+            )
+
+        client = self._build_client()
+
+        channel_response = (
+            client.channels()
+            .list(
+                part="id,contentDetails",
+                mine=True,
+            )
+            .execute()
+        )
+
+        channel_items = channel_response.get(
+            "items",
+            [],
+        )
+
+        if not channel_items:
+            raise YoutubePublisherError(
+                "Authorized channel was not returned."
+            )
+
+        channel = channel_items[0]
+
+        channel_id = str(
+            channel.get(
+                "id",
+                "",
+            )
+        ).strip()
+
+        uploads_playlist_id = str(
+            channel.get(
+                "contentDetails",
+                {},
+            )
+            .get(
+                "relatedPlaylists",
+                {},
+            )
+            .get(
+                "uploads",
+                "",
+            )
+        ).strip()
+
+        if not channel_id:
+            raise YoutubePublisherError(
+                "Authorized channel ID is missing."
+            )
+
+        if not uploads_playlist_id:
+            raise YoutubePublisherError(
+                "Authorized channel uploads playlist "
+                "is missing."
+            )
+
+        video_ids: list[str] = []
+        seen: set[str] = set()
+        page_token = None
+
+        while len(video_ids) < max_items:
+
+            request_kwargs = {
+                "part": "contentDetails",
+                "playlistId": uploads_playlist_id,
+                "maxResults": min(
+                    50,
+                    max_items - len(video_ids),
+                ),
+            }
+
+            if page_token:
+                request_kwargs[
+                    "pageToken"
+                ] = page_token
+
+            response = (
+                client.playlistItems()
+                .list(
+                    **request_kwargs
+                )
+                .execute()
+            )
+
+            for item in response.get(
+                "items",
+                [],
+            ):
+                video_id = str(
+                    item.get(
+                        "contentDetails",
+                        {},
+                    ).get(
+                        "videoId",
+                        "",
+                    )
+                ).strip()
+
+                if (
+                    video_id
+                    and video_id not in seen
+                ):
+                    seen.add(video_id)
+                    video_ids.append(
+                        video_id
+                    )
+
+                if len(video_ids) >= max_items:
+                    break
+
+            page_token = response.get(
+                "nextPageToken"
+            )
+
+            if not page_token:
+                break
+
+        return {
+            "channel_id": channel_id,
+            "uploads_playlist_id": (
+                uploads_playlist_id
+            ),
+            "video_ids": video_ids,
+        }
+
+
     def find_uploaded_video_by_operation_tag(
         self,
         operation_tag: str,
