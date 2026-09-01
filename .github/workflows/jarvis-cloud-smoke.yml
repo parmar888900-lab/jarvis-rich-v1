@@ -1,0 +1,58 @@
+﻿name: Jarvis Cloud Smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsndfile1
+
+      - name: Show runtime
+        run: |
+          python --version
+          ffmpeg -version | head -n 1
+          uname -a
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Verify critical imports
+        run: |
+          python - <<'PY'
+          import fastapi
+          import sqlalchemy
+          import moviepy
+          import piper
+          print("PASS: critical Python imports")
+          PY
+
+      - name: Check Piper command
+        run: |
+          which piper
+          piper --help >/dev/null
+
+      - name: Run portability tests
+        run: |
+          python -m pytest \
+            test_piper_runtime_config.py \
+            test_runtime_capabilities.py \
+            test_production_readiness_gate.py \
+            -q
