@@ -3,6 +3,7 @@ Local voice generation for Jarvis using Piper TTS.
 """
 
 import asyncio
+import shutil
 import wave
 from pathlib import Path
 
@@ -214,7 +215,14 @@ class VoiceGenerator:
                 f"{self.model_path}"
             )
 
-        if not self.piper_executable.exists():
+        if self.piper_executable.is_file():
+            return
+
+        resolved = shutil.which(
+            str(self.piper_executable)
+        )
+
+        if resolved is None:
             raise FileNotFoundError(
                 f"Piper executable not found: "
                 f"{self.piper_executable}"

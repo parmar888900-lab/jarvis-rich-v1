@@ -180,6 +180,43 @@ def test_validate_piper_uses_configured_paths():
         generator._validate_piper()
 
 
+def test_validate_piper_accepts_path_command():
+    with tempfile.TemporaryDirectory() as temp:
+        root = Path(temp)
+
+        config = build_config(
+            root
+        )
+
+        config = RuntimeConfig(
+            ollama_base_url=config.ollama_base_url,
+            ollama_model=config.ollama_model,
+            comfyui_url=config.comfyui_url,
+            comfyui_output_dir=config.comfyui_output_dir,
+            flux_workflow_path=config.flux_workflow_path,
+            piper_executable=Path("piper"),
+            piper_model_path=config.piper_model_path,
+            ffmpeg_executable=config.ffmpeg_executable,
+            generated_dir=config.generated_dir,
+            database_url=config.database_url,
+            youtube_token_path=config.youtube_token_path,
+            youtube_client_secret_path=(
+                config.youtube_client_secret_path
+            ),
+        )
+
+        generator = VoiceGenerator(
+            runtime_config=config
+        )
+
+        with patch(
+            "backend.services.video.voice_generator."
+            "shutil.which",
+            return_value="/usr/local/bin/piper",
+        ):
+            generator._validate_piper()
+
+
 def test_missing_model_fails_cleanly():
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
@@ -300,6 +337,11 @@ def main():
     test_validate_piper_uses_configured_paths()
     print(
         "PASS: Piper validation uses configured paths."
+    )
+
+    test_validate_piper_accepts_path_command()
+    print(
+        "PASS: Piper validation accepts a PATH command."
     )
 
     test_missing_model_fails_cleanly()
