@@ -1,7 +1,19 @@
-"""Service layer package."""
+"""Service layer package with optional production stacks loaded on demand."""
 
-from backend.services.agent_service import AgentService
-from backend.services.commander import Commander
-from backend.services.llm_service import LLMService
+from importlib import import_module
 
-__all__ = ["AgentService", "Commander", "LLMService"]
+_EXPORTS = {
+    "AgentService": "agent_service",
+    "Commander": "commander",
+    "LLMService": "llm_service",
+}
+__all__ = list(_EXPORTS)
+
+
+def __getattr__(name):
+    module = _EXPORTS.get(name)
+    if module is None:
+        raise AttributeError(name)
+    value = getattr(import_module(f"{__name__}.{module}"), name)
+    globals()[name] = value
+    return value

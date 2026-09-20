@@ -28,7 +28,7 @@ def candidate(lines=None):
 def test_recovery_handles_invalid_lengths_and_shapes_without_llm(lines):
     data = candidate(lines or [])
     before = json.dumps(data)
-    result = recover_movie_script(data, topic="workshop metal costume", research=RESEARCH)
+    result = recover_movie_script(data, topic="workshop metal costume components", research=RESEARCH)
     assert result is not None
     assert len(result["script_lines"]) == 4
     assert 75 <= sum(len(x.split()) for x in result["script_lines"]) <= 110
@@ -41,7 +41,7 @@ def test_recovery_handles_invalid_lengths_and_shapes_without_llm(lines):
 
 def test_valid_creative_order_is_preserved():
     data = candidate()
-    assert recover_movie_script(data, topic="workshop", research=RESEARCH) == data
+    assert recover_movie_script(data, topic="workshop metal components", research=RESEARCH) == data
 
 
 @pytest.mark.parametrize("research", ["", "Unlabelled prose is not a cited evidence packet.",
@@ -53,7 +53,7 @@ def test_insufficient_evidence_fails_closed(research):
 def test_invented_ids_are_replaced_only_with_actual_source_ids():
     data = candidate()
     data["evidence_ids"] = [["E999"]] * 4
-    result = recover_movie_script(data, topic="workshop", research=RESEARCH)
+    result = recover_movie_script(data, topic="workshop metal components", research=RESEARCH)
     assert result and all("E999" not in row for row in result["evidence_ids"])
 
 
@@ -73,7 +73,7 @@ def test_main_path_retains_semantic_gate_after_deterministic_recovery():
     llm = FakeLLM()
     generator.llm = llm
     generator.semantic_claim_evidence_validator = SemanticClaimEvidenceValidator(llm=llm)
-    result = asyncio.run(generator.generate({"title": "Workshop costume", "research": RESEARCH,
+    result = asyncio.run(generator.generate({"title": "Workshop metal components", "research": RESEARCH,
         "content_format": {"format_name": "famous_movie_commentary"}}))
     assert len(result.script_lines) == 4
     assert llm.calls == 2  # creative generation + semantic validation; zero length repair calls
@@ -92,5 +92,5 @@ def test_main_path_does_not_accept_semantically_rejected_recovery():
     g.llm = LLM()
     g.semantic_claim_evidence_validator = Reject()
     with pytest.raises(RuntimeError, match="semantic"):
-        asyncio.run(g.generate({"title": "Workshop", "research": RESEARCH,
+        asyncio.run(g.generate({"title": "Workshop metal components", "research": RESEARCH,
             "content_format": {"format_name": "famous_movie_commentary"}}))

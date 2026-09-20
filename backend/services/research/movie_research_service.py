@@ -78,6 +78,16 @@ class MovieResearchService:
         },
     }
 
+    ANGLE_EXCLUSIONS = {
+        "suit-building": {
+            "iron monger",
+            "war machine",
+            "mark iii",
+            "mark iv",
+            "final battle",
+        },
+    }
+
     STOPWORDS = {
         "why",
         "how",
@@ -161,26 +171,22 @@ class MovieResearchService:
         relevant = self._extract_relevant_sentences(
             full_text,
             angle_terms,
+            minimum_matches=(2 if self._matched_angle(commentary_topic) else 1),
+            excluded_phrases=self._angle_exclusions(commentary_topic),
         )
 
         ####################################################
-        # Always include film summary as context.
+        # The summary remains source context, but it must not become a giant
+        # evidence item. Earlier versions labelled the whole summary E1, which
+        # let an on-topic phrase elsewhere in E1 legitimize unrelated casting,
+        # release, and box-office claims.
         ####################################################
 
         summary = str(
             page.summary or ""
         ).strip()
 
-        if summary:
-            pack.add_fact(
-                summary[:2500]
-            )
-
-        ####################################################
-        # Angle-specific evidence.
-        ####################################################
-
-        for sentence in relevant[:12]:
+        for sentence in relevant[:10]:
             pack.add_fact(
                 sentence
             )
@@ -254,10 +260,21 @@ class MovieResearchService:
 
         return terms
 
+    @classmethod
+    def _matched_angle(cls, topic: str) -> str:
+        lower = str(topic).lower()
+        return next((trigger for trigger in cls.ANGLE_ALIASES if trigger in lower), "")
+
+    @classmethod
+    def _angle_exclusions(cls, topic: str) -> set[str]:
+        return cls.ANGLE_EXCLUSIONS.get(cls._matched_angle(topic), set())
+
     @staticmethod
     def _extract_relevant_sentences(
         text: str,
         terms: set[str],
+        minimum_matches: int = 1,
+        excluded_phrases: set[str] | None = None,
     ) -> list[str]:
 
         if not text.strip():
@@ -280,13 +297,16 @@ class MovieResearchService:
 
             lower = sentence.lower()
 
+            if any(phrase in lower for phrase in (excluded_phrases or set())):
+                continue
+
             matches = sum(
                 1
                 for term in terms
                 if term in lower
             )
 
-            if matches <= 0:
+            if matches < max(1, int(minimum_matches)):
                 continue
 
             scored.append(

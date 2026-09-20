@@ -33,6 +33,14 @@ def recover_movie_script(data, *, topic, research, minimum=75, maximum=110):
     if not evidence:
         return None
     validator = ClaimEvidenceValidator()
+    topic_terms = validator._terms(topic)
+
+    def on_angle(text: str, ids: tuple[str, ...]) -> bool:
+        supported = " ".join(evidence.get(x, "") for x in ids)
+        # Require the cited source—not merely a coincidental word in the
+        # narration—to overlap the requested angle. Two terms prevents broad
+        # film-name matches from admitting unrelated trivia.
+        return len(topic_terms & validator._terms(supported)) >= 2
     data = data if isinstance(data, dict) else {}
     lines = data.get("script_lines", [])
     citations = data.get("evidence_ids", [])
@@ -50,7 +58,7 @@ def recover_movie_script(data, *, topic, research, minimum=75, maximum=110):
         if not 5 <= len(text.split()) <= 29 or not ids or any(x not in evidence for x in ids):
             continue
         support = " ".join(evidence[x] for x in ids)
-        if len(validator._shared_terms(text, support)) >= 2:
+        if len(validator._shared_terms(text, support)) >= 2 and on_angle(text, ids):
             originals[slot] = _Line(text, ids, slot)
 
     if len(originals) == 4:
@@ -78,8 +86,10 @@ def recover_movie_script(data, *, topic, research, minimum=75, maximum=110):
                 if len(validator._shared_terms(text, source)) < 2:
                     continue
                 seen.add(key)
-                candidates.append(_Line(text, (evidence_id,)))
-    terms = validator._terms(topic)
+                candidate = _Line(text, (evidence_id,))
+                if on_angle(text, candidate.ids):
+                    candidates.append(candidate)
+    terms = topic_terms
     candidates.sort(key=lambda x: (-len(terms & validator._terms(x.text)), abs(x.words - 23), x.text))
     candidates = candidates[:80]
     # (score, total words, chosen lines). Prefer usable creative lines, then
