@@ -176,7 +176,10 @@ class LLMService:
             payload["format"] = "json"
 
         async with httpx.AsyncClient(
-            timeout=300
+            timeout=httpx.Timeout(
+                self.config.ollama_timeout_seconds,
+                connect=10.0,
+            )
         ) as client:
 
             response = await client.post(

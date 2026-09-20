@@ -54,6 +54,18 @@ def _read_int(
         return default
 
 
+def _read_timeout_seconds(
+    name: str,
+    *,
+    default: int,
+) -> int:
+    """Read a bounded provider timeout without context-size semantics."""
+    try:
+        return max(30, int(os.getenv(name, str(default))))
+    except (TypeError, ValueError):
+        return default
+
+
 @dataclass(frozen=True)
 class RuntimeConfig:
     """Machine-specific provider configuration."""
@@ -99,6 +111,9 @@ class RuntimeConfig:
         "llama-3.1-8b-instruct-fast"
     )
     ollama_num_ctx: int = 8192
+    # Full-context CPU inference can legitimately exceed five minutes.
+    # Keep this configurable for faster GPU deployments.
+    ollama_timeout_seconds: int = 900
 
     @classmethod
     def from_environment(
@@ -165,6 +180,10 @@ class RuntimeConfig:
             ollama_num_ctx=_read_int(
                 "JARVIS_OLLAMA_NUM_CTX",
                 default=8192,
+            ),
+            ollama_timeout_seconds=_read_timeout_seconds(
+                "JARVIS_OLLAMA_TIMEOUT_SECONDS",
+                default=900,
             ),
             piper_executable=_read_path(
                 "JARVIS_PIPER_EXECUTABLE",

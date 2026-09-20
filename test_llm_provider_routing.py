@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import json
 import tempfile
 from pathlib import Path
@@ -86,6 +86,7 @@ async def test_ollama_contract():
         real_client = httpx.AsyncClient
 
         def client_factory(*args, **kwargs):
+            request_seen["timeout"] = kwargs.get("timeout")
             kwargs["transport"] = transport
             return real_client(
                 *args,
@@ -122,6 +123,9 @@ async def test_ollama_contract():
         assert request_seen[
             "payload"
         ]["options"]["num_ctx"] == 8192
+
+        assert request_seen["timeout"].read == 900
+        assert request_seen["timeout"].connect == 10.0
 
         print(
             "PASS: Ollama chat contract preserved."
