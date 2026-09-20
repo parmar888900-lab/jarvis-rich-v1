@@ -1,0 +1,25 @@
+from backend.services.video.source_footage_resolver import SourceFootageResolver
+
+
+def test_science_topic_title_is_normalized_for_archive_search():
+    queries = SourceFootageResolver._queries(
+        format_name="science_explainer",
+        topic=(
+            "Why the James Webb Telescope's Gold Mirror "
+            "Must Unfold in Space"
+        ),
+    )
+
+    assert queries[0] == (
+        "James Webb Space Telescope mirror unfolding"
+    )
+    assert len(queries) == len(set(query.lower() for query in queries))
+
+
+def test_non_science_topic_queries_are_preserved():
+    queries = SourceFootageResolver._queries(
+        format_name="business_wealth",
+        topic="How Costco Makes Money",
+    )
+
+    assert queries[0] == "How Costco Makes Money"

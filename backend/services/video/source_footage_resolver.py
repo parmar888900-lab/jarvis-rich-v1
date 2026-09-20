@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from backend.services.video.asset_collector import (
@@ -288,6 +289,43 @@ class SourceFootageResolver:
             str(topic).split()
         ).strip()
 
+        science_subject = clean
+
+        if format_name == "science_explainer":
+            science_subject = re.sub(
+                r"^(?:why|how|what)\s+(?:the\s+)?",
+                "",
+                clean,
+                flags=re.IGNORECASE,
+            )
+            science_subject = re.sub(
+                r"\bmust\s+unfold\b",
+                "unfolding",
+                science_subject,
+                flags=re.IGNORECASE,
+            )
+            science_subject = re.sub(
+                r"\bJames\s+Webb\s+Telescope(?:['’]s)?\b",
+                "James Webb Space Telescope",
+                science_subject,
+                flags=re.IGNORECASE,
+            )
+            science_subject = re.sub(
+                r"\bgold\s+mirror\b",
+                "mirror",
+                science_subject,
+                flags=re.IGNORECASE,
+            )
+            science_subject = re.sub(
+                r"\s+in\s+space\s*$",
+                "",
+                science_subject,
+                flags=re.IGNORECASE,
+            )
+            science_subject = " ".join(
+                science_subject.split()
+            ).strip()
+
         format_queries = {
 
             "movie_facts": [
@@ -324,12 +362,12 @@ class SourceFootageResolver:
             ],
 
             "science_explainer": [
+                science_subject,
                 clean,
-                f"{clean} demonstration",
-                f"{clean} mechanism",
-                f"{clean} engineering",
-                f"{clean} experiment",
-                f"{clean} animation",
+                f"{science_subject} demonstration",
+                f"{science_subject} mechanism",
+                f"{science_subject} engineering",
+                f"{science_subject} animation",
             ],
 
             "business_wealth": [
@@ -372,4 +410,3 @@ class SourceFootageResolver:
             )
 
         return output
-
