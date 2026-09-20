@@ -44,6 +44,7 @@ from backend.services.video.source_footage_resolver import (
     SourceFootageResolver,
 )
 from backend.services.video_renderer.renderer import VideoRenderer
+from backend.services.video.media_asset import media_provenance_identity
 
 
 # RICH_V1_REAL_VIDEO_V6_1
@@ -2481,22 +2482,14 @@ class VideoPipeline:
             )
 
 
+        trend_content_format = trend.get("content_format", {})
+        if not isinstance(trend_content_format, dict):
+            trend_content_format = {}
         v62_format_name = str(
-            getattr(
-                trend,
-                "content_format",
-                "",
-            )
-            or getattr(
-                trend,
-                "format_name",
-                "",
-            )
-            or getattr(
-                trend,
-                "format",
-                "",
-            )
+            genre
+            or trend_content_format.get("format_name", "")
+            or trend.get("format_name", "")
+            or trend.get("format", "")
             or ""
         ).strip()
 
@@ -2619,41 +2612,7 @@ class VideoPipeline:
         # final authorized beat sequence before expensive render.
 
         def _block5_asset_identity(asset):
-            if asset is None:
-                return ""
-
-            for attribute in (
-                "image_path",
-                "file_path",
-                "local_path",
-                "path",
-                "source_url",
-                "asset_id",
-            ):
-                value = getattr(
-                    asset,
-                    attribute,
-                    None,
-                )
-
-                if value:
-                    return str(value).strip().lower()
-
-            if isinstance(asset, dict):
-                for key in (
-                    "image_path",
-                    "file_path",
-                    "local_path",
-                    "path",
-                    "source_url",
-                    "asset_id",
-                ):
-                    value = asset.get(key)
-
-                    if value:
-                        return str(value).strip().lower()
-
-            return str(asset).strip().lower()
+            return media_provenance_identity(asset)
 
         block5_identities = [
             _block5_asset_identity(asset)
@@ -2829,7 +2788,6 @@ class VideoPipeline:
             "video": video,
             "status": "success",
         }
-
 
 
 

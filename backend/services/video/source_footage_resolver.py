@@ -19,6 +19,7 @@ from backend.services.video.media_sources.pexels import (
 from backend.services.video.media_sources.wikimedia import (
     WikimediaCommonsProvider,
 )
+from backend.services.video.media_sources.nasa import NasaVideoProvider
 
 
 @dataclass(slots=True)
@@ -102,6 +103,8 @@ class SourceFootageResolver:
             else AssetCollector()
         )
 
+        self.science_providers = [NasaVideoProvider()]
+
     async def resolve(
         self,
         *,
@@ -131,12 +134,18 @@ class SourceFootageResolver:
         # Primary topic-specific footage
         ####################################################
 
+        primary_providers = list(self.primary_providers)
+        if str(format_name).strip().lower() in {
+            "science_explainer", "science_engineering", "space_aviation",
+        }:
+            primary_providers = list(self.science_providers) + primary_providers
+
         for query in queries:
 
             if len(primary) >= target_assets:
                 break
 
-            for provider in self.primary_providers:
+            for provider in primary_providers:
 
                 try:
 

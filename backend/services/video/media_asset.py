@@ -5,6 +5,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+def media_provenance_identity(asset) -> str:
+    """Stable identity for diversity QA, independent of download filename."""
+    if asset is None:
+        return ""
+    keys = ("source_url", "asset_id", "image_path", "file_path", "local_path", "path")
+    for key in keys:
+        value = asset.get(key) if isinstance(asset, dict) else getattr(asset, key, None)
+        if value:
+            return str(value).strip().lower()
+    return str(asset).strip().lower()
+
+
 @dataclass
 class MediaAsset:
     """A production-approved visual asset."""

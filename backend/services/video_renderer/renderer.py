@@ -7,6 +7,7 @@ MoviePy 2.x compatible.
 """
 
 from pathlib import Path
+from backend.services.video.media_asset import media_provenance_identity
 
 from backend.services.runtime.runtime_config import RuntimeConfig
 from backend.services.video_renderer.moviepy_runtime import (
@@ -284,13 +285,10 @@ class VideoRenderer:
                 # Stage2B will not render a sequence dominated by
                 # repeated physical images.
 
-                block5_paths = [
-                    str(
-                        Path(image.image_path)
-                        .resolve()
-                    ).lower()
-                    for image in beat_images
-                ]
+                def block5_identity(image):
+                    return media_provenance_identity(image)
+
+                block5_paths = [block5_identity(image) for image in beat_images]
 
                 block5_path_counts = {}
 

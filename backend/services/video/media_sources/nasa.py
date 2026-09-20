@@ -361,7 +361,7 @@ class NasaVideoProvider:
         output = (
             self.download_root
             / (
-                f"{content_id}_"
+                "nasa_"
                 f"{safe_id}_"
                 f"{digest}"
                 f"{suffix}"

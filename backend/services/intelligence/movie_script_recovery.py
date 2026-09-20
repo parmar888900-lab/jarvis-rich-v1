@@ -33,14 +33,53 @@ def recover_movie_script(data, *, topic, research, minimum=75, maximum=110):
     if not evidence:
         return None
     validator = ClaimEvidenceValidator()
-    topic_terms = validator._terms(topic)
+    topic_lower = str(topic).lower()
+
+    def angle_concepts(text: str) -> set[str]:
+        """Map only high-confidence wording variants to angle concepts."""
+        lower = str(text).lower()
+        concepts = set(validator._terms(lower))
+        concepts.difference_update({
+            "armor", "armored", "armour", "armoured", "suit", "suits",
+            "build", "builds", "building", "built", "construct",
+            "constructed", "constructs", "constructing", "assemble",
+            "assembled", "assembles", "assembling", "iron", "man",
+            "tony", "stark", "first", "prototype", "mark",
+        })
+        if re.search(r"\b(?:build|builds|building|built|construct(?:ed|s|ing)?|assembl(?:e|ed|es|ing))\b", lower):
+            concepts.add("build")
+        if re.search(r"\b(?:suit|suits|armor|armour|armored|armoured|mark\s+(?:one|1|i))\b", lower):
+            concepts.add("armor")
+        if re.search(r"\b(?:iron\s+man|tony\s+stark|stark)\b", lower):
+            concepts.add("stark")
+        if re.search(r"\b(?:first|prototype|mark\s+(?:one|1|i))\b", lower):
+            concepts.add("first")
+        return concepts
+
+    topic_terms = angle_concepts(topic)
+
+    def explicitly_off_angle(text: str) -> bool:
+        if not (
+            "suit-building" in topic_lower
+            or "suit building" in topic_lower
+            or "first suit" in topic_lower
+            or "mark i" in topic_lower
+        ):
+            return False
+        lower = str(text).lower()
+        return any(phrase in lower for phrase in (
+            "iron monger", "war machine", "mark iii", "mark iv",
+            "mark 3", "mark 4", "final battle",
+        ))
 
     def on_angle(text: str, ids: tuple[str, ...]) -> bool:
         supported = " ".join(evidence.get(x, "") for x in ids)
+        if explicitly_off_angle(supported):
+            return False
         # Require the cited source—not merely a coincidental word in the
         # narration—to overlap the requested angle. Two terms prevents broad
         # film-name matches from admitting unrelated trivia.
-        return len(topic_terms & validator._terms(supported)) >= 2
+        return len(topic_terms & angle_concepts(supported)) >= 2
     data = data if isinstance(data, dict) else {}
     lines = data.get("script_lines", [])
     citations = data.get("evidence_ids", [])
@@ -102,6 +141,8 @@ def recover_movie_script(data, *, topic, research, minimum=75, maximum=110):
             for option in options:
                 key = option.text.casefold()
                 if any(key in x.text.casefold() or x.text.casefold() in key for x in chosen):
+                    continue
+                if any(set(option.ids) & set(existing.ids) for existing in chosen):
                     continue
                 count = total + option.words
                 remaining = 3 - slot

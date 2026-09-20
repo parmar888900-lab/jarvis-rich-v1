@@ -94,3 +94,34 @@ def test_main_path_does_not_accept_semantically_rejected_recovery():
     with pytest.raises(RuntimeError, match="semantic"):
         asyncio.run(g.generate({"title": "Workshop metal components", "research": RESEARCH,
             "content_format": {"format_name": "famous_movie_commentary"}}))
+
+
+def test_first_suit_vocabulary_recovers_without_other_armor_drift():
+    facts = [
+        "Stark and Yinsen secretly build an arc reactor and construct a prototype armored suit from salvaged materials to aid in their escape from captivity.",
+        "Yinsen helps Tony Stark build the first Iron Man suit while they are held captive in a cave surrounded by the group's weapons.",
+        "Stan Winston and his company built separate metal and rubber versions of the armor so the production could photograph different physical requirements.",
+        "The Embassy created a digital version of the Mark I armor for additional visual effects work used alongside the physical armor versions.",
+    ]
+    research = "\n\n".join(f"[E{i}] {fact}" for i, fact in enumerate(facts, 1))
+    result = recover_movie_script(
+        {"title": "First suit", "hashtags": ["#film", "#movies", "#craft"],
+         "script_lines": ["Too short."] * 4,
+         "evidence_ids": [[f"E{i}"] for i in range(1, 5)]},
+        topic="Why Iron Man's first suit-building scene became iconic",
+        research=research,
+    )
+    assert result is not None
+    assert 75 <= sum(len(line.split()) for line in result["script_lines"]) <= 110
+
+
+def test_first_suit_angle_rejects_other_armor_only_packet():
+    research = "\n\n".join([
+        "[E1] Stan Winston built the Iron Monger armor for the film's final battle sequence.",
+        "[E2] War Machine used a separate armored suit with mounted weapons in a later film.",
+        "[E3] The Mark III armor used a red and gold finish after Stark returned home.",
+        "[E4] The Mark IV suit appeared after the cave escape had already ended.",
+    ])
+    assert recover_movie_script(
+        {}, topic="Why Iron Man's first suit-building scene became iconic", research=research,
+    ) is None
