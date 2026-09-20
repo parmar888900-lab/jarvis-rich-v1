@@ -1400,12 +1400,27 @@ class VideoPipeline:
 
             matcher = StrictClipMatcher()
 
+            max_reuse_per_source = min(
+                10,
+                max(
+                    3,
+                    (
+                        len(source_beats)
+                        + len(videos)
+                        - 1
+                    )
+                    // len(videos),
+                ),
+            )
+
             matches = matcher.match_many(
                 beats=source_beats,
                 clips=clips,
-
-                # Stronger diversity than class default.
-                max_reuse_per_source=3,
+                # A long authoritative source can contain many
+                # genuinely different shots. Clip IDs remain unique;
+                # this limit only prevents one file from monopolizing
+                # the sequence when several sources are available.
+                max_reuse_per_source=max_reuse_per_source,
             )
 
         except Exception as exc:
@@ -2486,8 +2501,8 @@ class VideoPipeline:
         if not isinstance(trend_content_format, dict):
             trend_content_format = {}
         v62_format_name = str(
-            genre
-            or trend_content_format.get("format_name", "")
+            trend_content_format.get("format_name", "")
+            or genre
             or trend.get("format_name", "")
             or trend.get("format", "")
             or ""
@@ -2788,7 +2803,6 @@ class VideoPipeline:
             "video": video,
             "status": "success",
         }
-
 
 
 
