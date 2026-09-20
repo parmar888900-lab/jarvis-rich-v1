@@ -881,8 +881,14 @@ STRICT RULES:
         research: str,
     ) -> dict | None:
         """
-        Expand a structurally valid but short script using only
-        complete sentences already present in supplied research.
+        Expand a structurally valid short script with compact,
+        verbatim factual units from supplied research.
+
+        The previous implementation appended the next full research
+        sentence to a round-robin line.  Long evidence sentences then
+        pushed otherwise good narration over the 29-word line limit.
+        Choose only units that fit, preserve the creative draft, and
+        fail closed when the evidence cannot reach a useful length.
         """
 
         if not self._is_structurally_valid_content(data):
@@ -903,15 +909,6 @@ STRICT RULES:
         if not research_text:
             return None
 
-        sentences = [
-            sentence.strip()
-            for sentence in re.split(
-                r"(?<=[.!?])\s+",
-                research_text,
-            )
-            if sentence.strip()
-        ]
-
         lines = [
             str(line).strip()
             for line in data.get(
@@ -924,61 +921,92 @@ STRICT RULES:
             return None
 
         existing_text = " ".join(lines).lower()
+        focus_tokens = self._recovery_tokens(existing_text)
 
-        safe_sentences = []
+        safe_units = []
+        seen_units = set()
 
-        for sentence in sentences:
-
-            if len(sentence.split()) < 5:
+        for order, sentence in enumerate(
+            re.split(r"(?<=[.!?])\s+", research_text)
+        ):
+            sentence = sentence.strip()
+            if not sentence or "http://" in sentence or "https://" in sentence:
                 continue
 
-            if sentence.lower() in existing_text:
-                continue
+            variants = [sentence]
 
-            safe_sentences.append(sentence)
+            # A leading comma-delimited clause is safe only when it is
+            # independently factual (subject + predicate), not a dangling
+            # relative clause.  This recovers compact evidence such as the
+            # 18-segment mirror fact without paraphrasing it.
+            first_clause = sentence.split(",", 1)[0].strip()
+            if first_clause != sentence:
+                variants.append(first_clause)
+
+            for unit in variants:
+                unit = re.sub(r"\s+", " ", unit).strip()
+                words = unit.split()
+                if not (6 <= len(words) <= 24):
+                    continue
+                if unit.lower().startswith(
+                    ("and ", "but ", "which ", "that ", "while ", "because ")
+                ):
+                    continue
+                if unit.lower() in existing_text:
+                    continue
+
+                unit_tokens = self._recovery_tokens(unit)
+                overlap = len(unit_tokens & focus_tokens)
+                if not overlap:
+                    continue
+
+                identity = " ".join(words).lower().rstrip(".!?")
+                if identity in seen_units:
+                    continue
+                seen_units.add(identity)
+
+                if unit[-1] not in ".!?":
+                    unit += "."
+
+                safe_units.append((overlap, order, unit))
+
+        safe_units.sort(key=lambda item: (-item[0], item[1]))
 
         candidate_lines = list(lines)
         total_words = current_words
-        line_index = 1
+        target_words = min(92, self.MAX_WORDS)
 
-        for sentence in safe_sentences:
-
-            sentence_words = len(
-                sentence.split()
-            )
-
-            if (
-                total_words + sentence_words
-                > self.MAX_WORDS
-            ):
+        for _, _, unit in safe_units:
+            unit_words = len(unit.split())
+            if total_words + unit_words > self.MAX_WORDS:
                 continue
 
-            base = candidate_lines[
-                line_index
-            ].rstrip()
+            eligible = [
+                index
+                for index, line in enumerate(candidate_lines)
+                if len(line.split()) + unit_words <= 29
+            ]
+            if not eligible:
+                continue
 
-            if (
-                base
-                and base[-1] not in ".!?"
-            ):
+            unit_tokens = self._recovery_tokens(unit)
+            line_index = max(
+                eligible,
+                key=lambda index: (
+                    len(self._recovery_tokens(candidate_lines[index]) & unit_tokens),
+                    29 - len(candidate_lines[index].split()),
+                    -index,
+                ),
+            )
+
+            base = candidate_lines[line_index].rstrip()
+            if base and base[-1] not in ".!?":
                 base += "."
 
-            candidate_lines[
-                line_index
-            ] = (
-                base
-                + " "
-                + sentence
-            ).strip()
+            candidate_lines[line_index] = f"{base} {unit}".strip()
+            total_words += unit_words
 
-            total_words += sentence_words
-
-            line_index += 1
-
-            if line_index > 3:
-                line_index = 1
-
-            if total_words >= self.MIN_WORDS:
+            if total_words >= target_words:
                 break
 
         candidate = {
@@ -992,6 +1020,20 @@ STRICT RULES:
             return None
 
         return candidate
+
+    @staticmethod
+    def _recovery_tokens(value: str) -> set[str]:
+        stop = {
+            "about", "after", "also", "because", "before", "being",
+            "from", "have", "into", "that", "their", "there", "these",
+            "they", "this", "those", "through", "using", "what", "when",
+            "where", "which", "while", "with", "would",
+        }
+        return {
+            token
+            for token in re.findall(r"[a-z0-9][a-z0-9'-]+", value.lower())
+            if len(token) >= 4 and token not in stop
+        }
 
     async def repair(
         self,
@@ -2579,7 +2621,6 @@ Return only the JSON object.
             )
 
         return {}
-
 
 
 
