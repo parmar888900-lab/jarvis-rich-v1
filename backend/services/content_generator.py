@@ -140,6 +140,22 @@ class ContentGenerator:
                 data=data, topic=topic, movie_title=movie_title, research=research,
             ) or {}
 
+        elif not self._is_valid_content(data):
+            # A structurally sound short draft is a creative success with a
+            # deterministic length defect.  Repair it from grounded research
+            # before spending another model call on an oscillating rewrite.
+            recovered_initial = self._recover_generation_length(
+                data=data,
+                research=research,
+            )
+            if recovered_initial is not None:
+                data = recovered_initial
+                logger.info(
+                    "Initial grounded draft recovered deterministically "
+                    "(%s words).",
+                    self._word_count(data),
+                )
+
 
         ####################################################
         # Attempt 2 - controlled regeneration
@@ -2621,7 +2637,6 @@ Return only the JSON object.
             )
 
         return {}
-
 
 
 

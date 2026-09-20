@@ -1,3 +1,6 @@
+import asyncio
+import json
+
 from backend.services.content_generator import ContentGenerator
 
 
@@ -51,3 +54,36 @@ def test_grounded_length_recovery_fails_closed_for_off_topic_material():
         data=draft,
         research=unrelated,
     ) is None
+
+
+def test_main_path_recovers_first_short_draft_without_second_llm_call():
+    class ShortDraftLLM:
+        def __init__(self):
+            self.calls = 0
+
+        async def chat(self, *args, **kwargs):
+            self.calls += 1
+            return json.dumps({
+                "title": "Why Webb unfolds",
+                "hashtags": ["#Science", "#Engineering", "#Space"],
+                "script_lines": [
+                    "Webb's giant gold mirror cannot launch at its full size.",
+                    "The telescope folds inside its rocket before the trip into space.",
+                    "After launch, its mirror structure opens through a carefully controlled deployment.",
+                    "Those aligned mirrors collect infrared light from the distant universe.",
+                ],
+            })
+
+    generator = ContentGenerator()
+    fake = ShortDraftLLM()
+    generator.llm = fake
+
+    result = asyncio.run(generator.generate({
+        "title": "Why Webb's mirror must unfold",
+        "research": RESEARCH,
+        "content_format": {"format_name": "visual_explainer"},
+    }))
+
+    assert fake.calls == 1
+    assert 75 <= sum(len(line.split()) for line in result.script_lines) <= 110
+    assert all(len(line.split()) <= 29 for line in result.script_lines)
