@@ -1,4 +1,4 @@
-﻿"""Historical YouTube performance intelligence."""
+"""Historical YouTube performance intelligence."""
 
 from __future__ import annotations
 

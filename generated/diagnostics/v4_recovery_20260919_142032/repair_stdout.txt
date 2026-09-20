@@ -1,0 +1,12 @@
+====================================================================
+V4 STATE RECOVERY
+====================================================================
+[INFO] V3 marker: True
+[INFO] V4 constant: True
+[INFO] V4 Foley queries: True
+[INFO] V4 generic-media filter: True
+[INFO] V4 semantic fallback: True
+[INFO] V4 weighted scoring: True
+
+[PASS] V4 is already fully installed.
+[PASS] No patch required.

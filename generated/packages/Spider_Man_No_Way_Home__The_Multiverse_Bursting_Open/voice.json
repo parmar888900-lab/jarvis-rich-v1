@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open.wav",
+    "duration": 31.41659863945578,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open_scene_001.wav",
+            "duration": 8.765532879818593,
+            "start_time": 0.0,
+            "end_time": 8.765532879818593,
+            "narration": "In Spider-Man: No Way Home, Doctor Strange\u2019s magic spell breaks open the multiverse, bringing alternate versions of Spider-Man into Peter's world."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open_scene_002.wav",
+            "duration": 6.873106575963718,
+            "start_time": 8.765532879818593,
+            "end_time": 15.638639455782311,
+            "narration": "This scene showcases the film's ambitious scope, seamlessly integrating characters from previous Spider-Man films into the MCU."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open_scene_003.wav",
+            "duration": 8.893242630385487,
+            "start_time": 15.638639455782311,
+            "end_time": 24.531882086167798,
+            "narration": "The seamless integration of characters like Andrew Garfield's Spider-Man and Tobey Maguire's Green Goblin adds depth and nostalgia, enhancing the overall storytelling."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open_scene_004.wav",
+            "duration": 6.884716553287982,
+            "start_time": 24.531882086167798,
+            "end_time": 31.416598639455778,
+            "narration": "By including these iconic characters, the filmmakers expand the Spider-Man universe while honoring the rich history of the franchise."
+        }
+    ],
+    "script": "In Spider-Man: No Way Home, Doctor Strange\u2019s magic spell breaks open the multiverse, bringing alternate versions of Spider-Man into Peter's world.\nThis scene showcases the film's ambitious scope, seamlessly integrating characters from previous Spider-Man films into the MCU.\nThe seamless integration of characters like Andrew Garfield's Spider-Man and Tobey Maguire's Green Goblin adds depth and nostalgia, enhancing the overall storytelling.\nBy including these iconic characters, the filmmakers expand the Spider-Man universe while honoring the rich history of the franchise."
+}

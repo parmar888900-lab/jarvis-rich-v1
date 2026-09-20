@@ -1,0 +1,177 @@
+﻿======================================================================
+MOVIE MEDIA RESOLVER - RESOLVE METHOD
+======================================================================
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:21:from backend.services.video.media_sources.pexels import (
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:22:    PexelsProvider,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:23:)
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:24:from backend.services.video.visual_semantic_validator import (
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:25:    VisualSemanticValidator,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:26:)
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:27:from backend.services.video.visual_quality_validator import (
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:28:    VisualQualityValidator,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:29:)
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:30:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:31:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:32:@dataclass(slots=True)
+> C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:33:class ResolvedMovieBeat:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:34:    beat_id: str
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:35:    narration_index: int
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:36:    purpose: str
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:37:    visual_query: str
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:38:    target_duration: float
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:39:    evidence_ids: list[str]
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:40:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:41:    asset: MediaAsset | None
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:42:    status: str
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:43:    attempted_queries: list[str]
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:44:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:45:    def to_dict(self) -> dict:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:46:        data = asdict(self)
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:47:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:48:        if self.asset is not None:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:49:            data["asset"] = asdict(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:50:                self.asset
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:51:            )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:52:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:53:        return data
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:54:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:55: > C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:56:class MovieMediaResolver:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:57:    """
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:58:    Resolve movie visual beats to production-authorized media.
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:59:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:60:    Search availability is never treated as reuse permission.
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:61:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:62:    Every selected asset must:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:63:        - exist locally
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:64:        - identify its source
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:65:        - identify its license
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:66:        - permit commercial reuse
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:67:        - pass relevance validation
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:68:        - match the production content_id
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:69:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:70:    Copyrighted movie footage is not acquired from streaming
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:71:    platforms, YouTube uploads, or other unauthorized sources.
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:72:    """
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:73:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:74:    MAX_QUERY_VARIANTS = 3
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:75:    RESULTS_PER_QUERY = 1
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:76:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:77:    def __init__(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:78:        self,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:79:        *,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:80:        providers=None,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:81:        asset_collector=None,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:82:    ) -> None:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:83:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:84:        self.providers = (
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:85:            providers
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:86:            if providers is not None
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:87:            else [
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:88:                WikimediaCommonsProvider(),
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:89:                PexelsProvider(),
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:90:            ]
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:91:        )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:92:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:93:        self.asset_collector = (
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:94:            asset_collector
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:95:            if asset_collector is not None
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:96:            else AssetCollector()
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:97:        )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:98:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:99:        self.visual_semantic_validator = (
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:100:            VisualSemanticValidator()
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:101:        )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:102:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:103:        self.visual_quality_validator = (
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:104:            VisualQualityValidator()
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:105:        )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:106: > C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:107:    async def resolve(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:108:        self,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:109:        *,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:110:        beats: list[MovieVisualBeat],
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:111:        content_id: str,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:112:        movie_title: str,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:113:    ) -> list[ResolvedMovieBeat]:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:114:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:115:        if not beats:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:116:            raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:117:                "MovieMediaResolver received no beats."
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:118:            )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:119:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:120:        clean_content_id = str(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:121:            content_id
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:122:        ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:123:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:124:        if not clean_content_id:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:125:            raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:126:                "Movie media resolution requires content_id."
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:127:            )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:128:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:129:        used_source_urls: set[str] = set()
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:130:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:131:        resolved: list[ResolvedMovieBeat] = []
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:132:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:133:        for beat in beats:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:134:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:135:            queries = self._query_variants(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:136:                beat=beat,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:137:                movie_title=movie_title,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:138:            )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:139:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:140:            candidates: list[MediaAsset] = []
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:141:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:142:            for query in queries[
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:143:                :self.MAX_QUERY_VARIANTS
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:144:            ]:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:145:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:146:                for provider in self.providers:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:147:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:148:                    try:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:149:                        found = await provider.search_and_download(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:150:                            query=query,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:151:                            content_id=clean_content_id,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:152:                            limit=self.RESULTS_PER_QUERY,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:153:                        )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:154:                    except Exception:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:155:                        # Provider failure is isolated to this
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:156:                        # query/provider combination.
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:157:                        continue
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:158:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:159:                    for asset in found:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:160:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:161:                        if (
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:162:                            asset.source_url
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:163:                            in used_source_urls
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:164:                        ):
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:165:                            continue
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:166:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:167:                        self._apply_query_relevance(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:168:                            asset=asset,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:169:                            query=query,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:170:                            beat=beat,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:171:                            movie_title=movie_title,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:172:                        )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:173:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:174:                        valid, issues = (
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:175:                            self.asset_collector.validate_asset(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:176:                                asset,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:177:                                content_id=clean_content_id,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:178:                            )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:179:                        )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:180:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:181:                        if not valid:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:182:                            continue
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:183:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:184:                        if not self._passes_identity_policy(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:185:                            asset=asset,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:186:                            beat=beat,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:187:                            query=query,
+
+======================================================================
+PIPELINE - AFTER BEAT MEDIA THROUGH RENDER
+======================================================================
+                    )                  selected_via = (                     "semantic_rotating_stage_fallback"                 )                  semantic_fallback_count += 1              identity = (                 self._master_asset_identity(                     selected_asset                 )             )              if (                 identity                 and identity                 == previous_identity             ):                  alternatives = (                     authorized_candidates                     + stage_candidates                 )                  replacement = next(                     (                         asset                         for asset                         in alternatives                         if (                             self._master_asset_identity(                                 asset                             )                             and self._master_asset_identity(                                 asset                             )                             != previous_identity                         )                     ),                     None,                 )                  if replacement is not None:                      master_duplicate_avoidance_events += 1                      selected_asset = replacement                      identity = (                         self._master_asset_identity(                             selected_asset                         )                     )                      selected_via += (                         "_duplicate_avoided"                     )              if identity:                 used_identities.add(                     identity                 )              previous_identity = identity              beat_render_assets.append(                 selected_asset             )              beat_media_evidence.append(                 {                     "beat_id": beat.beat_id,                     "narration_index": narration_index,                     "purpose": beat.purpose,                     "query": primary_query,                     "query_variants": query_variants,                     "selected_via": selected_via,                     "asset_id": selected_asset.asset_id,                     "source_name": selected_asset.source_name,                     "source_url": selected_asset.source_url,                     "license_name": selected_asset.license_name,                     "commercial_use_allowed": (                         selected_asset                         .commercial_use_allowed                     ),                 }             )          if (             len(beat_render_assets)             != len(visual_beats)         ):             raise RuntimeError(                 "Visual beat/media timeline mismatch."             )          ####################################################         # 7. Temporary renderer compatibility         #         # The existing renderer still accepts one image         # object per narration scene. For this integration         # test we pass the strongest authorized IMAGE from         # each group.         #         # The next renderer patch will consume the complete         # media_groups structure and produce multiple cuts.         ####################################################          render_assets = []          for index, group in enumerate(             media_groups,             start=1,         ):              image_asset = next(                 (                     asset                     for asset in group                     if asset.asset_type                     == "image"                 ),                 None,             )              if image_asset is None:                 raise RuntimeError(                     "Scene "                     f"{index} has no image-compatible "                     "asset for the current renderer."                 )              render_assets.append(                 image_asset             )          ####################################################         # 8. Build production package         ####################################################           # ====================================================         # RICH_V1_REAL_VIDEO_V6_1         # ====================================================          # ====================================================         # RICH_V1_VIDEO_ACQUISITION_V6_2         # ====================================================          v62_format_name = str(             getattr(                 trend,                 "content_format",                 "",             )             or getattr(                 trend,                 "format_name",                 "",             )             or getattr(                 trend,                 "format",                 "",             )             or ""         ).strip()          v62_source_result = (             await self._v62_acquire_source_footage(                 format_name=v62_format_name,                 topic=str(topic),                 content_id=str(content_id),             )         )          v62_source_assets = list(             v62_source_result.pop(                 "assets",                 [],             )         )          if v62_source_assets and media_groups:             existing_video_ids = {                 self._master_asset_identity(asset)                 for group in media_groups                 for asset in group                 if getattr(                     asset,                     "asset_type",                     "",                 ) == "video"             }              group_count = len(media_groups)              for asset_index, asset in enumerate(                 v62_source_assets             ):                 identity = self._master_asset_identity(                     asset                 )                  if (                     not identity                     or identity in existing_video_ids                 ):                     continue                  target_group = (                     asset_index                     % group_count                 )                  media_groups[                     target_group                 ].append(                     asset                 )                  existing_video_ids.add(                     identity                 )          v62_source_result[             "injected_video_assets"         ] = sum(             1             for group in media_groups             for asset in group             if getattr(                 asset,                 "asset_type",                 "",             ) == "video"         )          v61_video_result = (             self._v61_build_video_matches(                 media_groups=media_groups,                 visual_beats=visual_beats,                 content_id=str(                     content_id                 ),             )         )          v61_video_matches = list(             v61_video_result.get(                 "matches",                 [],             )         )          package = await self.package_builder.build(             content=generated,             scenes=storyboard,             images=render_assets,             trend=trend,         )          ####################################################         # 9. Render         ####################################################          # BLOCK5_VISUAL_QA_BEGIN         #         # The previous Stage2B implementation could legally         # resolve many semantic beats to the same authorized         # fallback image. That produced a technically valid         # 12-cut video which visually behaved like a slideshow.         #         # Rights authorization has already happened upstream.         # This gate does not authorize media and does not weaken         # any rights/evidence requirement. It only evaluates the         # final authorized beat sequence before expensive render.          def _block5_asset_identity(asset):             if asset is None:                 return ""              for attribute in (                 "image_path",                 "file_path",                 "local_path",                 "path",                 "source_url",                 "asset_id",             ):                 value = getattr(                     asset,                     attribute,                     None,                 )                  if value:                     return str(value).strip().lower()              if isinstance(asset, dict):                 for key in (                     "image_path",                     "file_path",                     "local_path",                     "path",                     "source_url",                     "asset_id",                 ):                     value = asset.get(key)                      if value:                         return str(value).strip().lower()              return str(asset).strip().lower()          block5_identities = [             _block5_asset_identity(asset)             for asset in beat_render_assets         ]          if (             not block5_identities             or len(block5_identities)             != len(visual_beat_dicts)         ):             raise RuntimeError(                 "Visual QA rejected semantic sequence: "                 "beat/image coverage mismatch."             )
+
+======================================================================
+END
+======================================================================

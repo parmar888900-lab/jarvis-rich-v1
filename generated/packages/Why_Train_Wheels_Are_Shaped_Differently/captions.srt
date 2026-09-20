@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:03,762
+Train wheels are designed for efficiency and safety on tracks, not roads.
+
+2
+00:00:03,762 --> 00:00:12,098
+They have flanges to guide them on the rails, preventing derailments. A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks.
+
+3
+00:00:12,098 --> 00:00:26,262
+Standardized profiles ensure smooth interaction with tracks, reducing wear. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE).
+
+4
+00:00:26,262 --> 00:00:29,872
+Incorrect profiles increase resistance and risk of accidents.

@@ -1,0 +1,520 @@
+﻿
+============================================================
+PATTERN: self.media_provider
+============================================================
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py
+LINE: 75
+0060:     STAGE_MEDIA_CANDIDATE_LIMIT = 3
+0061:     BEAT_MEDIA_CANDIDATE_LIMIT = 3
+0062:     TARGET_DISTINCT_BEAT_ASSETS = 6
+0063:     SEMANTIC_VISUAL_V4 = True
+0064:     REFERENCE_VISUAL_V5 = True
+0065: 
+0066:     def __init__(self):
+0067: 
+0068:         self.generator = ContentGenerator()
+0069:         self.content_validator = ContentValidator()
+0070:         self.research_service = EvergreenResearchService()
+0071:         self.movie_research_service = MovieResearchService()
+0072:         self.format_classifier = ContentFormatClassifier()
+0073:         self.storyboard = StoryboardGenerator()
+0074: 
+0075:         self.media_provider = (
+0076:             WikimediaCommonsProvider()
+0077:         )
+0078: 
+0079:         self.asset_collector = AssetCollector()
+0080:         self.media_query_builder = MediaQueryBuilder()
+0081: 
+0082:         self.visual_beat_planner = VisualBeatPlanner()
+0083: 
+0084:         self.package_builder = (
+0085:             ProductionPackageBuilder()
+0086:         )
+0087: 
+0088:         self.renderer = VideoRenderer()
+0089: 
+0090: 
+0091:     # MASTER_VISUAL_HELPERS_V2
+0092: 
+0093:     @staticmethod
+0094:     def _master_asset_identity(asset) -> str:
+0095: 
+0096:         if asset is None:
+0097:             return ""
+0098: 
+0099:         for attribute in (
+0100:             "local_path",
+0101:             "source_url",
+0102:             "asset_id",
+0103:         ):
+0104: 
+0105:             value = getattr(
+0106:                 asset,
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py
+LINE: 1663
+1648:         ):
+1649: 
+1650:             queries = (
+1651:                 self.media_query_builder.build(
+1652:                     topic=topic,
+1653:                     genre=genre,
+1654:                     narration=scene.narration,
+1655:                 )
+1656:             )[:3]
+1657: 
+1658:             authorized_scene_assets = []
+1659: 
+1660:             for query in queries:
+1661: 
+1662:                 found = await (
+1663:                     self.media_provider
+1664:                     .search_and_download(
+1665:                         query=query,
+1666:                         content_id=content_id,
+1667:                         limit=(
+1668:                             self.STAGE_MEDIA_CANDIDATE_LIMIT
+1669:                         ),
+1670:                     )
+1671:                 )
+1672: 
+1673:                 if not found:
+1674:                     continue
+1675: 
+1676:                 try:
+1677:                     authorized = (
+1678:                         self.asset_collector.authorize(
+1679:                             found,
+1680:                             content_id=content_id,
+1681:                         )
+1682:                     )
+1683:                 except RuntimeError:
+1684:                     continue
+1685: 
+1686:                 for image_asset in authorized:
+1687: 
+1688:                     if (
+1689:                         image_asset.asset_type
+1690:                         != "image"
+1691:                     ):
+1692:                         continue
+1693: 
+1694:                     identity = (
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py
+LINE: 1836
+1821: 
+1822:             for query in query_variants:
+1823: 
+1824:                 if (
+1825:                     semantic_enrichment_attempts
+1826:                     >= self.MAX_SEMANTIC_MEDIA_ENRICHMENTS
+1827:                 ):
+1828:                     break
+1829: 
+1830:                 semantic_enrichment_attempts += 1
+1831:                 master_query_count += 1
+1832: 
+1833:                 try:
+1834: 
+1835:                     found = await (
+1836:                         self.media_provider
+1837:                         .search_and_download(
+1838:                             query=query,
+1839:                             content_id=content_id,
+1840:                             limit=(
+1841:                                 self.BEAT_MEDIA_CANDIDATE_LIMIT
+1842:                             ),
+1843:                         )
+1844:                     )
+1845: 
+1846:                 except Exception:
+1847: 
+1848:                     found = []
+1849: 
+1850:                 if not found:
+1851:                     continue
+1852: 
+1853:                 try:
+1854: 
+1855:                     authorized = (
+1856:                         self.asset_collector.authorize(
+1857:                             found,
+1858:                             content_id=content_id,
+1859:                         )
+1860:                     )
+1861: 
+1862:                 except RuntimeError:
+1863: 
+1864:                     authorized = []
+1865: 
+1866:                 images = [
+1867:                     asset
+
+============================================================
+PATTERN: media_provider=
+============================================================
+
+============================================================
+PATTERN: PexelsProvider
+============================================================
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py
+LINE: 22
+0007: from dataclasses import asdict, dataclass
+0008: 
+0009: from backend.services.storyboard.movie_visual_beat_planner import (
+0010:     MovieVisualBeat,
+0011: )
+0012: from backend.services.video.movie_contextual_query_builder import (
+0013:     MovieContextualQueryBuilder,
+0014: )
+0015: 
+0016: from backend.services.video.asset_collector import AssetCollector
+0017: from backend.services.video.media_asset import MediaAsset
+0018: from backend.services.video.media_sources.wikimedia import (
+0019:     WikimediaCommonsProvider,
+0020: )
+0021: from backend.services.video.media_sources.pexels import (
+0022:     PexelsProvider,
+0023: )
+0024: from backend.services.video.visual_semantic_validator import (
+0025:     VisualSemanticValidator,
+0026: )
+0027: from backend.services.video.visual_quality_validator import (
+0028:     VisualQualityValidator,
+0029: )
+0030: 
+0031: 
+0032: @dataclass(slots=True)
+0033: class ResolvedMovieBeat:
+0034:     beat_id: str
+0035:     narration_index: int
+0036:     purpose: str
+0037:     visual_query: str
+0038:     target_duration: float
+0039:     evidence_ids: list[str]
+0040: 
+0041:     asset: MediaAsset | None
+0042:     status: str
+0043:     attempted_queries: list[str]
+0044: 
+0045:     def to_dict(self) -> dict:
+0046:         data = asdict(self)
+0047: 
+0048:         if self.asset is not None:
+0049:             data["asset"] = asdict(
+0050:                 self.asset
+0051:             )
+0052: 
+0053:         return data
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py
+LINE: 89
+0074:     MAX_QUERY_VARIANTS = 3
+0075:     RESULTS_PER_QUERY = 1
+0076: 
+0077:     def __init__(
+0078:         self,
+0079:         *,
+0080:         providers=None,
+0081:         asset_collector=None,
+0082:     ) -> None:
+0083: 
+0084:         self.providers = (
+0085:             providers
+0086:             if providers is not None
+0087:             else [
+0088:                 WikimediaCommonsProvider(),
+0089:                 PexelsProvider(),
+0090:             ]
+0091:         )
+0092: 
+0093:         self.asset_collector = (
+0094:             asset_collector
+0095:             if asset_collector is not None
+0096:             else AssetCollector()
+0097:         )
+0098: 
+0099:         self.visual_semantic_validator = (
+0100:             VisualSemanticValidator()
+0101:         )
+0102: 
+0103:         self.visual_quality_validator = (
+0104:             VisualQualityValidator()
+0105:         )
+0106: 
+0107:     async def resolve(
+0108:         self,
+0109:         *,
+0110:         beats: list[MovieVisualBeat],
+0111:         content_id: str,
+0112:         movie_title: str,
+0113:     ) -> list[ResolvedMovieBeat]:
+0114: 
+0115:         if not beats:
+0116:             raise RuntimeError(
+0117:                 "MovieMediaResolver received no beats."
+0118:             )
+0119: 
+0120:         clean_content_id = str(
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py
+LINE: 17
+0002: 
+0003: from __future__ import annotations
+0004: 
+0005: from dataclasses import dataclass, field
+0006: 
+0007: from backend.services.video.asset_collector import (
+0008:     AssetCollector,
+0009: )
+0010: from backend.services.video.media_asset import (
+0011:     MediaAsset,
+0012: )
+0013: from backend.services.video.media_sources.internet_archive import (
+0014:     InternetArchiveProvider,
+0015: )
+0016: from backend.services.video.media_sources.pexels import (
+0017:     PexelsProvider,
+0018: )
+0019: from backend.services.video.media_sources.wikimedia import (
+0020:     WikimediaCommonsProvider,
+0021: )
+0022: 
+0023: 
+0024: @dataclass(slots=True)
+0025: class SourceFootageResult:
+0026:     format_name: str
+0027:     topic: str
+0028:     assets: list[MediaAsset] = field(
+0029:         default_factory=list
+0030:     )
+0031:     primary_assets: list[MediaAsset] = field(
+0032:         default_factory=list
+0033:     )
+0034:     fallback_assets: list[MediaAsset] = field(
+0035:         default_factory=list
+0036:     )
+0037:     attempted_queries: list[str] = field(
+0038:         default_factory=list
+0039:     )
+0040:     status: str = "unresolved"
+0041: 
+0042: 
+0043: class SourceFootageResolver:
+0044:     """
+0045:     Resolve real/topic-specific reusable footage before generic B-roll.
+0046: 
+0047:     Priority:
+0048:         1. Wikimedia Commons
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py
+LINE: 89
+0074:         )
+0075: 
+0076:         if fallback_providers is not None:
+0077: 
+0078:             self.fallback_providers = (
+0079:                 fallback_providers
+0080:             )
+0081: 
+0082:         else:
+0083: 
+0084:             self.fallback_providers = []
+0085: 
+0086:             try:
+0087: 
+0088:                 self.fallback_providers.append(
+0089:                     PexelsProvider()
+0090:                 )
+0091: 
+0092:             except RuntimeError as exc:
+0093: 
+0094:                 print(
+0095:                     "Pexels fallback unavailable: "
+0096:                     f"{exc}"
+0097:                 )
+0098: 
+0099:         self.asset_collector = (
+0100:             asset_collector
+0101:             if asset_collector is not None
+0102:             else AssetCollector()
+0103:         )
+0104: 
+0105:     async def resolve(
+0106:         self,
+0107:         *,
+0108:         format_name: str,
+0109:         topic: str,
+0110:         content_id: str,
+0111:         minimum_assets: int = 6,
+0112:         target_assets: int = 12,
+0113:     ) -> SourceFootageResult:
+0114: 
+0115:         queries = self._queries(
+0116:             format_name=format_name,
+0117:             topic=topic,
+0118:         )
+0119: 
+0120:         primary: list[
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\media_sources\pexels.py
+LINE: 17
+0002: 
+0003: from __future__ import annotations
+0004: 
+0005: import asyncio
+0006: import hashlib
+0007: import json
+0008: import os
+0009: import re
+0010: import urllib.parse
+0011: import urllib.request
+0012: from pathlib import Path
+0013: 
+0014: from backend.services.video.media_asset import MediaAsset
+0015: 
+0016: 
+0017: class PexelsProvider:
+0018:     """
+0019:     Search and download Pexels photos/videos for contextual B-roll.
+0020: 
+0021:     Pexels assets are treated as contextual licensed media, not as
+0022:     authentic footage from the movie being discussed.
+0023:     """
+0024: 
+0025:     API_BASE = "https://api.pexels.com"
+0026:     SOURCE_NAME = "Pexels"
+0027:     LICENSE_NAME = "Pexels License"
+0028:     LICENSE_URL = "https://www.pexels.com/license/"
+0029: 
+0030:     DEFAULT_TIMEOUT = 25
+0031: 
+0032:     def __init__(
+0033:         self,
+0034:         *,
+0035:         api_key: str | None = None,
+0036:         download_root: str = "generated/media/pexels",
+0037:     ) -> None:
+0038: 
+0039:         self.api_key = (
+0040:             api_key
+0041:             or os.environ.get(
+0042:                 "PEXELS_API_KEY",
+0043:                 "",
+0044:             )
+0045:         ).strip()
+0046: 
+0047:         if not self.api_key:
+0048:             raise RuntimeError(
+
+============================================================
+PATTERN: WikimediaProvider
+============================================================
+
+============================================================
+PATTERN: PEXELS_API_KEY
+============================================================
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\media_sources\pexels.py
+LINE: 42
+0027:     LICENSE_NAME = "Pexels License"
+0028:     LICENSE_URL = "https://www.pexels.com/license/"
+0029: 
+0030:     DEFAULT_TIMEOUT = 25
+0031: 
+0032:     def __init__(
+0033:         self,
+0034:         *,
+0035:         api_key: str | None = None,
+0036:         download_root: str = "generated/media/pexels",
+0037:     ) -> None:
+0038: 
+0039:         self.api_key = (
+0040:             api_key
+0041:             or os.environ.get(
+0042:                 "PEXELS_API_KEY",
+0043:                 "",
+0044:             )
+0045:         ).strip()
+0046: 
+0047:         if not self.api_key:
+0048:             raise RuntimeError(
+0049:                 "PEXELS_API_KEY is not configured."
+0050:             )
+0051: 
+0052:         self.download_root = Path(
+0053:             download_root
+0054:         )
+0055: 
+0056:         self.download_root.mkdir(
+0057:             parents=True,
+0058:             exist_ok=True,
+0059:         )
+0060: 
+0061:     async def search_and_download(
+0062:         self,
+0063:         *,
+0064:         query: str,
+0065:         content_id: str,
+0066:         limit: int = 2,
+0067:     ) -> list[MediaAsset]:
+0068: 
+0069:         clean_query = " ".join(
+0070:             str(query).split()
+0071:         ).strip()
+0072: 
+0073:         if not clean_query:
+
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\media_sources\pexels.py
+LINE: 49
+0034:         *,
+0035:         api_key: str | None = None,
+0036:         download_root: str = "generated/media/pexels",
+0037:     ) -> None:
+0038: 
+0039:         self.api_key = (
+0040:             api_key
+0041:             or os.environ.get(
+0042:                 "PEXELS_API_KEY",
+0043:                 "",
+0044:             )
+0045:         ).strip()
+0046: 
+0047:         if not self.api_key:
+0048:             raise RuntimeError(
+0049:                 "PEXELS_API_KEY is not configured."
+0050:             )
+0051: 
+0052:         self.download_root = Path(
+0053:             download_root
+0054:         )
+0055: 
+0056:         self.download_root.mkdir(
+0057:             parents=True,
+0058:             exist_ok=True,
+0059:         )
+0060: 
+0061:     async def search_and_download(
+0062:         self,
+0063:         *,
+0064:         query: str,
+0065:         content_id: str,
+0066:         limit: int = 2,
+0067:     ) -> list[MediaAsset]:
+0068: 
+0069:         clean_query = " ".join(
+0070:             str(query).split()
+0071:         ).strip()
+0072: 
+0073:         if not clean_query:
+0074:             return []
+0075: 
+0076:         clean_content_id = str(
+0077:             content_id
+0078:         ).strip()
+0079: 
+0080:         if not clean_content_id:

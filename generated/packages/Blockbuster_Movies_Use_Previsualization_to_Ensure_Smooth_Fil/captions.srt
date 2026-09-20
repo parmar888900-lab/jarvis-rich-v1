@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:04,656
+Blockbuster movies use previsualization to plan shots and ensure smooth filming.
+
+2
+00:00:04,656 --> 00:00:13,978
+This technique helps directors and cinematographers visualize scenes before actual shooting begins. Filmmaking, or film production, is the process of creating a motion picture.
+
+3
+00:00:13,978 --> 00:00:37,129
+Previs allows for adjustments and improvements, saving time and resources during production. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries.
+
+4
+00:00:37,129 --> 00:00:42,098
+By using previsualization, filmmakers can create more polished and cohesive final products.

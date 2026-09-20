@@ -1,0 +1,4 @@
+Imagine a weather presenter magically stepping into a live broadcast with a world map behind them - that's green screen magic!
+Filmmakers use green screens to replace backgrounds with CGI, creating seamless, fantastical worlds without limitations.
+Common in both news and entertainment, this technique allows for dynamic visual effects and flexible post-production editing.
+By using chroma keying, they can easily remove the green and replace it with any background, making magic happen frame by frame.

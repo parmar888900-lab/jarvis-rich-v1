@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Jurassic_Park__Dinosaurs_That_Feel_Real\\Jurassic_Park__Dinosaurs_That_Feel_Real.wav",
+    "duration": 30.56907029478458,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Jurassic_Park__Dinosaurs_That_Feel_Real_scene_001.wav",
+            "duration": 7.012426303854875,
+            "start_time": 0.0,
+            "end_time": 7.012426303854875,
+            "narration": "In Jurassic Park, the dinosaurs are brought to life through groundbreaking CGI and animatronics, making them feel like real creatures."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Jurassic_Park__Dinosaurs_That_Feel_Real_scene_002.wav",
+            "duration": 8.962902494331066,
+            "start_time": 7.012426303854875,
+            "end_time": 15.975328798185942,
+            "narration": "Spielberg ensured the dinosaurs were not just monsters, but animals with behavior and personalities, as Grant says, 'We're out of a job,' reflecting the impact they have on the characters."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Jurassic_Park__Dinosaurs_That_Feel_Real_scene_003.wav",
+            "duration": 6.757006802721088,
+            "start_time": 15.975328798185942,
+            "end_time": 22.732335600907028,
+            "narration": "The public has retained the portrayal of dinosaurs in Jurassic Park since its release, even though the film contained scientific inaccuracies."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Jurassic_Park__Dinosaurs_That_Feel_Real_scene_004.wav",
+            "duration": 7.836734693877551,
+            "start_time": 22.732335600907028,
+            "end_time": 30.56907029478458,
+            "narration": "Critics praised Jurassic Park for its innovative approach to dinosaur animation, solidifying its status as one of the greatest films ever made."
+        }
+    ],
+    "script": "In Jurassic Park, the dinosaurs are brought to life through groundbreaking CGI and animatronics, making them feel like real creatures.\nSpielberg ensured the dinosaurs were not just monsters, but animals with behavior and personalities, as Grant says, 'We're out of a job,' reflecting the impact they have on the characters.\nThe public has retained the portrayal of dinosaurs in Jurassic Park since its release, even though the film contained scientific inaccuracies.\nCritics praised Jurassic Park for its innovative approach to dinosaur animation, solidifying its status as one of the greatest films ever made."
+}

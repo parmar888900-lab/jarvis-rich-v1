@@ -1,4 +1,4 @@
-﻿"""Goal-aware candidate intelligence for production topic selection."""
+"""Goal-aware candidate intelligence for production topic selection."""
 
 from __future__ import annotations
 

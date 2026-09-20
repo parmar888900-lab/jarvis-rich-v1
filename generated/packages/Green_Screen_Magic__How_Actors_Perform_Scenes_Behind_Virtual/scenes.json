@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Imagine an actor stepping onto a virtual set without leaving the studio \u2013 that's green screen magic!",
+        "image_prompt": "Imagine an actor stepping onto a virtual set without leaving the studio \u2013 that's green screen magic!",
+        "duration": 6.373877551020408,
+        "start_time": 0.0,
+        "end_time": 6.373877551020408
+    },
+    {
+        "narration": "In chroma key compositing, the actor stands in front of a green screen, which is later replaced with any background you can imagine.",
+        "image_prompt": "In chroma key compositing, the actor stands in front of a green screen, which is later replaced with any background you can imagine.",
+        "duration": 6.327437641723356,
+        "start_time": 6.373877551020408,
+        "end_time": 12.701315192743763
+    },
+    {
+        "narration": "This technique, widely used in film, TV, and gaming, allows seamless integration of real actors into any environment.",
+        "image_prompt": "This technique, widely used in film, TV, and gaming, allows seamless integration of real actors into any environment.",
+        "duration": 6.826666666666667,
+        "start_time": 12.701315192743763,
+        "end_time": 19.52798185941043
+    },
+    {
+        "narration": "From weather reports to epic battle scenes, chroma keying brings imagination to life, one green screen at a time.",
+        "image_prompt": "From weather reports to epic battle scenes, chroma keying brings imagination to life, one green screen at a time.",
+        "duration": 6.048798185941043,
+        "start_time": 19.52798185941043,
+        "end_time": 25.576780045351473
+    }
+]

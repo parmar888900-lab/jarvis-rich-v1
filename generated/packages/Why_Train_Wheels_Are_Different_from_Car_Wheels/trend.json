@@ -1,0 +1,63 @@
+{
+    "title": "Why train wheels are shaped differently from car wheels",
+    "topic": "Why train wheels are shaped differently from car wheels",
+    "genre": "science_engineering",
+    "content_id": "d35a56fa-cf66-475a-b9b4-75cbbcb64707",
+    "content_strategy": "evergreen_storytelling",
+    "requires_trend": false,
+    "production_selection": {
+        "eligible": true,
+        "selected": true,
+        "production_score": 87.9,
+        "curiosity_score": 88.0,
+        "story_strength": 82.0,
+        "visual_supply": 89.0,
+        "evergreen_value": 94.0,
+        "credibility": 90.0,
+        "channel_fit": 86.0,
+        "reason": "Evergreen topic passed Rich V1 story and production criteria.",
+        "rejection_reasons": []
+    },
+    "content_format": {
+        "format_name": "visual_explainer",
+        "target_duration_min": 35.0,
+        "target_duration_max": 65.0,
+        "preferred_media": [
+            "licensed_video",
+            "licensed_image",
+            "diagram",
+            "archive_media"
+        ],
+        "narration_mode": "voiceover",
+        "pacing": "information_density",
+        "rights_gate_required": false
+    },
+    "research": "A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE). The powered wheels under the locomotive are called driving wheels. Wheels are initially cast or forged and then heat-treated to have a specific hardness. New wheels are machined using a lathe to a standardised shape, called a profile. All wheel profiles are regularly checked to ensure proper interaction between the wheel and the rail. Incorrectly profiled wheels and worn wheels can increase rolling resistance, reduce energy efficiency and may even cause a derailment. The International Union of Railways has defined a standard wheel diameter of 920 mm (36 in), although smaller sizes are used in some rapid transit railway systems and on ro-ro carriages. Wheelset may refer to: \n\nA pair of bicycle wheels\nWheelset (rail transport), a pair of railroad vehicle wheels mounted rigidly on an axle\n\nA train wheel or rail wheel is a type of wheel specially designed for use on railway tracks. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE). The powered wheels under the locomotive are called driving wheels. Wheels are initially cast or forged and then heat-treated to have a specific hardness. New wheels are machined using a lathe to a standardised shape, called a profile. All wheel profiles are regularly checked to ensure proper interaction between the wheel and the rail. Incorrectly profiled wheels and worn wheels can increase rolling resistance, reduce energy efficiency and may even cause a derailment. The International Union of Railways has defined a standard wheel diameter of 920 mm (36 in), although smaller sizes are used in some rapid transit railway systems and on ro-ro carriages.\n\nWheelset may refer to: \n\nA pair of bicycle wheels\nWheelset (rail transport), a pair of railroad vehicle wheels mounted rigidly on an axle",
+    "knowledge": {
+        "topic": "Why train wheels are shaped differently from car wheels",
+        "summary": "A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE). The powered wheels under the locomotive are called driving wheels. Wheels are initially cast or forged and then heat-treated to have a specific hardness. New wheels are machined using a lathe to a standardised shape, called a profile. All wheel profiles are regularly checked to ensure proper interaction between the wheel and the rail. Incorrectly profiled wheels and worn wheels can increase rolling resistance, reduce energy efficiency and may even cause a derailment. The International Union of Railways has defined a standard wheel diameter of 920 mm (36 in), although smaller sizes are used in some rapid transit railway systems and on ro-ro carriages. Wheelset may refer to: \n\nA pair of bicycle wheels\nWheelset (rail transport), a pair of railroad vehicle wheels mounted rigidly on an axle",
+        "facts": [
+            "A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE). The powered wheels under the locomotive are called driving wheels. Wheels are initially cast or forged and then heat-treated to have a specific hardness. New wheels are machined using a lathe to a standardised shape, called a profile. All wheel profiles are regularly checked to ensure proper interaction between the wheel and the rail. Incorrectly profiled wheels and worn wheels can increase rolling resistance, reduce energy efficiency and may even cause a derailment. The International Union of Railways has defined a standard wheel diameter of 920 mm (36 in), although smaller sizes are used in some rapid transit railway systems and on ro-ro carriages.",
+            "Wheelset may refer to: \n\nA pair of bicycle wheels\nWheelset (rail transport), a pair of railroad vehicle wheels mounted rigidly on an axle"
+        ],
+        "keywords": [],
+        "sources": [
+            {
+                "title": "Train wheel",
+                "content": "A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE). The powered wheels under the locomotive are called driving wheels. Wheels are initially cast or forged and then heat-treated to have a specific hardness. New wheels are machined using a lathe to a standardised shape, called a profile. All wheel profiles are regularly checked to ensure proper interaction between the wheel and the rail. Incorrectly profiled wheels and worn wheels can increase rolling resistance, reduce energy efficiency and may even cause a derailment. The International Union of Railways has defined a standard wheel diameter of 920 mm (36 in), although smaller sizes are used in some rapid transit railway systems and on ro-ro carriages.",
+                "source": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Train_wheel",
+                "confidence": 0.95
+            },
+            {
+                "title": "Wheelset",
+                "content": "Wheelset may refer to: \n\nA pair of bicycle wheels\nWheelset (rail transport), a pair of railroad vehicle wheels mounted rigidly on an axle",
+                "source": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Wheelset",
+                "confidence": 0.95
+            }
+        ],
+        "score": 6.16,
+        "category": "Evergreen"
+    }
+}

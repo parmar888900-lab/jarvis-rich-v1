@@ -1,0 +1,14 @@
+{
+  "success": false,
+  "patched": true,
+  "rolled_back": true,
+  "tests": [
+    "Current Wikimedia source backed up.",
+    "_api patched structurally.",
+    "Patched Wikimedia source compiles."
+  ],
+  "backup": "C:\\Users\\hp\\jarvis.ai\\generated\\backups\\wikimedia_429_atomic_20260919_010523\\wikimedia.py",
+  "exception_type": "ImportError",
+  "exception": "cannot import name 'WikimediaMediaSource' from 'backend.services.video.media_sources.wikimedia' (C:\\Users\\hp\\jarvis.ai\\backend\\services\\video\\media_sources\\wikimedia.py)",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\hp\\jarvis.ai\\generated\\diagnostics\\wikimedia_atomic_20260919_010523\\wikimedia_atomic_patch.py\", line 400, in <module>\n    from backend.services.video.media_sources.wikimedia import (\n        WikimediaMediaSource,\n    )\nImportError: cannot import name 'WikimediaMediaSource' from 'backend.services.video.media_sources.wikimedia' (C:\\Users\\hp\\jarvis.ai\\backend\\services\\video\\media_sources\\wikimedia.py)\n"
+}

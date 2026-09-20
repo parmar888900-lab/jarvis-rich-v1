@@ -1,0 +1,4441 @@
+﻿===== JARVIS REFERENCE UPGRADE - STAGE 1 SOURCE =====
+
+===== DISCOVERED IMPLEMENTATIONS =====
+C:\Users\hp\jarvis.ai\backend\services\content_generator.py
+C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py
+C:\Users\hp\jarvis.ai\backend\services\intelligence\scorer.py
+C:\Users\hp\jarvis.ai\backend\services\intelligence\trend_engine.py
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py
+C:\Users\hp\jarvis.ai\backend\services\storyboard\generator.py
+C:\Users\hp\jarvis.ai\backend\services\storyboard\storyboard_generator.py
+C:\Users\hp\jarvis.ai\backend\services\video\media_query_builder.py
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\content_generator.py
+================================================================================
+import json
+import logging
+import re
+
+from backend.models.generated_content import GeneratedContent
+from backend.services.llm_service import LLMService
+from backend.services.intelligence.claim_evidence_validator import (
+    ClaimEvidenceValidator,
+)
+from backend.services.intelligence.semantic_claim_evidence_validator import (
+    SemanticClaimEvidenceValidator,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class ContentGenerator:
+
+    MIN_WORDS = 75
+    MAX_WORDS = 110
+
+    def __init__(self):
+        self.llm = LLMService()
+        self.claim_evidence_validator = ClaimEvidenceValidator()
+        self.semantic_claim_evidence_validator = (
+            SemanticClaimEvidenceValidator(
+                llm=self.llm
+            )
+        )
+
+    async def generate(
+        self,
+        trend: dict,
+    ) -> GeneratedContent:
+
+        topic = (
+            trend.get("title")
+            or trend.get("topic")
+            or "Trending Story"
+        )
+
+        research = trend.get(
+            "research",
+            "",
+        )
+
+        content_format = trend.get(
+            "content_format",
+            {},
+        )
+
+        if not isinstance(
+            content_format,
+            dict,
+        ):
+            content_format = {}
+
+        format_name = str(
+            content_format.get(
+                "format_name",
+                "visual_explainer",
+            )
+        ).strip()
+
+        movie_title = str(
+            trend.get(
+                "movie_title",
+                "",
+            )
+        ).strip()
+
+        if isinstance(research, list):
+            research = "\n".join(
+                str(x)
+                for x in research
+            )
+
+        if not research:
+            research = json.dumps(
+                trend,
+                indent=2,
+            )
+
+        ####################################################
+        # Attempt 1
+        ####################################################
+
+        raw = await self.llm.chat(
+            self._build_messages(
+                topic=topic,
+                research=research,
+                format_name=format_name,
+                movie_title=movie_title,
+            ),
+            json_mode=True,
+        )
+
+        data = self._extract_json(raw)
+
+
+        ####################################################
+        # Attempt 2 - controlled regeneration
+        ####################################################
+
+        if not self._is_valid_content(data):
+
+            previous_words = (
+                self._word_count(data)
+            )
+
+            logger.warning(
+                "Initial content invalid "
+                "(%s words). Regenerating.",
+                previous_words,
+            )
+
+            retry_raw = await self.llm.chat(
+                self._build_messages(
+                    topic=topic,
+                    research=research,
+                    previous_words=previous_words,
+                    retry=True,
+                    format_name=format_name,
+                    movie_title=movie_title,
+            ),
+                json_mode=True,
+            )
+
+            retry_data = self._extract_json(
+                retry_raw
+            )
+
+
+            if self._is_valid_content(
+                retry_data
+            ):
+                data = retry_data
+
+                logger.info(
+                    "Content regeneration succeeded."
+                )
+
+            else:
+                retry_words = self._word_count(
+                    retry_data
+                )
+
+                logger.warning(
+                    "Content regeneration failed "
+                    "(%s words). Attempting grounded "
+                    "length recovery.",
+                    retry_words,
+                )
+
+                if format_name == "famous_movie_commentary":
+
+                    recovered = (
+                        await self._recover_movie_generation_length(
+                            data=retry_data,
+                            topic=topic,
+                            movie_title=movie_title,
+                            research=research,
+                        )
+                    )
+
+                else:
+
+                    recovered = (
+                        self._recover_generation_length(
+                            data=retry_data,
+                            research=research,
+                        )
+                    )
+
+                if recovered is not None:
+                    data = recovered
+
+                    logger.info(
+                        "Grounded generation length "
+                        "recovery succeeded (%s words).",
+                        self._word_count(data),
+                    )
+
+                else:
+                    data = {}
+
+        ####################################################
+        # Emergency fallback
+        ####################################################
+
+        if not data:
+
+            logger.warning(
+                "Using emergency content fallback."
+            )
+
+            data = self._fallback(
+                topic=topic,
+                research=research,
+            )
+
+        ####################################################
+        # Normalize
+        ####################################################
+
+        title = str(
+            data.get(
+                "title",
+                topic,
+            )
+        ).strip()
+
+        hashtags = [
+            str(tag).strip()
+            for tag in data.get(
+                "hashtags",
+                []
+            )
+            if str(tag).strip()
+        ]
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+            if str(line).strip()
+        ]
+
+        if len(lines) != 4:
+            raise RuntimeError(
+                "Generated content normalization produced "
+                f"{len(lines)} script lines; expected exactly 4."
+            )
+
+        lines = lines[:4]
+
+        if format_name == "famous_movie_commentary":
+
+            evidence_ids = data.get(
+                "evidence_ids",
+                [],
+            )
+
+            evidence_validation = (
+                self.claim_evidence_validator.validate(
+                    script_lines=lines,
+                    evidence_ids=evidence_ids,
+                    research=research,
+                )
+            )
+
+            if not evidence_validation.valid:
+                raise RuntimeError(
+                    "Movie script failed claim-evidence validation: "
+                    f"{evidence_validation.issues}"
+                )
+
+        if format_name == "famous_movie_commentary":
+
+            semantic_validation = (
+                await self.semantic_claim_evidence_validator.validate(
+                    script_lines=lines,
+                    evidence_ids=data.get(
+                        "evidence_ids",
+                        [],
+                    ),
+                    research=research,
+                )
+            )
+
+            if not semantic_validation.valid:
+
+                repaired_lines = (
+                    await self._repair_movie_semantic_failures(
+                        script_lines=lines,
+                        evidence_ids=data.get(
+                            "evidence_ids",
+                            [],
+                        ),
+                        research=research,
+                        semantic_validation=semantic_validation,
+                        topic=topic,
+                        movie_title=movie_title,
+                    )
+                )
+
+                if repaired_lines is None:
+                    raise RuntimeError(
+                        "Movie script failed semantic evidence "
+                        "validation and targeted repair failed: "
+                        f"{semantic_validation.to_dict()}"
+                    )
+
+                lines = repaired_lines
+
+                data["script_lines"] = list(
+                    repaired_lines
+                )
+
+                logger.info(
+                    "Targeted semantic movie repair succeeded."
+                )
+
+        return GeneratedContent(
+            title=title,
+            hashtags=hashtags,
+            script_lines=lines,
+            metadata={
+                "source": topic,
+                "generator": "Jarvis Rich V1",
+                "content_format": format_name,
+                "movie_title": movie_title,
+                "evidence_ids": (
+                    data.get("evidence_ids", [])
+                    if format_name == "famous_movie_commentary"
+                    else []
+                ),
+                "word_count": sum(
+                    len(line.split())
+                    for line in lines
+                ),
+            },
+        )
+
+    ########################################################
+    # Content repair
+    ########################################################
+
+    async def _recover_movie_generation_length(
+        self,
+        *,
+        data: dict,
+        topic: str,
+        movie_title: str,
+        research: str,
+    ) -> dict | None:
+        """
+        Expand short movie commentary using the LLM while
+        preserving evidence citations and natural narration.
+
+        Raw research text must never be copied directly into
+        the spoken script merely to satisfy word count.
+        """
+
+        if not self._is_structurally_valid_content(
+            data
+        ):
+            return None
+
+        current_words = self._word_count(
+            data
+        )
+
+        if (
+            self.MIN_WORDS
+            <= current_words
+            <= self.MAX_WORDS
+        ):
+            return data
+
+        if current_words > self.MAX_WORDS:
+            return None
+
+        current_json = json.dumps(
+            data,
+            indent=2,
+        )
+
+        messages = [
+            {
+                "role": "system",
+                "content": """
+You are repairing a grounded movie-commentary YouTube Short.
+
+Return ONLY one valid JSON object.
+
+Keep exactly this structure:
+
+{
+  "title": "string",
+  "hashtags": ["#tag1", "#tag2", "#tag3"],
+  "script_lines": [
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4"
+  ],
+  "evidence_ids": [
+    ["E1"],
+    ["E2"],
+    ["E3"],
+    ["E4"]
+  ]
+}
+
+RULES:
+
+1. Keep exactly four narration lines.
+2. Expand the narration to 85-100 words total.
+3. Preserve natural spoken narration.
+4. Never paste raw research blocks or evidence labels into narration.
+5. Never include [E1], [E2], etc. inside script_lines.
+6. evidence_ids must remain separate from script_lines.
+7. Every factual claim must be supported by cited evidence.
+8. Cite only evidence IDs that exist in the supplied research.
+9. Preserve the original commentary angle.
+10. Do not add unsupported filmmaking or behind-the-scenes claims.
+11. Do not add generic calls to action.
+12. Do not add filler just to increase length.
+13. Add useful explanation supported by evidence.
+""",
+            },
+            {
+                "role": "user",
+                "content": f"""
+MOVIE:
+
+{movie_title}
+
+TOPIC:
+
+{topic}
+
+CURRENT SHORT SCRIPT:
+
+{current_json}
+
+GROUNDED EVIDENCE:
+
+{research}
+
+Rewrite the script to 85-100 narration words.
+
+Return only JSON.
+""",
+            },
+        ]
+
+        raw = await self.llm.chat(
+            messages,
+            json_mode=True,
+        )
+
+        recovered = self._extract_json(
+            raw
+        )
+
+        if not self._is_valid_content(
+            recovered
+        ):
+            logger.warning(
+                "Movie evidence-aware length recovery "
+                "failed structural/length validation."
+            )
+            return None
+
+        evidence_ids = recovered.get(
+            "evidence_ids",
+            [],
+        )
+
+        validation = (
+            self.claim_evidence_validator.validate(
+                script_lines=recovered.get(
+                    "script_lines",
+                    [],
+                ),
+                evidence_ids=evidence_ids,
+                research=research,
+            )
+        )
+
+        if not validation.valid:
+            logger.warning(
+                "Movie evidence-aware recovery failed "
+                "claim-evidence validation: %s",
+                validation.issues,
+            )
+            return None
+
+        # Evidence labels belong in metadata only.
+        # They must never leak into spoken narration.
+        for line in recovered.get(
+            "script_lines",
+            [],
+        ):
+            if re.search(
+                r"\[E\d+\]",
+                str(line),
+                flags=re.IGNORECASE,
+            ):
+                logger.warning(
+                    "Movie recovery rejected evidence-label "
+                    "leakage into narration."
+                )
+                return None
+
+        return recovered
+
+
+    async def _repair_movie_semantic_failures(
+        self,
+        *,
+        script_lines: list[str],
+        evidence_ids: list[list[str]],
+        research: str,
+        semantic_validation,
+        topic: str,
+        movie_title: str,
+    ) -> list[str] | None:
+        """
+        Repair only semantic evidence failures.
+
+        Up to three controlled repair rounds are allowed.
+        Every round is revalidated lexically and semantically.
+        """
+
+        evidence_map = {}
+
+        for match in re.finditer(
+            r"\[E(\d+)\]\s*(.*?)(?=\n\s*\[E\d+\]|\Z)",
+            str(research),
+            flags=re.DOTALL,
+        ):
+            evidence_id = f"E{match.group(1)}"
+
+            evidence_map[evidence_id] = " ".join(
+                match.group(2).split()
+            )
+
+        working_lines = list(
+            script_lines
+        )
+
+        current_validation = (
+            semantic_validation
+        )
+
+        max_attempts = 3
+
+        for attempt in range(
+            1,
+            max_attempts + 1,
+        ):
+
+            failed_lines = [
+                item
+                for item in current_validation.line_results
+                if item.get("supported") is not True
+            ]
+
+            if not failed_lines:
+                return working_lines
+
+            repair_payload = []
+
+            for failure in failed_lines:
+
+                line_number = int(
+                    failure.get(
+                        "line",
+                        0,
+                    )
+                    or 0
+                )
+
+                if (
+                    line_number < 1
+                    or line_number > len(working_lines)
+                ):
+                    return None
+
+                cited_ids = [
+                    str(item).strip().upper()
+                    for item in evidence_ids[
+                        line_number - 1
+                    ]
+                    if str(item).strip()
+                ]
+
+                cited_evidence = {
+                    evidence_id: evidence_map.get(
+                        evidence_id,
+                        "",
+                    )
+                    for evidence_id in cited_ids
+                }
+
+                repair_payload.append(
+                    {
+                        "line": line_number,
+                        "current_text": (
+                            working_lines[
+                                line_number - 1
+                            ]
+                        ),
+                        "unsupported_claims": (
+                            failure.get(
+                                "unsupported_claims",
+                                [],
+                            )
+                        ),
+                        "evidence_ids": cited_ids,
+                        "evidence": cited_evidence,
+                    }
+                )
+
+            messages = [
+                {
+                    "role": "system",
+                    "content": """
+You repair unsupported factual claims in movie commentary.
+
+Return ONLY valid JSON:
+
+{
+  "repairs": [
+    {
+      "line": 3,
+      "text": "replacement narration"
+    }
+  ]
+}
+
+STRICT RULES:
+
+1. Rewrite only the requested failed lines.
+2. Use only the evidence supplied for that exact line.
+3. Remove every unsupported claim identified by the validator.
+4. Do not replace one unsupported claim with another unsupported claim.
+5. Prefer wording that closely follows the evidence.
+6. Do not strengthen the evidence.
+7. Do not simplify attribution incorrectly.
+8. If multiple studios contributed, do not attribute all work to one studio.
+9. If evidence says a filmmaker tried to take another film's effects further, do not change that into "inspired by" unless explicitly supported.
+10. Do not invent audience reactions, symbolism, rankings, historical importance, motivations, or production methods.
+11. Do not include evidence labels in narration.
+12. Keep the narration natural and cinematic.
+13. Keep the full script within 75-110 words.
+""",
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"REPAIR ATTEMPT: {attempt}\n\n"
+                        f"MOVIE:\n{movie_title}\n\n"
+                        f"TOPIC:\n{topic}\n\n"
+                        "FAILED LINES AND EVIDENCE:\n"
+                        + json.dumps(
+                            repair_payload,
+                            indent=2,
+                            ensure_ascii=False,
+                        )
+                    ),
+                },
+            ]
+
+            raw = await self.llm.chat(
+                messages,
+                json_mode=True,
+            )
+
+            repair_data = self._extract_json(
+                raw
+            )
+
+            repairs = repair_data.get(
+                "repairs",
+                [],
+            )
+
+            if not isinstance(
+                repairs,
+                list,
+            ):
+                return None
+
+            expected_lines = {
+                int(item["line"])
+                for item in repair_payload
+            }
+
+            repaired_line_numbers = set()
+
+            candidate_lines = list(
+                working_lines
+            )
+
+            for repair in repairs:
+
+                if not isinstance(
+                    repair,
+                    dict,
+                ):
+                    return None
+
+                try:
+                    line_number = int(
+                        repair.get(
+                            "line",
+                            0,
+                        )
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    return None
+
+                text = str(
+                    repair.get(
+                        "text",
+                        "",
+                    )
+                ).strip()
+
+                if (
+                    line_number not in expected_lines
+                    or not text
+                ):
+                    return None
+
+                if re.search(
+                    r"\[E\d+\]",
+                    text,
+                    flags=re.IGNORECASE,
+                ):
+                    return None
+
+                candidate_lines[
+                    line_number - 1
+                ] = text
+
+                repaired_line_numbers.add(
+                    line_number
+                )
+
+            if repaired_line_numbers != expected_lines:
+                return None
+
+            word_count = sum(
+                len(line.split())
+                for line in candidate_lines
+            )
+
+            if not (
+                self.MIN_WORDS
+                <= word_count
+                <= self.MAX_WORDS
+            ):
+                logger.warning(
+                    "Semantic repair attempt %s "
+                    "produced invalid length: %s.",
+                    attempt,
+                    word_count,
+                )
+                continue
+
+            lexical_validation = (
+                self.claim_evidence_validator.validate(
+                    script_lines=candidate_lines,
+                    evidence_ids=evidence_ids,
+                    research=research,
+                )
+            )
+
+            if not lexical_validation.valid:
+                logger.warning(
+                    "Semantic repair attempt %s "
+                    "failed lexical validation: %s",
+                    attempt,
+                    lexical_validation.issues,
+                )
+                continue
+
+            next_validation = (
+                await self.semantic_claim_evidence_validator.validate(
+                    script_lines=candidate_lines,
+                    evidence_ids=evidence_ids,
+                    research=research,
+                )
+            )
+
+            if next_validation.valid:
+                logger.info(
+                    "Semantic repair succeeded "
+                    "on attempt %s.",
+                    attempt,
+                )
+                return candidate_lines
+
+            logger.warning(
+                "Semantic repair attempt %s "
+                "still failed: %s",
+                attempt,
+                next_validation.to_dict(),
+            )
+
+            working_lines = candidate_lines
+            current_validation = next_validation
+
+        return None
+
+
+    def _recover_generation_length(
+        self,
+        data: dict,
+        research: str,
+    ) -> dict | None:
+        """
+        Expand a structurally valid but short script using only
+        complete sentences already present in supplied research.
+        """
+
+        if not self._is_structurally_valid_content(data):
+            return None
+
+        current_words = self._word_count(data)
+
+        if self.MIN_WORDS <= current_words <= self.MAX_WORDS:
+            return data
+
+        if current_words > self.MAX_WORDS:
+            return None
+
+        research_text = " ".join(
+            str(research).split()
+        ).strip()
+
+        if not research_text:
+            return None
+
+        sentences = [
+            sentence.strip()
+            for sentence in re.split(
+                r"(?<=[.!?])\s+",
+                research_text,
+            )
+            if sentence.strip()
+        ]
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+        ]
+
+        if len(lines) != 4:
+            return None
+
+        existing_text = " ".join(lines).lower()
+
+        safe_sentences = []
+
+        for sentence in sentences:
+
+            if len(sentence.split()) < 5:
+                continue
+
+            if sentence.lower() in existing_text:
+                continue
+
+            safe_sentences.append(sentence)
+
+        candidate_lines = list(lines)
+        total_words = current_words
+        line_index = 1
+
+        for sentence in safe_sentences:
+
+            sentence_words = len(
+                sentence.split()
+            )
+
+            if (
+                total_words + sentence_words
+                > self.MAX_WORDS
+            ):
+                continue
+
+            base = candidate_lines[
+                line_index
+            ].rstrip()
+
+            if (
+                base
+                and base[-1] not in ".!?"
+            ):
+                base += "."
+
+            candidate_lines[
+                line_index
+            ] = (
+                base
+                + " "
+                + sentence
+            ).strip()
+
+            total_words += sentence_words
+
+            line_index += 1
+
+            if line_index > 3:
+                line_index = 1
+
+            if total_words >= self.MIN_WORDS:
+                break
+
+        candidate = {
+            **data,
+            "script_lines": candidate_lines,
+        }
+
+        if not self._is_valid_content(
+            candidate
+        ):
+            return None
+
+        return candidate
+
+    async def repair(
+        self,
+        content: GeneratedContent,
+        trend: dict,
+        issues: list[dict],
+    ) -> GeneratedContent | None:
+
+        topic = (
+            trend.get("title")
+            or trend.get("topic")
+            or content.title
+            or "Trending Story"
+        )
+
+        research = trend.get(
+            "research",
+            "",
+        )
+
+        content_format = trend.get(
+            "content_format",
+            {},
+        )
+
+        if not isinstance(
+            content_format,
+            dict,
+        ):
+            content_format = {}
+
+        format_name = str(
+            content_format.get(
+                "format_name",
+                "visual_explainer",
+            )
+        ).strip()
+
+        movie_title = str(
+            trend.get(
+                "movie_title",
+                "",
+            )
+        ).strip()
+
+        if isinstance(research, list):
+            research = "\n".join(
+                str(item)
+                for item in research
+            )
+
+        if not research:
+            research = json.dumps(
+                trend,
+                indent=2,
+            )
+
+        original_script = "\n".join(
+            content.script_lines
+        )
+
+        banned_terms = (
+            self._extract_flagged_terms(
+                issues
+            )
+        )
+
+        ####################################################
+        # Repair attempt 1
+        ####################################################
+
+        raw = await self.llm.chat(
+            self._build_repair_messages(
+                topic=topic,
+                research=research,
+                original_script=original_script,
+                issues=issues,
+                banned_terms=banned_terms,
+            ),
+            json_mode=True,
+        )
+
+        data = self._extract_json(
+            raw
+        )
+
+        if self._repair_candidate_valid(
+            data=data,
+            banned_terms=banned_terms,
+        ):
+            return self._build_repaired_content(
+                data=data,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=1,
+            )
+
+        recovered = self._recover_repair_length(
+            data=data,
+            research=research,
+            banned_terms=banned_terms,
+        )
+
+        if recovered is not None:
+            logger.info(
+                "Repair attempt 1 recovered "
+                "deterministically."
+            )
+
+            return self._build_repaired_content(
+                data=recovered,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=1,
+            )
+
+        first_words = self._word_count(
+            data
+        )
+
+        remaining_terms = (
+            self._remaining_flagged_terms(
+                data=data,
+                banned_terms=banned_terms,
+            )
+        )
+
+        logger.warning(
+            "Repair attempt 1 failed. "
+            "Words=%s, remaining terms=%s",
+            first_words,
+            remaining_terms,
+        )
+
+        ####################################################
+        # Repair attempt 2
+        ####################################################
+
+        previous_repair = ""
+
+        if isinstance(data, dict):
+            previous_repair = json.dumps(
+                data,
+                indent=2,
+            )
+
+        retry_raw = await self.llm.chat(
+            self._build_repair_messages(
+                topic=topic,
+                research=research,
+                original_script=original_script,
+                issues=issues,
+                banned_terms=banned_terms,
+                retry=True,
+                previous_repair=previous_repair,
+                previous_words=first_words,
+                remaining_terms=remaining_terms,
+            ),
+            json_mode=True,
+        )
+
+        retry_data = self._extract_json(
+            retry_raw
+        )
+
+        if self._repair_candidate_valid(
+            data=retry_data,
+            banned_terms=banned_terms,
+        ):
+            logger.info(
+                "Repair attempt 2 succeeded."
+            )
+
+            return self._build_repaired_content(
+                data=retry_data,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=2,
+            )
+
+        recovered_retry = self._recover_repair_length(
+            data=retry_data,
+            research=research,
+            banned_terms=banned_terms,
+        )
+
+        if recovered_retry is not None:
+            logger.info(
+                "Repair attempt 2 recovered "
+                "deterministically."
+            )
+
+            return self._build_repaired_content(
+                data=recovered_retry,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=2,
+            )
+
+        logger.warning(
+            "Repair attempt 2 failed. "
+            "Words=%s, remaining terms=%s",
+            self._word_count(
+                retry_data
+            ),
+            self._remaining_flagged_terms(
+                data=retry_data,
+                banned_terms=banned_terms,
+            ),
+        )
+
+        return None
+
+    def _build_repaired_content(
+        self,
+        data: dict,
+        original: GeneratedContent,
+        topic: str,
+        issues: list[dict],
+        attempt: int,
+    ) -> GeneratedContent:
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+            if str(line).strip()
+        ]
+
+        hashtags = [
+            str(tag).strip()
+            for tag in data.get(
+                "hashtags",
+                original.hashtags,
+            )
+            if str(tag).strip()
+        ]
+
+        return GeneratedContent(
+            title=str(
+                data.get(
+                    "title",
+                    original.title,
+                )
+            ).strip(),
+            hashtags=hashtags,
+            script_lines=lines,
+            metadata={
+                **original.metadata,
+                "source": topic,
+                "generator": "Jarvis Rich V1",
+                "repaired": True,
+                "repair_attempt": attempt,
+                "repair_issues": issues,
+                "word_count": sum(
+                    len(line.split())
+                    for line in lines
+                ),
+            },
+        )
+
+    def _recover_repair_length(
+        self,
+        data: dict,
+        research: str,
+        banned_terms: list[str],
+    ) -> dict | None:
+
+        if not self._is_structurally_valid_content(
+            data
+        ):
+            return None
+
+        current_words = self._word_count(
+            data
+        )
+
+        if (
+            self.MIN_WORDS
+            <= current_words
+            <= self.MAX_WORDS
+        ):
+            return data
+
+        if current_words > self.MAX_WORDS:
+            return None
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+        ]
+
+        research_text = " ".join(
+            str(research).split()
+        ).strip()
+
+        if not research_text:
+            return None
+
+        # Preserve complete research sentences.
+        research_sentences = [
+            sentence.strip()
+            for sentence in re.split(
+                r"(?<=[.!?])\s+",
+                research_text,
+            )
+            if sentence.strip()
+        ]
+
+        safe_sentences = []
+
+        for sentence in research_sentences:
+
+            blocked = False
+
+            for term in banned_terms:
+
+                pattern = (
+                    r"(?<!\w)"
+                    + re.escape(term)
+                    + r"(?!\w)"
+                )
+
+                if re.search(
+                    pattern,
+                    sentence,
+                    flags=re.IGNORECASE,
+                ):
+                    blocked = True
+                    break
+
+            if not blocked:
+                safe_sentences.append(
+                    sentence
+                )
+
+        if not safe_sentences:
+            return None
+
+        candidate_lines = list(
+            lines
+        )
+
+        total_words = current_words
+        line_index = 0
+
+        for sentence in safe_sentences:
+
+            sentence_words = len(
+                sentence.split()
+            )
+
+            if (
+                total_words
+                + sentence_words
+                > self.MAX_WORDS
+            ):
+                continue
+
+            base = candidate_lines[
+                line_index
+            ].rstrip()
+
+            if (
+                base
+                and base[-1]
+                not in ".!?"
+            ):
+                base += "."
+
+            candidate_lines[
+                line_index
+            ] = (
+                base
+                + " "
+                + sentence
+            ).strip()
+
+            total_words += (
+                sentence_words
+            )
+
+            line_index = (
+                line_index + 1
+            ) % 4
+
+            if total_words >= self.MIN_WORDS:
+                break
+
+        candidate = {
+            **data,
+            "script_lines": candidate_lines,
+        }
+
+        if not self._is_valid_content(
+            candidate
+        ):
+            return None
+
+        if self._remaining_flagged_terms(
+            data=candidate,
+            banned_terms=banned_terms,
+        ):
+            return None
+
+        return candidate
+
+    def _repair_candidate_valid(
+        self,
+        data: dict,
+        banned_terms: list[str],
+    ) -> bool:
+
+        if not self._is_valid_content(
+            data
+        ):
+            return False
+
+        remaining = (
+            self._remaining_flagged_terms(
+                data=data,
+                banned_terms=banned_terms,
+            )
+        )
+
+        if remaining:
+            logger.warning(
+                "Repair still contains "
+                "flagged terms: %s",
+                remaining,
+            )
+            return False
+
+        return True
+
+    @staticmethod
+    def _extract_flagged_terms(
+        issues: list[dict],
+    ) -> list[str]:
+
+        terms = []
+
+        for issue in issues:
+
+            matches = issue.get(
+                "matches",
+                [],
+            )
+
+            if not isinstance(
+                matches,
+                list,
+            ):
+                continue
+
+            for match in matches:
+
+                term = str(
+                    match
+                ).strip()
+
+                if (
+                    term
+                    and term.lower()
+                    not in {
+                        existing.lower()
+                        for existing in terms
+                    }
+                ):
+                    terms.append(
+                        term
+                    )
+
+        return terms
+
+    @staticmethod
+    def _remaining_flagged_terms(
+        data: dict,
+        banned_terms: list[str],
+    ) -> list[str]:
+
+        if not isinstance(
+            data,
+            dict,
+        ):
+            return list(
+                banned_terms
+            )
+
+        lines = data.get(
+            "script_lines",
+            [],
+        )
+
+        if not isinstance(
+            lines,
+            list,
+        ):
+            return list(
+                banned_terms
+            )
+
+        script = " ".join(
+            str(line)
+            for line in lines
+        )
+
+        remaining = []
+
+        for term in banned_terms:
+
+            pattern = (
+                r"(?<!\w)"
+                + re.escape(term)
+                + r"(?!\w)"
+            )
+
+            if re.search(
+                pattern,
+                script,
+                flags=re.IGNORECASE,
+            ):
+                remaining.append(
+                    term
+                )
+
+        return remaining
+
+    def _build_repair_messages(
+        self,
+        topic: str,
+        research: str,
+        original_script: str,
+        issues: list[dict],
+        banned_terms: list[str],
+        retry: bool = False,
+        previous_repair: str = "",
+        previous_words: int = 0,
+        remaining_terms: list[str] | None = None,
+    ) -> list[dict]:
+
+        issue_text = json.dumps(
+            issues,
+            indent=2,
+        )
+
+        banned_text = (
+            ", ".join(
+                banned_terms
+            )
+            or "None"
+        )
+
+        retry_text = ""
+
+        if retry:
+
+            remaining_text = (
+                ", ".join(
+                    remaining_terms or []
+                )
+                or "None"
+            )
+
+            retry_text = f"""
+THIS IS REPAIR ATTEMPT 2.
+
+The first repair failed.
+
+Previous word count:
+{previous_words}
+
+Required word count:
+75-105.
+
+Flagged terms still present:
+{remaining_text}
+
+Previous failed repair:
+
+{previous_repair}
+
+Rewrite it again rather than copying it.
+
+If it was below 75 words, expand only with
+information supported by the research.
+
+None of the banned terms may appear.
+"""
+
+        system_prompt = """
+You are Jarvis, a factual YouTube Shorts script editor.
+
+Return ONLY one valid JSON object.
+Do not use markdown or code fences.
+Do not include text outside the JSON.
+
+Use exactly this schema:
+
+{
+  "title": "string",
+  "hashtags": [
+    "#hashtag1",
+    "#hashtag2",
+    "#hashtag3"
+  ],
+  "script_lines": [
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4"
+  ]
+}
+
+MANDATORY RULES:
+
+1. Exactly four narration lines.
+2. EACH line must contain about 19-26 words.
+3. Total narration must contain 75-105 words.
+4. Use only claims supported by the research.
+5. Remove every flagged high-risk claim.
+6. Do not invent replacement facts.
+7. Do not make absolute predictions.
+8. Banned terms must not appear anywhere
+   inside script_lines.
+9. Count the words before responding.
+"""
+
+        user_prompt = f"""
+TOPIC:
+
+{topic}
+
+RESEARCH:
+
+{research}
+
+ORIGINAL SCRIPT:
+
+{original_script}
+
+VALIDATION ISSUES:
+
+{issue_text}
+
+BANNED TERMS:
+
+{banned_text}
+
+The banned terms must not appear anywhere
+inside script_lines.
+
+Do not use a banned word even to negate it.
+For example, if "indistinguishable" is banned,
+do not write "not indistinguishable".
+
+{retry_text}
+
+Before returning:
+
+- verify exactly 4 script_lines
+- verify 75-105 total narration words
+- verify each line is approximately 19-26 words
+- verify no banned term appears
+- verify every factual claim is supported
+  by the research
+
+Return only JSON.
+"""
+
+        return [
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {
+                "role": "user",
+                "content": user_prompt,
+            },
+        ]
+
+    ########################################################
+    # Prompt construction
+    ########################################################
+
+    def _build_messages(
+        self,
+        topic: str,
+        research: str,
+        previous_words: int = 0,
+        retry: bool = False,
+        format_name: str = "visual_explainer",
+        movie_title: str = "",
+    ) -> list[dict]:
+
+        if format_name == "famous_movie_commentary":
+
+            system_prompt = """
+You are Jarvis, writing an original high-retention YouTube Short commentary about a famous movie.
+
+Return ONLY one valid JSON object.
+Never use markdown or code fences.
+Never add text outside the JSON.
+
+Use exactly this schema:
+
+{
+  "title": "string",
+  "hashtags": [
+    "#hashtag1",
+    "#hashtag2",
+    "#hashtag3"
+  ],
+  "script_lines": [
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4"
+  ],
+  "evidence_ids": [
+    ["E1"],
+    ["E2"],
+    ["E3"],
+    ["E4"]
+  ]
+}
+
+MOVIE COMMENTARY RULES:
+
+EVIDENCE RULES:
+
+- Research facts are labelled [E1], [E2], [E3], and so on.
+- evidence_ids must contain exactly four lists, one for each script line.
+- Every script line must cite at least one real evidence ID.
+- Cite only IDs that actually exist in the supplied research.
+- The factual meaning of each line must be supported by its cited evidence.
+- A line may cite multiple evidence IDs when needed.
+- Do not cite evidence merely because it mentions the same movie.
+- Interpretation is allowed only when its factual premise is supported by cited evidence.
+
+
+1. Write exactly four narration lines.
+2. Total narration must be 75-105 words.
+3. Line 1 must immediately hook the viewer with the specific movie angle.
+4. Never begin with generic phrases such as "Did you know" or "You won't believe".
+5. Line 2 gives only the context needed to understand the point.
+6. Line 3 explains the strongest concrete filmmaking, VFX, editing, character, production, or storytelling detail supported by the research.
+7. Line 4 gives the payoff: explain why the scene, technique, or decision is effective or important.
+8. Write like fast cinematic commentary, not a school report.
+9. Add original explanation instead of merely retelling the scene.
+10. Do not include generic calls to action.
+11. Every factual claim must be supported by the supplied research.
+12. Do not invent behind-the-scenes details.
+13. Never claim a specific visual-effects technique was used unless the research explicitly supports it.
+14. If the evidence only supports a broader conclusion, state only that broader conclusion.
+15. Do not confuse information about the comic-book character with information about the film.
+16. Do not compare the movie to another movie unless the supplied research explicitly makes that comparison.
+17. Avoid unsupported adjectives such as revolutionary, groundbreaking, extreme, iconic, or unprecedented.
+18. Prefer a concrete researched detail over promotional-sounding language.
+19. Aim for 85-100 words so the result remains safely above the minimum.
+20. Do not claim that a scene makes viewers feel awe, fear, terror, excitement, immersion, tension, or any other audience reaction unless the cited research explicitly supports that reaction.
+21. Prefer concrete statements about the filmmaking, visual effects, action design, dimensions, production choices, or documented critical response.
+22. Do not turn your own interpretation into a factual statement.
+23. Aim for 85-100 narration words.
+24. Count the narration words before returning JSON.
+"""
+
+        else:
+
+            system_prompt = """
+You are Jarvis, a YouTube Shorts script writer.
+
+Return ONLY one valid JSON object.
+Never use markdown or code fences.
+Never add text outside the JSON.
+
+Use exactly this schema:
+
+{
+  "title": "string",
+  "hashtags": [
+    "#hashtag1",
+    "#hashtag2",
+    "#hashtag3"
+  ],
+  "script_lines": [
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4"
+  ]
+}
+
+SCRIPT RULES:
+
+1. Exactly four narration lines.
+2. Total narration MUST be 75-105 words.
+3. Aim for 19-26 words per narration line.
+4. Line 1 must immediately hook the viewer.
+5. Lines 2 and 3 explain the important information.
+6. Line 4 concludes naturally.
+7. Use only information supported by the research.
+8. Do not exaggerate certainty.
+9. Do not invent facts.
+10. Do not add generic engagement filler.
+11. Count the narration words before responding.
+"""
+
+        retry_instruction = ""
+
+        if retry:
+
+            retry_instruction = f"""
+IMPORTANT RETRY:
+
+Your previous attempt contained approximately
+{previous_words} narration words and FAILED validation.
+
+Rewrite the entire script.
+
+The new script must contain 75-105 total narration words.
+
+Keep exactly four script_lines.
+
+Do not shorten the previous script.
+
+Expand only with information supported by the supplied research.
+
+For movie commentary, remove unsupported comparison or promotional language.
+
+Do NOT use:
+- groundbreaking
+- cutting-edge
+- Inception comparisons
+- practical effects
+- Eastern mysticism
+
+unless those exact ideas are explicitly supported by the research.
+"""
+
+        user_prompt = f"""
+TOPIC:
+
+{topic}
+
+CONTENT FORMAT:
+
+{format_name}
+
+MOVIE:
+
+{movie_title if movie_title else "N/A"}
+
+RESEARCH:
+
+{research}
+
+{retry_instruction}
+
+Create the final YouTube Shorts script.
+
+Before returning JSON:
+
+- verify there are exactly 4 script_lines
+- count the words across those 4 lines
+- verify the total is between 75 and 105
+- verify every factual claim is supported by the research
+- remove unsupported production or behind-the-scenes claims
+- remove generic filler
+
+Return only the JSON object.
+"""
+
+        return [
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {
+                "role": "user",
+                "content": user_prompt,
+            },
+        ]
+
+    # Validation
+    ########################################################
+
+    def _movie_script_has_unsupported_language(
+        self,
+        data: dict,
+        research: str,
+    ) -> bool:
+        """
+        Reject movie-commentary embellishments unless
+        the supplied research contains supporting evidence.
+        """
+
+        if not isinstance(data, dict):
+            return False
+
+        lines = data.get(
+            "script_lines",
+            [],
+        )
+
+        if not isinstance(lines, list):
+            return False
+
+        script = " ".join(
+            str(line)
+            for line in lines
+        ).lower()
+
+        evidence = str(
+            research
+        ).lower()
+
+        guarded_terms = {
+            "inception": (
+                "inception",
+            ),
+            "practical effects": (
+                "practical effect",
+                "practical effects",
+            ),
+            "eastern mysticism": (
+                "eastern mysticism",
+            ),
+            "groundbreaking": (
+                "groundbreaking",
+            ),
+            "cutting-edge": (
+                "cutting-edge",
+                "cutting edge",
+            ),
+        }
+
+        for phrase, evidence_terms in guarded_terms.items():
+
+            if phrase not in script:
+                continue
+
+            if not any(
+                term in evidence
+                for term in evidence_terms
+            ):
+                logger.warning(
+                    "Movie script rejected unsupported "
+                    "language: %s",
+                    phrase,
+                )
+                return True
+
+        return False
+
+
+    def _is_structurally_valid_content(
+        self,
+        data: dict,
+    ) -> bool:
+
+        if not isinstance(data, dict):
+            return False
+
+        title = data.get("title")
+        hashtags = data.get("hashtags")
+        lines = data.get("script_lines")
+
+        if (
+            not isinstance(title, str)
+            or not title.strip()
+        ):
+            return False
+
+        if (
+            not isinstance(hashtags, list)
+            or len(hashtags) < 3
+        ):
+            return False
+
+        if not all(
+            isinstance(tag, str)
+            and tag.strip()
+            for tag in hashtags
+        ):
+            return False
+
+        if (
+            not isinstance(lines, list)
+            or len(lines) != 4
+        ):
+            return False
+
+        if not all(
+            isinstance(line, str)
+            and line.strip()
+            for line in lines
+        ):
+            return False
+
+        return True
+
+    def _is_valid_content(
+        self,
+        data: dict,
+    ) -> bool:
+
+        if not self._is_structurally_valid_content(
+            data
+        ):
+            return False
+
+        word_count = self._word_count(
+            data
+        )
+
+        if not (
+            self.MIN_WORDS
+            <= word_count
+            <= self.MAX_WORDS
+        ):
+
+            logger.warning(
+                "Script length validation failed: "
+                "%s words.",
+                word_count,
+            )
+
+            return False
+
+        return True
+
+    ########################################################
+    # Word counting
+    ########################################################
+
+    @staticmethod
+    def _word_count(
+        data: dict,
+    ) -> int:
+
+        if not isinstance(data, dict):
+            return 0
+
+        lines = data.get(
+            "script_lines",
+            [],
+        )
+
+        if not isinstance(lines, list):
+            return 0
+
+        return sum(
+            len(str(line).split())
+            for line in lines
+        )
+
+    ########################################################
+    # Emergency fallback
+    ########################################################
+
+    def _fallback(
+        self,
+        topic: str,
+        research: str,
+    ) -> dict:
+        """
+        Rich V1 does not fabricate generic fallback content.
+
+        If grounded content generation fails, the production cycle must
+        stop rather than publishing an unrelated or generic script.
+        """
+
+        logger.error(
+            "Content generation fallback blocked for topic: %s",
+            topic,
+        )
+
+        raise RuntimeError(
+            f"Grounded content generation failed for topic: {topic}"
+        )
+
+    ########################################################
+    # JSON extraction
+    ########################################################
+
+    def _extract_json(
+        self,
+        raw: str,
+    ) -> dict:
+
+        if not raw:
+            return {}
+
+        cleaned = raw.strip()
+
+        cleaned = re.sub(
+            r"```json",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+
+        cleaned = cleaned.replace(
+            "```",
+            "",
+        ).strip()
+
+        try:
+
+            parsed = json.loads(
+                cleaned
+            )
+
+            if isinstance(parsed, dict):
+                return parsed
+
+        except json.JSONDecodeError:
+            pass
+
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+
+        if (
+            start == -1
+            or end == -1
+            or end <= start
+        ):
+            return {}
+
+        candidate = cleaned[
+            start:end + 1
+        ]
+
+        try:
+
+            parsed = json.loads(
+                candidate
+            )
+
+            if isinstance(parsed, dict):
+                return parsed
+
+        except json.JSONDecodeError as exc:
+
+            logger.warning(
+                "Failed to parse LLM JSON: %s",
+                exc,
+            )
+
+        return {}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py
+================================================================================
+"""Reference-style content format classification for Jarvis Rich V1."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+
+@dataclass(slots=True)
+class ContentFormatDecision:
+    format_name: str
+    target_duration_min: float
+    target_duration_max: float
+    preferred_media: list[str]
+    narration_mode: str
+    pacing: str
+    reason: str
+    rights_gate_required: bool = False
+
+
+class ContentFormatClassifier:
+    """Choose the correct production format for a topic."""
+
+    MOVIE_COMMENTARY_GENRES = {
+        "famous_movie_commentary",
+        "movie_facts",
+        "scene_breakdowns",
+        "movies_filmmaking",
+    }
+
+    EXPLAINER_GENRES = {
+        "science_engineering",
+        "technology",
+        "machines_manufacturing",
+        "space_aviation",
+        "interesting_products",
+        "luxury_money",
+    }
+
+    STORY_GENRES = {
+        "business_stories",
+        "history_inventions",
+        "human_performance",
+    }
+
+    def classify(
+        self,
+        *,
+        topic: str,
+        genre: str,
+        authorized_movie_source: bool = False,
+    ) -> ContentFormatDecision:
+
+        genre = str(genre).strip().lower()
+
+        if genre == "famous_movie_commentary":
+            return ContentFormatDecision(
+                format_name="famous_movie_commentary",
+                target_duration_min=35.0,
+                target_duration_max=60.0,
+                preferred_media=[
+                    "authorized_movie_excerpt",
+                    "licensed_promotional_media",
+                    "licensed_image",
+                    "archive_media",
+                ],
+                narration_mode="original_commentary_voiceover",
+                pacing="cinematic_information_density",
+                reason=(
+                    "Famous-movie topic requires original commentary "
+                    "with supporting authorized visual material."
+                ),
+                rights_gate_required=True,
+            )
+
+        if genre in {
+            "movie_facts",
+            "scene_breakdowns",
+            "movies_filmmaking",
+        }:
+            return ContentFormatDecision(
+                format_name="cinematic_explainer",
+                target_duration_min=35.0,
+                target_duration_max=60.0,
+                preferred_media=[
+                    "authorized_movie_excerpt",
+                    "licensed_promotional_media",
+                    "licensed_image",
+                    "archive_media",
+                ],
+                narration_mode="voiceover",
+                pacing="cinematic",
+                reason=(
+                    "Film-related explanation requires cinematic "
+                    "visual planning and original narration."
+                ),
+                rights_gate_required=True,
+            )
+
+        if genre in self.EXPLAINER_GENRES:
+            return ContentFormatDecision(
+                format_name="visual_explainer",
+                target_duration_min=35.0,
+                target_duration_max=65.0,
+                preferred_media=[
+                    "licensed_video",
+                    "licensed_image",
+                    "diagram",
+                    "archive_media",
+                ],
+                narration_mode="voiceover",
+                pacing="information_density",
+                reason="Reference-style visual explainer.",
+            )
+
+        if genre in self.STORY_GENRES:
+            return ContentFormatDecision(
+                format_name="documentary_story",
+                target_duration_min=40.0,
+                target_duration_max=75.0,
+                preferred_media=[
+                    "licensed_video",
+                    "archive_media",
+                    "licensed_image",
+                    "documents",
+                ],
+                narration_mode="voiceover",
+                pacing="story_progression",
+                reason="Reference-style documentary story.",
+            )
+
+        return ContentFormatDecision(
+            format_name="visual_explainer",
+            target_duration_min=35.0,
+            target_duration_max=60.0,
+            preferred_media=[
+                "licensed_video",
+                "licensed_image",
+            ],
+            narration_mode="voiceover",
+            pacing="information_density",
+            reason="Default Rich V1 reference format.",
+        )
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\intelligence\scorer.py
+================================================================================
+"""Trend opportunity scoring for Jarvis."""
+
+import math
+from datetime import datetime, timezone
+
+
+class TrendScorer:
+    """Calculate a normalized 0-100 opportunity score."""
+
+    SOURCE_PRIORS = {
+        "YouTube": 15.0,
+        "Google News RSS": 13.0,
+        "Reddit": 12.0,
+    }
+
+    MAX_SOURCE_SCORE = 15.0
+    MAX_PROVIDER_SCORE = 30.0
+    MAX_ENGAGEMENT_SCORE = 25.0
+    MAX_FRESHNESS_SCORE = 20.0
+    MAX_RESEARCH_SCORE = 10.0
+
+    def score(self, trend: dict) -> float:
+        """Return a normalized opportunity score."""
+
+        source_score = self._source_score(trend)
+        provider_score = self._provider_strength(trend)
+        engagement_score = self._engagement_score(trend)
+        freshness_score = self._freshness_score(trend)
+        research_score = self._research_score(trend)
+
+        total = (
+            source_score
+            + provider_score
+            + engagement_score
+            + freshness_score
+            + research_score
+        )
+
+        return round(
+            min(max(total, 0.0), 100.0),
+            2,
+        )
+
+    def _source_score(self, trend: dict) -> float:
+        source = trend.get("source", "")
+
+        return self.SOURCE_PRIORS.get(
+            source,
+            10.0,
+        )
+
+    def _provider_strength(self, trend: dict) -> float:
+        """
+        Normalize provider-specific strength.
+
+        Provider APIs use different score scales, so raw values
+        must not be compared directly across providers.
+        """
+
+        source = trend.get("source", "")
+        raw_score = max(
+            float(trend.get("score", 0) or 0),
+            0.0,
+        )
+
+        if source == "YouTube":
+            # YouTube scores can range from single digits
+            # into the hundreds or thousands. Log scaling
+            # preserves separation without allowing huge
+            # values to dominate the final score.
+            normalized = (
+                math.log1p(raw_score)
+                / math.log1p(600.0)
+            )
+
+        elif source == "Google News RSS":
+            # Current RSS provider assigns rank scores
+            # beginning near 80. Convert that ranking
+            # signal into a bounded 0-1 strength.
+            normalized = (
+                (raw_score - 60.0)
+                / 20.0
+            )
+
+        elif source == "Reddit":
+            # RedditProvider already produces an
+            # approximately 0-100 opportunity score.
+            normalized = raw_score / 100.0
+
+        else:
+            # Conservative generic fallback.
+            normalized = raw_score / 100.0
+
+        normalized = min(
+            max(normalized, 0.0),
+            1.0,
+        )
+
+        return round(
+            normalized * self.MAX_PROVIDER_SCORE,
+            2,
+        )
+
+    def _engagement_score(self, trend: dict) -> float:
+        """
+        Score measurable audience engagement.
+
+        Logarithmic scaling prevents a single viral item
+        from overwhelming every other signal.
+        """
+
+        views = max(
+            int(trend.get("views", 0) or 0),
+            0,
+        )
+        likes = max(
+            int(trend.get("likes", 0) or 0),
+            0,
+        )
+
+        view_score = 0.0
+        like_score = 0.0
+
+        if views:
+            view_score = min(
+                math.log1p(views)
+                / math.log1p(10_000_000)
+                * 17.0,
+                17.0,
+            )
+
+        if likes:
+            like_score = min(
+                math.log1p(likes)
+                / math.log1p(500_000)
+                * 8.0,
+                8.0,
+            )
+
+        return round(
+            min(
+                view_score + like_score,
+                self.MAX_ENGAGEMENT_SCORE,
+            ),
+            2,
+        )
+
+    def _freshness_score(self, trend: dict) -> float:
+        published = trend.get("published")
+
+        if not published:
+            return 0.0
+
+        try:
+            published_dt = datetime.fromisoformat(
+                str(published).replace(
+                    "Z",
+                    "+00:00",
+                )
+            )
+
+            if published_dt.tzinfo is None:
+                published_dt = published_dt.replace(
+                    tzinfo=timezone.utc
+                )
+
+            hours_old = max(
+                (
+                    datetime.now(timezone.utc)
+                    - published_dt
+                ).total_seconds()
+                / 3600.0,
+                0.0,
+            )
+
+        except (TypeError, ValueError):
+            return 0.0
+
+        if hours_old < 6:
+            return 20.0
+
+        if hours_old < 24:
+            return 17.0
+
+        if hours_old < 72:
+            return 12.0
+
+        if hours_old < 168:
+            return 6.0
+
+        return 0.0
+
+    def _research_score(self, trend: dict) -> float:
+        knowledge = trend.get("knowledge") or {}
+
+        facts = knowledge.get("facts") or []
+        sources = knowledge.get("sources") or []
+
+        fact_score = min(
+            len(facts) * 1.5,
+            6.0,
+        )
+
+        source_score = min(
+            len(sources) * 1.0,
+            4.0,
+        )
+
+        return round(
+            min(
+                fact_score + source_score,
+                self.MAX_RESEARCH_SCORE,
+            ),
+            2,
+        )
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\intelligence\trend_engine.py
+================================================================================
+"""Central trend intelligence engine."""
+
+from collections import defaultdict
+
+from backend.services.research.research_service import ResearchService
+
+from .deduplicator import TrendDeduplicator
+from .scorer import TrendScorer
+
+
+class TrendEngine:
+    """Central intelligence engine for ranking trend opportunities."""
+
+    def __init__(self):
+        self.deduplicator = TrendDeduplicator()
+        self.scorer = TrendScorer()
+        self.research = ResearchService()
+
+    def process(
+        self,
+        trends: list[dict],
+        limit: int = 10,
+    ) -> list[dict]:
+        """Process raw trends and return the best opportunities."""
+
+        if not trends or limit <= 0:
+            return []
+
+        # ---------------------------------------------------------------
+        # 1. Remove duplicate / highly similar trends.
+        # ---------------------------------------------------------------
+        unique_trends = self.deduplicator.deduplicate(
+            trends
+        )
+
+        if not unique_trends:
+            return []
+
+        # ---------------------------------------------------------------
+        # 2. Cheap first-pass scoring.
+        # ---------------------------------------------------------------
+        for trend in unique_trends:
+            trend["initial_score"] = self.scorer.score(
+                trend
+            )
+
+        unique_trends.sort(
+            key=lambda trend: trend["initial_score"],
+            reverse=True,
+        )
+
+        # ---------------------------------------------------------------
+        # 3. Select a diversified research shortlist.
+        #
+        # Initial provider scores are not perfectly comparable.
+        # Preserve strong candidates from every active source before
+        # filling remaining research slots globally.
+        # ---------------------------------------------------------------
+        research_count = min(
+            max(limit * 2, 5),
+            10,
+            len(unique_trends),
+        )
+
+        candidates = self._select_research_candidates(
+            unique_trends,
+            research_count,
+        )
+
+        # ---------------------------------------------------------------
+        # 4. Research candidates.
+        # ---------------------------------------------------------------
+        for trend in candidates:
+            topic = trend.get(
+                "title",
+                "",
+            ).strip()
+
+            if not topic:
+                trend["knowledge"] = {}
+                trend["viral_score"] = trend[
+                    "initial_score"
+                ]
+                continue
+
+            try:
+                knowledge = self.research.research(
+                    topic
+                )
+                trend["knowledge"] = (
+                    knowledge.to_dict()
+                )
+
+            except Exception as exc:
+                print(
+                    f"[TrendEngine] Research failed for "
+                    f"'{topic}': {exc}"
+                )
+
+                trend["knowledge"] = {}
+
+            # -----------------------------------------------------------
+            # 5. Final score using research quality.
+            # -----------------------------------------------------------
+            trend["viral_score"] = self.scorer.score(
+                trend
+            )
+
+        # ---------------------------------------------------------------
+        # 6. Final cross-source ranking.
+        # ---------------------------------------------------------------
+        candidates.sort(
+            key=lambda trend: trend["viral_score"],
+            reverse=True,
+        )
+
+        # ---------------------------------------------------------------
+        # 7. Return the requested number.
+        # ---------------------------------------------------------------
+        return candidates[:limit]
+
+    @staticmethod
+    def _select_research_candidates(
+        trends: list[dict],
+        research_count: int,
+    ) -> list[dict]:
+        """
+        Build a source-diverse research shortlist.
+
+        Half of the available research budget is reserved for
+        source representation. Those slots are distributed as
+        evenly as possible across active sources.
+
+        Remaining slots are filled by initial score regardless
+        of source.
+        """
+
+        if research_count <= 0:
+            return []
+
+        if len(trends) <= research_count:
+            return list(trends)
+
+        by_source = defaultdict(list)
+
+        for trend in trends:
+            source = (
+                trend.get("source")
+                or "Unknown"
+            )
+            by_source[source].append(trend)
+
+        # A single-source pool needs no diversification.
+        if len(by_source) <= 1:
+            return trends[:research_count]
+
+        # Every source bucket inherits the global initial-score
+        # ordering, but sort explicitly so this helper is safe
+        # when called independently.
+        for source_trends in by_source.values():
+            source_trends.sort(
+                key=lambda trend: trend.get(
+                    "initial_score",
+                    0,
+                ),
+                reverse=True,
+            )
+
+        selected = []
+        selected_ids = set()
+
+        # Reserve approximately half the research budget for
+        # source diversity.
+        diversity_budget = max(
+            len(by_source),
+            research_count // 2,
+        )
+        diversity_budget = min(
+            diversity_budget,
+            research_count,
+        )
+
+        source_names = sorted(
+            by_source,
+            key=lambda source: (
+                by_source[source][0].get(
+                    "initial_score",
+                    0,
+                )
+            ),
+            reverse=True,
+        )
+
+        # Round-robin selection prevents one provider from
+        # consuming the entire diversity budget.
+        source_positions = {
+            source: 0
+            for source in source_names
+        }
+
+        while (
+            len(selected) < diversity_budget
+        ):
+            added = False
+
+            for source in source_names:
+                if (
+                    len(selected)
+                    >= diversity_budget
+                ):
+                    break
+
+                position = source_positions[
+                    source
+                ]
+                source_trends = by_source[
+                    source
+                ]
+
+                if position >= len(source_trends):
+                    continue
+
+                trend = source_trends[position]
+
+                source_positions[source] += 1
+
+                trend_id = id(trend)
+
+                if trend_id in selected_ids:
+                    continue
+
+                selected.append(trend)
+                selected_ids.add(trend_id)
+                added = True
+
+            if not added:
+                break
+
+        # Fill the remaining research capacity with the
+        # strongest candidates globally.
+        for trend in trends:
+            if len(selected) >= research_count:
+                break
+
+            trend_id = id(trend)
+
+            if trend_id in selected_ids:
+                continue
+
+            selected.append(trend)
+            selected_ids.add(trend_id)
+
+        return selected
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py
+================================================================================
+import asyncio
+"""
+Rich V1 video production pipeline.
+
+Responsibilities:
+    - Generate grounded content
+    - Validate/repair content
+    - Build narration storyboard
+    - Acquire real licensed media
+    - Validate media provenance and relevance
+    - Build production package
+    - Render final video
+
+AI-generated imagery is no longer the primary visual source.
+"""
+
+from backend.services.content_generator import ContentGenerator
+from backend.services.content_validator import ContentValidator
+from backend.services.intelligence.content_format_classifier import ContentFormatClassifier
+from backend.services.intelligence.movie_topic_parser import MovieTopicParser
+from backend.services.research.evergreen_research_service import EvergreenResearchService
+from backend.services.research.movie_research_service import MovieResearchService
+from backend.services.storyboard.generator import StoryboardGenerator
+from backend.services.video.asset_collector import AssetCollector
+from backend.services.video.media_query_builder import MediaQueryBuilder
+from backend.services.video.media_sources.wikimedia import (
+    WikimediaCommonsProvider,
+)
+from backend.services.video.production_package import (
+    ProductionPackageBuilder,
+)
+from backend.services.video_renderer.renderer import VideoRenderer
+
+
+class VideoPipeline:
+
+    MIN_ASSETS_PER_SCENE = 1
+    TARGET_ASSETS_PER_SCENE = 1
+
+    def __init__(self):
+
+        self.generator = ContentGenerator()
+        self.content_validator = ContentValidator()
+        self.research_service = EvergreenResearchService()
+        self.movie_research_service = MovieResearchService()
+        self.format_classifier = ContentFormatClassifier()
+        self.storyboard = StoryboardGenerator()
+
+        self.media_provider = (
+            WikimediaCommonsProvider()
+        )
+
+        self.asset_collector = AssetCollector()
+        self.media_query_builder = MediaQueryBuilder()
+
+        self.package_builder = (
+            ProductionPackageBuilder()
+        )
+
+        self.renderer = VideoRenderer()
+
+    async def run(
+        self,
+        trend: dict,
+    ) -> dict:
+
+        ####################################################
+        # 1. Content identity
+        ####################################################
+
+        content_id = str(
+            trend.get(
+                "content_id",
+                "",
+            )
+        ).strip()
+
+        if not content_id:
+            raise RuntimeError(
+                "Production topic has no content_id."
+            )
+
+        ####################################################
+        # 2. Choose production format
+        ####################################################
+
+        topic_title = str(
+            trend.get(
+                "title",
+                "",
+            )
+        ).strip()
+
+        genre = str(
+            trend.get(
+                "genre",
+                "",
+            )
+        ).strip()
+
+        format_decision = (
+            self.format_classifier.classify(
+                topic=topic_title,
+                genre=genre,
+                authorized_movie_source=False,
+            )
+        )
+
+        trend["content_format"] = {
+            "format_name": format_decision.format_name,
+            "target_duration_min": format_decision.target_duration_min,
+            "target_duration_max": format_decision.target_duration_max,
+            "preferred_media": format_decision.preferred_media,
+            "narration_mode": format_decision.narration_mode,
+            "pacing": format_decision.pacing,
+            "rights_gate_required": format_decision.rights_gate_required,
+        }
+
+        ####################################################
+        # 3. Research topic
+        ####################################################
+
+        if (
+            format_decision.format_name
+            == "famous_movie_commentary"
+        ):
+
+            movie_title = (
+                MovieTopicParser.extract_movie_title(
+                    topic_title
+                )
+            )
+
+            if not movie_title:
+                raise RuntimeError(
+                    "Movie commentary topic has no recognized "
+                    f"movie title: {topic_title}"
+                )
+
+            trend["movie_title"] = movie_title
+
+            knowledge_pack = await asyncio.to_thread(
+                    self.movie_research_service.research,
+                    movie_title=movie_title,
+                    commentary_topic=topic_title,
+                )
+
+            research_text = (
+                self.movie_research_service.build_research_text(
+                    knowledge_pack
+                )
+            )
+
+        else:
+
+            knowledge_pack = await asyncio.to_thread(
+                    self.research_service.research,
+                    topic_title,
+                )
+
+            research_text = (
+                self.research_service.build_research_text(
+                    knowledge_pack
+                )
+            )
+
+        if not research_text.strip():
+            raise RuntimeError(
+                "Research returned no usable grounded "
+                f"information for: {topic_title}"
+            )
+
+        trend["research"] = research_text
+        trend["knowledge"] = knowledge_pack.to_dict()
+
+        ####################################################
+        # 4. Generate content
+        ####################################################
+        generated = await self.generator.generate(
+            trend
+        )
+
+        if generated is None:
+            raise RuntimeError(
+                "ContentGenerator returned None."
+            )
+
+        ####################################################
+        # 3. Validate generated content
+        ####################################################
+
+        validation = (
+            self.content_validator.validate(
+                generated
+            )
+        )
+
+        ####################################################
+        # 4. Repair rejected content
+        ####################################################
+
+        if not validation["valid"]:
+
+            repaired = await self.generator.repair(
+                content=generated,
+                trend=trend,
+                issues=validation["issues"],
+            )
+
+            if repaired is None:
+                raise RuntimeError(
+                    "Generated content failed validation "
+                    "and automatic repair failed."
+                )
+
+            repaired_validation = (
+                self.content_validator.validate(
+                    repaired
+                )
+            )
+
+            if not repaired_validation["valid"]:
+                raise RuntimeError(
+                    "Repaired content still failed "
+                    "validation: "
+                    f"{repaired_validation['issues']}"
+                )
+
+            generated = repaired
+            validation = repaired_validation
+
+        ####################################################
+        # 5. Build narration storyboard
+        ####################################################
+
+        storyboard = self.storyboard.generate(
+            generated
+        )
+
+        if not storyboard:
+            raise RuntimeError(
+                "StoryboardGenerator produced no scenes."
+            )
+
+        ####################################################
+        # 6. Acquire real licensed media
+        ####################################################
+
+        media_groups = []
+
+        topic = str(
+            trend.get(
+                "title",
+                "",
+            )
+        ).strip()
+
+        genre = str(
+            trend.get(
+                "genre",
+                "",
+            )
+        ).strip()
+
+        for index, scene in enumerate(
+            storyboard,
+            start=1,
+        ):
+
+            queries = (
+                self.media_query_builder.build(
+                    topic=topic,
+                    genre=genre,
+                    narration=scene.narration,
+                )
+            )[:3]
+
+            authorized_scene_assets = []
+
+            for query in queries:
+
+                found = await (
+                    self.media_provider
+                    .search_and_download(
+                        query=query,
+                        content_id=content_id,
+                        limit=1,
+                    )
+                )
+
+                if not found:
+                    continue
+
+                try:
+                    authorized = (
+                        self.asset_collector.authorize(
+                            found,
+                            content_id=content_id,
+                        )
+                    )
+                except RuntimeError:
+                    continue
+
+                image_asset = next(
+                    (
+                        asset
+                        for asset in authorized
+                        if asset.asset_type
+                        == "image"
+                    ),
+                    None,
+                )
+
+                if image_asset is None:
+                    continue
+
+                authorized_scene_assets.append(
+                    image_asset
+                )
+
+                # Current renderer needs only one image
+                # per narration scene. Stop immediately.
+                break
+
+            if not authorized_scene_assets:
+                raise RuntimeError(
+                    "Scene "
+                    f"{index} produced no authorized "
+                    "image after limited media search. "
+                    f"Queries: {queries}"
+                )
+
+            media_groups.append(
+                authorized_scene_assets
+            )
+
+        if (
+            len(media_groups)
+            != len(storyboard)
+        ):
+            raise RuntimeError(
+                "Storyboard/media group mismatch."
+            )
+        ####################################################
+        # 7. Temporary renderer compatibility
+        #
+        # The existing renderer still accepts one image
+        # object per narration scene. For this integration
+        # test we pass the strongest authorized IMAGE from
+        # each group.
+        #
+        # The next renderer patch will consume the complete
+        # media_groups structure and produce multiple cuts.
+        ####################################################
+
+        render_assets = []
+
+        for index, group in enumerate(
+            media_groups,
+            start=1,
+        ):
+
+            image_asset = next(
+                (
+                    asset
+                    for asset in group
+                    if asset.asset_type
+                    == "image"
+                ),
+                None,
+            )
+
+            if image_asset is None:
+                raise RuntimeError(
+                    "Scene "
+                    f"{index} has no image-compatible "
+                    "asset for the current renderer."
+                )
+
+            render_assets.append(
+                image_asset
+            )
+
+        ####################################################
+        # 8. Build production package
+        ####################################################
+
+        package = await self.package_builder.build(
+            content=generated,
+            scenes=storyboard,
+            images=render_assets,
+            trend=trend,
+        )
+
+        ####################################################
+        # 9. Render
+        ####################################################
+
+        video = await self.renderer.render(
+            content=generated,
+            scenes=storyboard,
+            images=render_assets,
+            production_package=package,
+        )
+
+        ####################################################
+        # 10. Return production evidence
+        ####################################################
+
+        return {
+            "generated": generated,
+            "content_validation": validation,
+            "storyboard": storyboard,
+            "licensed_media": [
+                [
+                    {
+                        "asset_id": asset.asset_id,
+                        "asset_type": asset.asset_type,
+                        "file_path": asset.file_path,
+                        "source_url": asset.source_url,
+                        "source_name": asset.source_name,
+                        "creator": asset.creator,
+                        "license_name": asset.license_name,
+                        "license_url": asset.license_url,
+                        "attribution_required": (
+                            asset.attribution_required
+                        ),
+                        "commercial_use_allowed": (
+                            asset.commercial_use_allowed
+                        ),
+                        "relevance_score": (
+                            asset.relevance_score
+                        ),
+                        "content_id": asset.content_id,
+                    }
+                    for asset in group
+                ]
+                for group in media_groups
+            ],
+            "production_package": package,
+            "video": video,
+            "status": "success",
+        }
+
+
+
+
+
+
+
+
+
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\storyboard\generator.py
+================================================================================
+from backend.models.generated_content import GeneratedContent
+from backend.services.storyboard.scene import Scene
+
+
+class StoryboardGenerator:
+    """
+    Converts GeneratedContent into storyboard scenes.
+    """
+
+    def generate(
+        self,
+        content: GeneratedContent,
+    ) -> list[Scene]:
+
+        scenes = []
+
+        for line in content.script_lines:
+
+            scenes.append(
+                Scene(
+                    narration=line,
+                    image_prompt=line,
+                    duration=4.0,
+                )
+            )
+
+        return scenes
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\storyboard\storyboard_generator.py
+================================================================================
+"""
+Converts GeneratedContent into a storyboard.
+"""
+
+from typing import List
+
+from backend.models.generated_content import GeneratedContent
+from backend.services.storyboard.scene import Scene
+from backend.services.storyboard.prompt_builder import PromptBuilder
+
+
+class StoryboardGenerator:
+    """
+    Converts a generated script into a list of Scene objects.
+
+    Every downstream service uses these scenes.
+
+    Image Generator
+    Voice Generator
+    Subtitle Generator
+    Renderer
+    """
+
+    DEFAULT_SCENE_DURATION = 4.5
+
+    def __init__(self):
+        self.prompt_builder = PromptBuilder()
+
+    def generate(
+        self,
+        content: GeneratedContent,
+    ) -> List[Scene]:
+
+        scenes: List[Scene] = []
+
+        current_time = 0.0
+
+        transitions = [
+            "cut",
+            "flash",
+            "fade",
+            "zoom",
+        ]
+
+        camera_moves = [
+            "slow_zoom",
+            "push_in",
+            "pan_left",
+            "pan_right",
+            "tilt_up",
+            "tilt_down",
+        ]
+
+        for i, line in enumerate(content.script_lines):
+
+            duration = self.DEFAULT_SCENE_DURATION
+
+            scene = Scene(
+                number=i + 1,
+                narration=line,
+                subtitle=line,
+                duration=duration,
+                image_prompt="",
+                camera_motion=camera_moves[i % len(camera_moves)],
+                transition=transitions[i % len(transitions)],
+            )
+
+            scene.start_time = current_time
+            scene.end_time = current_time + duration
+
+            scene.image_prompt = self.prompt_builder.build(
+                content,
+                scene,
+            )
+
+            scenes.append(scene)
+
+            current_time += duration
+
+        return scenes
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\media_query_builder.py
+================================================================================
+"""Visual search-query generation for Jarvis Rich V1."""
+
+from __future__ import annotations
+
+import re
+
+
+class MediaQueryBuilder:
+    """
+    Convert narration and topic context into concrete visual-search
+    queries suitable for licensed-media libraries.
+
+    The goal is not to summarize narration. The goal is to identify
+    physical objects, places, people, machines, components, or scenes
+    that can actually exist as searchable media.
+    """
+
+    STOPWORDS = {
+        "a", "an", "and", "are", "as", "at", "be", "because",
+        "been", "being", "but", "by", "can", "could", "did",
+        "do", "does", "for", "from", "had", "has", "have",
+        "how", "if", "in", "into", "is", "it", "its", "more",
+        "most", "of", "on", "or", "our", "so", "that", "the",
+        "their", "them", "these", "they", "this", "those", "to",
+        "was", "were", "what", "when", "where", "which", "while",
+        "who", "why", "will", "with", "without", "you", "your",
+        "different", "differently", "actually", "really", "know",
+        "helps", "help", "keep", "keeps", "unique", "design",
+        "designed", "works", "work", "working", "special",
+    }
+
+    TOPIC_VISUAL_ALIASES = {
+        "train wheel": [
+            "railway wheelset",
+            "train wheel rail",
+            "railway wheel flange",
+            "railroad wheel profile",
+            "train bogie wheels",
+            "railway wheels close up",
+        ],
+        "airplane window": [
+            "aircraft passenger window",
+            "airplane fuselage windows",
+            "rounded aircraft window",
+            "aircraft cabin window",
+        ],
+        "suspension bridge": [
+            "suspension bridge cables",
+            "bridge tower cables",
+            "suspension bridge structure",
+            "bridge engineering",
+        ],
+        "skyscraper": [
+            "skyscraper structure",
+            "tall building engineering",
+            "skyscraper construction",
+            "building tuned mass damper",
+        ],
+        "black box": [
+            "aircraft flight recorder",
+            "airplane black box",
+            "flight data recorder",
+            "cockpit voice recorder",
+        ],
+        "rocket": [
+            "rocket launch",
+            "space rocket engine",
+            "rocket launch pad",
+            "rocket propulsion",
+        ],
+        "satellite": [
+            "satellite orbit earth",
+            "communications satellite",
+            "space satellite",
+            "satellite solar panels",
+        ],
+        "gps": [
+            "GPS satellite",
+            "navigation satellite",
+            "GPS receiver",
+            "satellite navigation",
+        ],
+        "mechanical watch": [
+            "mechanical watch movement",
+            "luxury watch gears",
+            "watchmaker movement",
+            "mechanical wristwatch",
+        ],
+        "private jet": [
+            "private jet aircraft",
+            "business jet cabin",
+            "private aircraft",
+            "business jet airport",
+        ],
+        "supercar": [
+            "supercar factory",
+            "sports car assembly",
+            "luxury sports car",
+            "automotive manufacturing",
+        ],
+        "data center": [
+            "data center servers",
+            "server racks cooling",
+            "data center cooling",
+            "computer server room",
+        ],
+        "noise cancelling": [
+            "noise cancelling headphones",
+            "headphones microphone",
+            "audio waveform headphones",
+        ],
+        "green screen": [
+            "film green screen studio",
+            "chroma key filming",
+            "movie green screen set",
+        ],
+        "shipping container": [
+            "shipping containers port",
+            "container ship cargo",
+            "freight containers",
+            "shipping container terminal",
+        ],
+        "barcode": [
+            "barcode scanner",
+            "product barcode",
+            "supermarket barcode scanner",
+        ],
+        "elevator": [
+            "elevator machinery",
+            "elevator shaft",
+            "lift motor mechanism",
+        ],
+        "cnc": [
+            "CNC machine metal cutting",
+            "CNC milling machine",
+            "computer numerical control machine",
+        ],
+        "industrial robot": [
+            "industrial robot factory",
+            "robotic car assembly",
+            "factory robot arm",
+        ],
+        "glass bottle": [
+            "glass bottle factory",
+            "glass bottle manufacturing",
+            "bottle production line",
+        ],
+        "pencil": [
+            "pencil manufacturing",
+            "wooden pencils",
+            "hexagonal pencil",
+        ],
+        "mechanical keyboard": [
+            "mechanical keyboard switch",
+            "keyboard switch close up",
+            "mechanical keyboard",
+        ],
+        "safety glass": [
+            "tempered safety glass",
+            "broken tempered glass",
+            "automotive safety glass",
+        ],
+    }
+
+    @classmethod
+    def build(
+        cls,
+        *,
+        topic: str,
+        genre: str,
+        narration: str,
+    ) -> list[str]:
+
+        topic_lower = topic.lower()
+
+        alias_queries: list[str] = []
+
+        for trigger, queries in (
+            cls.TOPIC_VISUAL_ALIASES.items()
+        ):
+            if trigger in topic_lower:
+                alias_queries.extend(queries)
+
+        topic_words = cls._keywords(
+            topic,
+            limit=6,
+        )
+
+        narration_words = cls._keywords(
+            narration,
+            limit=6,
+        )
+
+        object_query = cls._object_query(
+            topic_words
+        )
+
+        narration_query = cls._object_query(
+            narration_words
+        )
+
+        candidates = [
+            *alias_queries,
+            object_query,
+            narration_query,
+            " ".join(topic_words[:3]),
+            " ".join(narration_words[:3]),
+        ]
+
+        output: list[str] = []
+        seen: set[str] = set()
+
+        for query in candidates:
+
+            query = " ".join(
+                str(query).split()
+            ).strip()
+
+            if len(query) < 3:
+                continue
+
+            key = query.lower()
+
+            if key in seen:
+                continue
+
+            seen.add(key)
+            output.append(query)
+
+        return output[:10]
+
+    @classmethod
+    def _keywords(
+        cls,
+        text: str,
+        *,
+        limit: int,
+    ) -> list[str]:
+
+        words = re.findall(
+            r"[A-Za-z0-9]+",
+            text.lower(),
+        )
+
+        output: list[str] = []
+
+        for word in words:
+
+            if (
+                len(word) < 3
+                or word in cls.STOPWORDS
+            ):
+                continue
+
+            if word not in output:
+                output.append(word)
+
+            if len(output) >= limit:
+                break
+
+        return output
+
+    @staticmethod
+    def _object_query(
+        words: list[str],
+    ) -> str:
+
+        if not words:
+            return ""
+
+        return " ".join(
+            words[:4]
+        )
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py
+================================================================================
+"""Visual beat planning for reference-quality Rich V1 Shorts."""
+
+from __future__ import annotations
+
+import re
+
+from dataclasses import dataclass, asdict
+
+from backend.models.generated_content import GeneratedContent
+from backend.services.video.media_query_builder import (
+    MediaQueryBuilder,
+)
+
+
+@dataclass(slots=True)
+class VisualBeat:
+    beat_id: str
+    narration_index: int
+    purpose: str
+    search_query: str
+    preferred_media: list[str]
+    target_duration: float
+    emphasis: str
+
+
+class VisualBeatPlanner:
+    """Convert narration sections into distinct visual beats."""
+
+    MIN_BEATS = 8
+    MAX_BEATS = 14
+
+    def __init__(self) -> None:
+        self.query_builder = MediaQueryBuilder()
+
+    def plan(
+        self,
+        *,
+        content: GeneratedContent,
+        topic: str,
+        genre: str,
+        format_name: str,
+    ) -> list[VisualBeat]:
+
+        lines = list(
+            content.script_lines
+        )
+
+        if not lines:
+            raise RuntimeError(
+                "Cannot build visual beats from empty script."
+            )
+
+        beats: list[VisualBeat] = []
+        used_queries: set[str] = set()
+
+        for narration_index, line in enumerate(
+            lines,
+            start=1,
+        ):
+
+            queries = self._queries_for_line(
+                topic=topic,
+                genre=genre,
+                line=line,
+            )
+
+            per_line = (
+                3
+                if narration_index <= 2
+                else 2
+            )
+
+            selected_queries = []
+
+            for query in queries:
+
+                key = query.lower().strip()
+
+                if (
+                    not key
+                    or key in used_queries
+                ):
+                    continue
+
+                used_queries.add(key)
+                selected_queries.append(
+                    query
+                )
+
+                if len(
+                    selected_queries
+                ) >= per_line:
+                    break
+
+            for local_index, query in enumerate(
+                selected_queries,
+                start=1,
+            ):
+
+                beats.append(
+                    VisualBeat(
+                        beat_id=(
+                            f"n{narration_index}"
+                            f"_b{local_index}"
+                        ),
+                        narration_index=narration_index,
+                        purpose=self._purpose(
+                            narration_index=narration_index,
+                            local_index=local_index,
+                        ),
+                        search_query=query,
+                        preferred_media=(
+                            self._preferred_media(
+                                format_name
+                            )
+                        ),
+                        target_duration=(
+                            self._target_duration(
+                                format_name
+                            )
+                        ),
+                        emphasis=(
+                            "high"
+                            if narration_index == 1
+                            else "normal"
+                        ),
+                    )
+                )
+
+        beats = beats[
+            :self.MAX_BEATS
+        ]
+
+        if len(beats) < self.MIN_BEATS:
+            beats = self._pad_beats(
+                beats=beats,
+                topic=topic,
+                genre=genre,
+                format_name=format_name,
+                used_queries=used_queries,
+            )
+
+        return beats
+
+    def _queries_for_line(
+        self,
+        *,
+        topic: str,
+        genre: str,
+        line: str,
+    ) -> list[str]:
+
+        queries = (
+            self.query_builder.build(
+                topic=topic,
+                genre=genre,
+                narration=line,
+            )
+        )
+
+        ####################################################
+        # Add narration-specific concrete noun phrases.
+        ####################################################
+
+        words = re.findall(
+            r"[A-Za-z0-9]+",
+            line.lower(),
+        )
+
+        stopwords = {
+            "this",
+            "that",
+            "with",
+            "from",
+            "their",
+            "they",
+            "have",
+            "more",
+            "into",
+            "because",
+            "about",
+            "which",
+            "while",
+            "were",
+            "used",
+            "using",
+            "designed",
+            "helps",
+            "help",
+            "proper",
+            "ensure",
+            "extremely",
+        }
+
+        useful = [
+            word
+            for word in words
+            if (
+                len(word) >= 4
+                and word not in stopwords
+            )
+        ]
+
+        phrase_candidates = []
+
+        if len(useful) >= 2:
+            phrase_candidates.append(
+                " ".join(
+                    useful[:2]
+                )
+            )
+
+        if len(useful) >= 3:
+            phrase_candidates.append(
+                " ".join(
+                    useful[:3]
+                )
+            )
+
+        if len(useful) >= 4:
+            phrase_candidates.append(
+                " ".join(
+                    useful[-3:]
+                )
+            )
+
+        output = []
+
+        ####################################################
+        # Prefer concrete alias/media queries over full topic.
+        ####################################################
+
+        for query in [
+            *queries,
+            *phrase_candidates,
+        ]:
+
+            clean = " ".join(
+                str(query).split()
+            ).strip()
+
+            if not clean:
+                continue
+
+            if clean.lower() == topic.lower():
+                continue
+
+            if clean not in output:
+                output.append(clean)
+
+        return output
+
+    @staticmethod
+    def to_dicts(
+        beats: list[VisualBeat],
+    ) -> list[dict]:
+
+        return [
+            asdict(beat)
+            for beat in beats
+        ]
+
+    @staticmethod
+    def _purpose(
+        *,
+        narration_index: int,
+        local_index: int,
+    ) -> str:
+
+        if narration_index == 1:
+            return (
+                "hook_subject"
+                if local_index == 1
+                else "hook_detail"
+            )
+
+        if narration_index in {
+            2,
+            3,
+        }:
+            return (
+                "explanation"
+                if local_index == 1
+                else "supporting_detail"
+            )
+
+        return (
+            "payoff"
+            if local_index == 1
+            else "closing_visual"
+        )
+
+    @staticmethod
+    def _preferred_media(
+        format_name: str,
+    ) -> list[str]:
+
+        if format_name == "movie_clip":
+            return [
+                "authorized_movie_video",
+            ]
+
+        if format_name == "documentary_story":
+            return [
+                "licensed_video",
+                "archive_media",
+                "licensed_image",
+            ]
+
+        return [
+            "licensed_video",
+            "licensed_image",
+            "diagram",
+        ]
+
+    @staticmethod
+    def _target_duration(
+        format_name: str,
+    ) -> float:
+
+        if format_name == "movie_clip":
+            return 3.5
+
+        if format_name == "documentary_story":
+            return 3.0
+
+        return 2.5
+
+    def _pad_beats(
+        self,
+        *,
+        beats: list[VisualBeat],
+        topic: str,
+        genre: str,
+        format_name: str,
+        used_queries: set[str],
+    ) -> list[VisualBeat]:
+
+        result = list(beats)
+
+        fallback_queries = (
+            self.query_builder.build(
+                topic=topic,
+                genre=genre,
+                narration=topic,
+            )
+        )
+
+        for query in fallback_queries:
+
+            if len(result) >= self.MIN_BEATS:
+                break
+
+            clean = query.strip()
+
+            if (
+                not clean
+                or clean.lower()
+                in used_queries
+                or clean.lower()
+                == topic.lower()
+            ):
+                continue
+
+            used_queries.add(
+                clean.lower()
+            )
+
+            result.append(
+                VisualBeat(
+                    beat_id=(
+                        f"extra_b"
+                        f"{len(result)+1}"
+                    ),
+                    narration_index=(
+                        (len(result) % 4) + 1
+                    ),
+                    purpose="supporting_detail",
+                    search_query=clean,
+                    preferred_media=(
+                        self._preferred_media(
+                            format_name
+                        )
+                    ),
+                    target_duration=(
+                        self._target_duration(
+                            format_name
+                        )
+                    ),
+                    emphasis="normal",
+                )
+            )
+
+        return result
+
+
+================================================================================
+FILE: C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py
+================================================================================
+"""Visual-source planning for Jarvis Rich V1."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, asdict
+
+from backend.services.llm_service import LLMService
+
+
+@dataclass(slots=True)
+class SourceVisualBeat:
+    beat_id: str
+    purpose: str
+    visual_goal: str
+    search_queries: list[str]
+    negative_visuals: list[str]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+class VisualBeatSourcePlanner:
+    """
+    Convert a topic + Rich V1 format into exact visual requirements.
+
+    Unlike the old media resolver, this planner does not search one
+    broad topic repeatedly. It produces specific visual beats first.
+    """
+
+    FORMAT_RULES = {
+        "movie_facts": (
+            "Use recognizable movie-specific moments, production "
+            "footage, VFX breakdown material, actor/director context, "
+            "and exact scene-relevant visuals."
+        ),
+        "cinematic_movie_edit": (
+            "Use visually strong character, action, emotional, wide, "
+            "detail, and payoff shots from the same movie/source."
+        ),
+        "curiosity_story": (
+            "Use real subject/location/event footage. Avoid generic "
+            "stock people or unrelated cinematic filler."
+        ),
+        "luxury_product": (
+            "Use the actual product/model where possible: dial, case, "
+            "movement, materials, craftsmanship, wrist/product shots."
+        ),
+        "science_explainer": (
+            "Use real mechanism-specific visuals: exterior, internal "
+            "parts, process stages, operation, demonstration, diagrams."
+        ),
+        "business_wealth": (
+            "Use real company/founder/product/factory/headquarters/"
+            "historical footage matching the exact claim."
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        llm: LLMService | None = None,
+    ) -> None:
+
+        self.llm = (
+            llm
+            if llm is not None
+            else LLMService()
+        )
+
+    async def plan(
+        self,
+        *,
+        topic: str,
+        format_name: str,
+        beat_count: int = 8,
+    ) -> list[SourceVisualBeat]:
+
+        clean_topic = " ".join(
+            str(topic).split()
+        ).strip()
+
+        if not clean_topic:
+            raise ValueError(
+                "Visual beat planning requires a topic."
+            )
+
+        rule = self.FORMAT_RULES.get(
+            format_name,
+            (
+                "Use specific real visuals that directly represent "
+                "the topic. Avoid generic filler."
+            ),
+        )
+
+        prompt = f"""
+You are the visual-source planner for a high-retention vertical Short.
+
+TOPIC:
+{clean_topic}
+
+FORMAT:
+{format_name}
+
+FORMAT VISUAL RULE:
+{rule}
+
+Create exactly {beat_count} distinct visual beats.
+
+Each beat must be visually concrete and searchable.
+
+For every beat return:
+- beat_id
+- purpose
+- visual_goal
+- search_queries: 3 highly specific search queries
+- negative_visuals: 3 descriptions of footage that may look vaguely
+  related but must be rejected
+
+Important:
+- Do not use generic phrases like "cinematic footage".
+- Search queries should identify the actual object, mechanism, person,
+  product, location, scene, or process needed.
+- Beats should progress logically through the topic.
+- For science, show actual mechanism stages.
+- For luxury, show the actual product/details.
+- For movies, show movie-specific or production-specific footage.
+- Avoid generic stock replacements.
+
+Return JSON only:
+
+{{
+  "beats": [
+    {{
+      "beat_id": "b1",
+      "purpose": "hook",
+      "visual_goal": "...",
+      "search_queries": ["...", "...", "..."],
+      "negative_visuals": ["...", "...", "..."]
+    }}
+  ]
+}}
+"""
+
+        raw = await self.llm.chat(
+            [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            json_mode=True,
+        )
+
+        try:
+
+            data = json.loads(
+                raw
+            )
+
+        except json.JSONDecodeError as exc:
+
+            raise RuntimeError(
+                "VisualBeatSourcePlanner returned invalid JSON."
+            ) from exc
+
+        rows = data.get(
+            "beats",
+            []
+        )
+
+        if not isinstance(
+            rows,
+            list,
+        ):
+            raise RuntimeError(
+                "Visual beat planner produced invalid beat list."
+            )
+
+        beats: list[
+            SourceVisualBeat
+        ] = []
+
+        for index, row in enumerate(
+            rows,
+            start=1,
+        ):
+
+            if not isinstance(
+                row,
+                dict,
+            ):
+                continue
+
+            goal = " ".join(
+                str(
+                    row.get(
+                        "visual_goal",
+                        "",
+                    )
+                ).split()
+            ).strip()
+
+            if not goal:
+                continue
+
+            queries = [
+                " ".join(
+                    str(item).split()
+                ).strip()
+                for item in row.get(
+                    "search_queries",
+                    [],
+                )
+                if str(item).strip()
+            ]
+
+            negatives = [
+                " ".join(
+                    str(item).split()
+                ).strip()
+                for item in row.get(
+                    "negative_visuals",
+                    [],
+                )
+                if str(item).strip()
+            ]
+
+            if not queries:
+                queries = [
+                    goal
+                ]
+
+            beats.append(
+                SourceVisualBeat(
+                    beat_id=str(
+                        row.get(
+                            "beat_id",
+                            f"b{index}",
+                        )
+                    ),
+                    purpose=str(
+                        row.get(
+                            "purpose",
+                            "supporting_visual",
+                        )
+                    ),
+                    visual_goal=goal,
+                    search_queries=(
+                        queries[:3]
+                    ),
+                    negative_visuals=(
+                        negatives[:3]
+                    ),
+                )
+            )
+
+        if len(beats) < 4:
+            raise RuntimeError(
+                "Visual beat planner produced too few valid beats."
+            )
+
+        return beats[:beat_count]
+
+===== VIDEO PIPELINE WIRING =====
+C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:75: self.pipeline = VideoPipeline()
+
+===== FORMAT REFERENCES =====
+C:\Users\hp\jarvis.ai\backend\services\agent_service.py:1: """Agent CRUD business logic."""
+C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:25: "movie_facts",
+C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:31: "science_engineering",
+C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:40: "business_stories",
+C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:76: "movie_facts",
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:31: "movie_facts": [
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:45: "business_stories": [
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:59: "science_engineering": [
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:129: "movie_facts": (
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:131: "movie_facts",
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:135: "cinematic_movie_edit": (
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:140: "curiosity_story": (
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:146: "luxury_product": (
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:150: "science_explainer": (
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:151: "science_engineering",
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:156: "business_wealth": (
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:157: "business_stories",
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:380: "science_engineering",
+C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:66: "movie_facts": [
+C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:77: "cinematic_movie_edit": [
+C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:88: "curiosity_story": [
+C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:99: "luxury_product": [
+C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:110: "science_explainer": [
+C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:121: "business_wealth": [
+C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:26: "movie_facts",
+C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:27: "cinematic_movie_edit",
+C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:28: "curiosity_story",
+C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:29: "luxury_product",
+C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:30: "science_explainer",
+C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:31: "business_wealth",
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py:48: "Structural engineering",
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py:70: "Business jet",
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py:347: add("Business model")
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py:405: "business",
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py:410: "Business model",
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py:464: "Structural engineering",
+C:\Users\hp\jarvis.ai\backend\services\video\media_query_builder.py:51: "bridge engineering",
+C:\Users\hp\jarvis.ai\backend\services\video\media_query_builder.py:55: "tall building engineering",
+C:\Users\hp\jarvis.ai\backend\services\video\media_query_builder.py:91: "business jet cabin",
+C:\Users\hp\jarvis.ai\backend\services\video\media_query_builder.py:93: "business jet airport",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:64: "movie_facts": RichFormatProfile(
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:65: format_name="movie_facts",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:114: "cinematic_movie_edit": RichFormatProfile(
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:115: format_name="cinematic_movie_edit",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:164: "curiosity_story": RichFormatProfile(
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:165: format_name="curiosity_story",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:214: "luxury_product": RichFormatProfile(
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:215: format_name="luxury_product",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:261: # 5. SCIENCE / ENGINEERING EXPLAINER
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:264: "science_explainer": RichFormatProfile(
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:265: format_name="science_explainer",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:311: # 6. BUSINESS / WEALTH STORY
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:314: "business_wealth": RichFormatProfile(
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:315: format_name="business_wealth",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:353: "documentary_business_story"
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:363: "famous_movie_commentary": "movie_facts",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:364: "movie_commentary": "movie_facts",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:365: "movie_edit": "cinematic_movie_edit",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:366: "cinematic_edit": "cinematic_movie_edit",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:367: "curiosity": "curiosity_story",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:368: "extreme_story": "curiosity_story",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:369: "luxury": "luxury_product",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:370: "product": "luxury_product",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:371: "science": "science_explainer",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:372: "engineering": "science_explainer",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:373: "business": "business_wealth",
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:374: "wealth": "business_wealth",
+C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:284: "movie_facts": [
+C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:292: "cinematic_movie_edit": [
+C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:300: "curiosity_story": [
+C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:308: "luxury_product": [
+C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:317: "science_explainer": [
+C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:321: f"{clean} engineering",
+C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:326: "business_wealth": [
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:32: "movie_facts": (
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:37: "cinematic_movie_edit": (
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:41: "curiosity_story": (
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:45: "luxury_product": (
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:49: "science_explainer": (
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:53: "business_wealth": (
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:125: - For science, show actual mechanism stages.
+
+===== RELEVANT FILE TREE =====
+C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py
+C:\Users\hp\jarvis.ai\backend\services\analytics\youtube_historical_intelligence.py
+C:\Users\hp\jarvis.ai\backend\services\analytics\youtube_performance.py
+C:\Users\hp\jarvis.ai\backend\services\analytics\youtube_performance_collector.py
+C:\Users\hp\jarvis.ai\backend\services\analytics\youtube_performance_evidence_service.py
+C:\Users\hp\jarvis.ai\backend\services\analytics\youtube_performance_snapshot_service.py
+C:\Users\hp\jarvis.ai\backend\services\content_generator.py
+C:\Users\hp\jarvis.ai\backend\services\content_validator.py
+C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py
+C:\Users\hp\jarvis.ai\backend\services\intelligence\trend_engine.py
+C:\Users\hp\jarvis.ai\backend\services\orchestration\youtube_release_evidence.py
+C:\Users\hp\jarvis.ai\backend\services\orchestration\youtube_release_policy.py
+C:\Users\hp\jarvis.ai\backend\services\orchestration\youtube_release_service.py
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py
+C:\Users\hp\jarvis.ai\backend\services\providers\trend_manager.py
+C:\Users\hp\jarvis.ai\backend\services\providers\youtube_provider.py
+C:\Users\hp\jarvis.ai\backend\services\providers\youtube_publish_reconciler.py
+C:\Users\hp\jarvis.ai\backend\services\providers\youtube_publisher.py
+C:\Users\hp\jarvis.ai\backend\services\providers\youtube_upload_reconciler.py
+C:\Users\hp\jarvis.ai\backend\services\research\__init__.py
+C:\Users\hp\jarvis.ai\backend\services\research\cache.py
+C:\Users\hp\jarvis.ai\backend\services\research\confidence.py
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py
+C:\Users\hp\jarvis.ai\backend\services\research\knowledge_pack.py
+C:\Users\hp\jarvis.ai\backend\services\research\luxury_source_lead_selector.py
+C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py
+C:\Users\hp\jarvis.ai\backend\services\research\providers\__init__.py
+C:\Users\hp\jarvis.ai\backend\services\research\providers\base.py
+C:\Users\hp\jarvis.ai\backend\services\research\providers\google_web.py
+C:\Users\hp\jarvis.ai\backend\services\research\providers\news.py
+C:\Users\hp\jarvis.ai\backend\services\research\providers\registry.py
+C:\Users\hp\jarvis.ai\backend\services\research\providers\wikipedia.py
+C:\Users\hp\jarvis.ai\backend\services\research\providers\youtube.py
+C:\Users\hp\jarvis.ai\backend\services\research\research_memory.py
+C:\Users\hp\jarvis.ai\backend\services\research\research_service.py
+C:\Users\hp\jarvis.ai\backend\services\research\source_ranker.py
+C:\Users\hp\jarvis.ai\backend\services\research\summarizer.py
+C:\Users\hp\jarvis.ai\backend\services\research\youtube_thumbnail_verifier.py
+C:\Users\hp\jarvis.ai\backend\services\video\__init__.py
+C:\Users\hp\jarvis.ai\backend\services\video\asset_collector.py
+C:\Users\hp\jarvis.ai\backend\services\video\caption_aligner.py
+C:\Users\hp\jarvis.ai\backend\services\video\clip_matcher.py
+C:\Users\hp\jarvis.ai\backend\services\video\editor.py
+C:\Users\hp\jarvis.ai\backend\services\video\editorial_sequence.py
+C:\Users\hp\jarvis.ai\backend\services\video\luxury_reference_timeline.py
+C:\Users\hp\jarvis.ai\backend\services\video\media_asset.py
+C:\Users\hp\jarvis.ai\backend\services\video\media_query_builder.py
+C:\Users\hp\jarvis.ai\backend\services\video\media_sources\__init__.py
+C:\Users\hp\jarvis.ai\backend\services\video\media_sources\internet_archive.py
+C:\Users\hp\jarvis.ai\backend\services\video\media_sources\nasa.py
+C:\Users\hp\jarvis.ai\backend\services\video\media_sources\pexels.py
+C:\Users\hp\jarvis.ai\backend\services\video\media_sources\wikimedia.py
+C:\Users\hp\jarvis.ai\backend\services\video\movie_commentary_planner.py
+C:\Users\hp\jarvis.ai\backend\services\video\movie_contextual_query_builder.py
+C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py
+C:\Users\hp\jarvis.ai\backend\services\video\production_package.py
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py
+C:\Users\hp\jarvis.ai\backend\services\video\renderer.py
+C:\Users\hp\jarvis.ai\backend\services\video\scene_planner.py
+C:\Users\hp\jarvis.ai\backend\services\video\script_parser.py
+C:\Users\hp\jarvis.ai\backend\services\video\source_clip_indexer.py
+C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py
+C:\Users\hp\jarvis.ai\backend\services\video\strict_clip_matcher.py
+C:\Users\hp\jarvis.ai\backend\services\video\targeted_beat_resolver.py
+C:\Users\hp\jarvis.ai\backend\services\video\v18_final_master.py
+C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py
+C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py
+C:\Users\hp\jarvis.ai\backend\services\video\visual_identity_verifier.py
+C:\Users\hp\jarvis.ai\backend\services\video\visual_quality_validator.py
+C:\Users\hp\jarvis.ai\backend\services\video\visual_semantic_validator.py
+C:\Users\hp\jarvis.ai\backend\services\video\voice_generator.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\__init__.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\audio_mixer.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\ffmpeg_renderer.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\luxury_benchmark_renderer.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\matched_clip_renderer.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\models.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\movie_clip_renderer.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\moviepy_runtime.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\renderer.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\rich_multi_shot_renderer.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\subtitle_renderer.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\transition_engine.py
+C:\Users\hp\jarvis.ai\backend\services\video_renderer\v18_visual_engine.py

@@ -1,0 +1,55 @@
+{
+    "title": "Why industrial robots dominate modern car factories",
+    "topic": "Why industrial robots dominate modern car factories",
+    "genre": "machines_manufacturing",
+    "content_id": "e8cc81e4-0dc0-4d12-be35-b826cd943edb",
+    "content_strategy": "evergreen_storytelling",
+    "requires_trend": false,
+    "production_selection": {
+        "eligible": true,
+        "selected": true,
+        "production_score": 87.9,
+        "curiosity_score": 88.0,
+        "story_strength": 82.0,
+        "visual_supply": 89.0,
+        "evergreen_value": 94.0,
+        "credibility": 90.0,
+        "channel_fit": 86.0,
+        "reason": "Evergreen topic passed Rich V1 story and production criteria.",
+        "rejection_reasons": []
+    },
+    "content_format": {
+        "format_name": "visual_explainer",
+        "target_duration_min": 35.0,
+        "target_duration_max": 65.0,
+        "preferred_media": [
+            "licensed_video",
+            "licensed_image",
+            "diagram",
+            "archive_media"
+        ],
+        "narration_mode": "voiceover",
+        "pacing": "information_density",
+        "rights_gate_required": false
+    },
+    "research": "An industrial robot is a robot used for manufacturing. Industrial robots are automated, programmable and capable of movement on three or more axes.\nTypical applications of robots include welding, painting, assembly, disassembly, pick and place for printed circuit boards, packaging and labeling, palletizing, product inspection, and testing; all accomplished with high endurance, speed, and precision. They can assist in material handling.\nIn the year 2024, an estimated 4,663,698 industrial robots were in operation worldwide according to the International Federation of Robotics (IFR).",
+    "knowledge": {
+        "topic": "Why industrial robots dominate modern car factories",
+        "summary": "An industrial robot is a robot used for manufacturing. Industrial robots are automated, programmable and capable of movement on three or more axes.\nTypical applications of robots include welding, painting, assembly, disassembly, pick and place for printed circuit boards, packaging and labeling, palletizing, product inspection, and testing; all accomplished with high endurance, speed, and precision. They can assist in material handling.\nIn the year 2024, an estimated 4,663,698 industrial robots were in operation worldwide according to the International Federation of Robotics (IFR).",
+        "facts": [
+            "An industrial robot is a robot used for manufacturing. Industrial robots are automated, programmable and capable of movement on three or more axes.\nTypical applications of robots include welding, painting, assembly, disassembly, pick and place for printed circuit boards, packaging and labeling, palletizing, product inspection, and testing; all accomplished with high endurance, speed, and precision. They can assist in material handling.\nIn the year 2024, an estimated 4,663,698 industrial robots were in operation worldwide according to the International Federation of Robotics (IFR)."
+        ],
+        "keywords": [],
+        "sources": [
+            {
+                "title": "Industrial robot",
+                "content": "An industrial robot is a robot used for manufacturing. Industrial robots are automated, programmable and capable of movement on three or more axes.\nTypical applications of robots include welding, painting, assembly, disassembly, pick and place for printed circuit boards, packaging and labeling, palletizing, product inspection, and testing; all accomplished with high endurance, speed, and precision. They can assist in material handling.\nIn the year 2024, an estimated 4,663,698 industrial robots were in operation worldwide according to the International Federation of Robotics (IFR).",
+                "source": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Industrial_robot",
+                "confidence": 0.95
+            }
+        ],
+        "score": 9.85,
+        "category": "Evergreen"
+    }
+}

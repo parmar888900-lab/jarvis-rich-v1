@@ -1,0 +1,151 @@
+﻿0850:                             not in clean_line
+0851:                         ):
+0852:                             clean_line.append(
+0853:                                 normalized
+0854:                             )
+0855:                     else:
+0856:                         unknown.append(
+0857:                             normalized
+0858:                         )
+0859: 
+0860:                 sanitized.append(
+0861:                     clean_line
+0862:                 )
+0863: 
+0864:             if unknown:
+0865:                 logger.warning(
+0866:                     "Movie recovery attempt %s "
+0867:                     "rejected unknown evidence IDs: %s",
+0868:                     attempt,
+0869:                     sorted(set(unknown)),
+0870:                 )
+0871: 
+0872:                 recovered[
+0873:                     "evidence_ids"
+0874:                 ] = sanitized
+0875: 
+0876:                 current_candidate = recovered
+0877:                 continue
+0878: 
+0879:             if any(
+0880:                 not ids
+0881:                 for ids in sanitized
+0882:             ):
+0883:                 logger.warning(
+0884:                     "Movie recovery attempt %s "
+0885:                     "left a line without evidence.",
+0886:                     attempt,
+0887:                 )
+0888: 
+0889:                 recovered[
+0890:                     "evidence_ids"
+0891:                 ] = sanitized
+0892: 
+0893:                 current_candidate = recovered
+0894:                 continue
+0895: 
+0896:             recovered[
+0897:                 "evidence_ids"
+0898:             ] = sanitized
+0899: 
+0900:             # IMPORTANT:
+0901:             # Validate against the SAME deterministic labelled
+0902:             # evidence packet supplied to the recovery model.
+0903:             validation = (
+0904:                 self.claim_evidence_validator.validate(
+0905:                     script_lines=recovered_lines,
+0906:                     evidence_ids=sanitized,
+0907:                     research=evidence_packet,
+0908:                 )
+0909:             )
+0910: 
+0911:             if not validation.valid:
+0912:                 logger.warning(
+0913:                     "Movie recovery attempt %s "
+0914:                     "failed claim-evidence validation: %s",
+0915:                     attempt,
+0916:                     validation.issues,
+0917:                 )
+0918: 
+0919:                 current_candidate = recovered
+0920:                 continue
+0921: 
+0922:             if any(
+0923:                 re.search(
+0924:                     r"\[E\d+\]",
+0925:                     line,
+0926:                     flags=re.IGNORECASE,
+0927:                 )
+0928:                 for line in recovered_lines
+0929:             ):
+0930:                 logger.warning(
+0931:                     "Movie recovery attempt %s "
+0932:                     "rejected evidence-label leakage.",
+0933:                     attempt,
+0934:                 )
+0935: 
+0936:                 current_candidate = recovered
+0937:                 continue
+0938: 
+0939:             logger.info(
+0940:                 "Movie evidence-aware length recovery "
+0941:                 "succeeded on attempt %s: %s words.",
+0942:                 attempt,
+0943:                 recovered_words,
+0944:             )
+0945: 
+0946:             return recovered
+0947: 
+0948:         logger.warning(
+0949:             "Movie evidence-aware length recovery "
+0950:             "exhausted 3 bounded attempts."
+0951:         )
+0952: 
+0953:         return None
+0954: 
+0955: 
+0956:     async def _repair_movie_semantic_failures(
+0957:         self,
+0958:         *,
+0959:         script_lines: list[str],
+0960:         evidence_ids: list[list[str]],
+0961:         research: str,
+0962:         semantic_validation,
+0963:         topic: str,
+0964:         movie_title: str,
+0965:     ) -> list[str] | None:
+0966:         """
+0967:         Repair only semantic evidence failures.
+0968: 
+0969:         Up to three controlled repair rounds are allowed.
+0970:         Every round is revalidated lexically and semantically.
+0971:         """
+0972: 
+0973:         evidence_map = {}
+0974: 
+0975:         for match in re.finditer(
+0976:             r"\[E(\d+)\]\s*(.*?)(?=\n\s*\[E\d+\]|\Z)",
+0977:             str(research),
+0978:             flags=re.DOTALL,
+0979:         ):
+0980:             evidence_id = f"E{match.group(1)}"
+0981: 
+0982:             evidence_map[evidence_id] = " ".join(
+0983:                 match.group(2).split()
+0984:             )
+0985: 
+0986:         working_lines = list(
+0987:             script_lines
+0988:         )
+0989: 
+0990:         current_validation = (
+0991:             semantic_validation
+0992:         )
+0993: 
+0994:         max_attempts = 3
+0995: 
+0996:         for attempt in range(
+0997:             1,
+0998:             max_attempts + 1,
+0999:         ):
+1000: 

@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\How_Camera_Movement_Increases_Tension_in_Films\\How_Camera_Movement_Increases_Tension_in_Films.wav",
+    "duration": 27.58530612244898,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\How_Camera_Movement_Increases_Tension_in_Films_scene_001.wav",
+            "duration": 6.501587301587302,
+            "start_time": 0.0,
+            "end_time": 6.501587301587302,
+            "narration": "Watch how subtle camera movements can dramatically increase tension in films, keeping audiences on the edge of their seats."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\How_Camera_Movement_Increases_Tension_in_Films_scene_002.wav",
+            "duration": 8.55655328798186,
+            "start_time": 6.501587301587302,
+            "end_time": 15.058140589569161,
+            "narration": "In key scenes, filmmakers often use slow pushes or pulls to build suspense, guiding your eyes to the crucial elements of the shot."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\How_Camera_Movement_Increases_Tension_in_Films_scene_003.wav",
+            "duration": 7.360725623582766,
+            "start_time": 15.058140589569161,
+            "end_time": 22.41886621315193,
+            "narration": "By carefully manipulating the camera, they create a sense of impending danger or reveal hidden threats, enhancing the overall emotional impact."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\How_Camera_Movement_Increases_Tension_in_Films_scene_004.wav",
+            "duration": 5.166439909297052,
+            "start_time": 22.41886621315193,
+            "end_time": 27.585306122448984,
+            "narration": "Understanding these techniques can help you appreciate the skill behind crafting suspenseful scenes."
+        }
+    ],
+    "script": "Watch how subtle camera movements can dramatically increase tension in films, keeping audiences on the edge of their seats.\nIn key scenes, filmmakers often use slow pushes or pulls to build suspense, guiding your eyes to the crucial elements of the shot.\nBy carefully manipulating the camera, they create a sense of impending danger or reveal hidden threats, enhancing the overall emotional impact.\nUnderstanding these techniques can help you appreciate the skill behind crafting suspenseful scenes."
+}

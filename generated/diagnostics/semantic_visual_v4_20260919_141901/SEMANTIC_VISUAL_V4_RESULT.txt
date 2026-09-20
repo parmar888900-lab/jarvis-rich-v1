@@ -1,0 +1,9 @@
+﻿========================================================
+ JARVIS SEMANTIC VISUAL V4
+========================================================
+
+[ROLLBACK] V4 patch failed.
+[ROLLBACK] RuntimeError: Semantic Visual V4 is already installed.
+[PASS] Original V3 source restored.
+
+[STOP] V4 patch failed. V3 restored.

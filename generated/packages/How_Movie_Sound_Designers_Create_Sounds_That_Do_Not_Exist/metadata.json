@@ -1,0 +1,30 @@
+{
+    "title": "How Movie Sound Designers Create Sounds That Do Not Exist",
+    "hashtags": [
+        "#SoundDesign",
+        "#AlienSounds",
+        "#FilmProduction"
+    ],
+    "scene_count": 4,
+    "duration": 39.172063492063494,
+    "created_by": "Jarvis Rich V1",
+    "metadata": {
+        "source": "How movie sound designers create sounds that do not exist",
+        "generator": "Jarvis Rich V1",
+        "content_format": "cinematic_explainer",
+        "movie_title": "",
+        "evidence_ids": [],
+        "word_count": 104,
+        "repaired": true,
+        "repair_attempt": 1,
+        "repair_issues": [
+            {
+                "type": "high_risk_claim",
+                "pattern": "\\bperfect(?:ed|ly)?\\b",
+                "matches": [
+                    "perfect"
+                ]
+            }
+        ]
+    }
+}

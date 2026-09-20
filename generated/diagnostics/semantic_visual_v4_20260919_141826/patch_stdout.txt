@@ -1,0 +1,10 @@
+[PASS] Semantic Visual V4 installed.
+[PASS] Foley-specific visual queries installed.
+[PASS] Literal beat relevance strengthened.
+[PASS] Generic social-media penalty installed.
+[PASS] Domain relevance bonus installed.
+[PASS] Semantic rejection threshold installed.
+[PASS] Duplicate avoidance preserved.
+[PASS] Rights authorization preserved.
+[PASS] Block 5 preserved.
+[PASS] Research grounding preserved.

@@ -61,6 +61,7 @@ class RuntimeConfig:
     ffmpeg_executable: str
 
     generated_dir: Path
+    media_library_dir: Path
     database_url: str
 
     youtube_token_path: Path
@@ -168,6 +169,10 @@ class RuntimeConfig:
             generated_dir=_read_path(
                 "JARVIS_GENERATED_DIR",
                 default="generated",
+            ),
+            media_library_dir=_read_path(
+                "JARVIS_MEDIA_LIBRARY_DIR",
+                default="media_library",
             ),
             database_url=_read_text(
                 "JARVIS_DATABASE_URL",

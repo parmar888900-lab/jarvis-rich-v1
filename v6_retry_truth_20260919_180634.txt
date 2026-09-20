@@ -1,0 +1,13 @@
+=== RICH V1 V6 RETRY TRUTH ===
+Started: 2026-09-19T18:06:34.1151795-06:00
+Root: C:\Users\hp\jarvis.ai\generated\diagnostics\v6_video_beats_20260919_180347
+Installer: C:\Users\hp\jarvis.ai\generated\diagnostics\v6_video_beats_20260919_180347\install_v6.py
+
+=== RESTORE CLEAN BASELINE ===
+BaselineCompileExitCode: 0
+
+=== FIX INSTALLER IMPORT ANCHOR ===
+Installer import anchor corrected.
+
+=== INSTALLER COMPILE ===
+Sorry: IndentationError: unexpected indent (install_v6.py, line 15)InstallerCompileExitCode: 1

@@ -1,0 +1,1368 @@
+﻿
+============================================================
+PATTERN: async def render(
+LINE: 118
+============================================================
+0089:             clip.close()
+0090:             raise RuntimeError(
+0091:                 "Invalid source image dimensions."
+0092:             )
+0093: 
+0094:         cover_scale = max(
+0095:             self.WIDTH / float(source_width),
+0096:             self.HEIGHT / float(source_height),
+0097:         )
+0098: 
+0099:         scale = cover_scale * max(1.0, float(zoom))
+0100: 
+0101:         target_width = max(
+0102:             self.WIDTH,
+0103:             int(round(source_width * scale)),
+0104:         )
+0105: 
+0106:         target_height = max(
+0107:             self.HEIGHT,
+0108:             int(round(source_height * scale)),
+0109:         )
+0110: 
+0111:         return (
+0112:             clip
+0113:             .resized((target_width, target_height))
+0114:             .with_duration(max(0.05, float(duration)))
+0115:             .with_position(("center", "center"))
+0116:         )
+0117: 
+0118:     async def render(
+0119:         self,
+0120:         content: GeneratedContent,
+0121:         scenes: list[Scene],
+0122:         images: list[GeneratedImage],
+0123:         production_package: dict,
+0124:         visual_beats: list[dict] | None = None,
+0125:         beat_images: list[GeneratedImage] | None = None,
+0126:         beat_videos: list[dict] | None = None,
+0127:     ) -> dict:
+0128: 
+0129:         if not scenes:
+0130:             raise RuntimeError(
+0131:                 "Storyboard contains no scenes."
+0132:             )
+0133: 
+0134:         if not images:
+0135:             raise RuntimeError(
+0136:                 "Renderer received no authorized images."
+0137:             )
+0138: 
+0139:         if len(images) != len(scenes):
+0140:             raise RuntimeError(
+0141:                 "Image/storyboard mismatch."
+0142:             )
+0143: 
+0144:         # Stage 2A deliberately keeps the existing rights-safe
+0145:         # one-authorized-image-per-story-stage acquisition rule.
+0146:         # The renderer creates a denser editorial timeline from
+0147:         # those authorized assets without requesting unverified
+0148:         # media.
+0149: 
+0150:         voice = production_package["voice"]
+0151: 
+0152:         audio_path = Path(
+0153:             voice["audio_path"]
+0154:         )
+0155: 
+0156:         if not audio_path.exists():
+0157:             raise FileNotFoundError(
+0158:                 f"Audio not found: {audio_path}"
+0159:             )
+0160: 
+0161:         audio = AudioFileClip(
+0162:             str(audio_path)
+0163:         )
+0164: 
+0165:         audio_duration = audio.duration
+0166: 
+0167:         if audio_duration <= 0:
+0168:             audio.close()
+0169: 
+0170:             raise RuntimeError(
+0171:                 "Narration has invalid duration."
+0172:             )
+0173: 
+0174:         image_clips = []
+0175:         subtitle_clips = []
+0176: 
+0177:         # RICH_V1_REAL_VIDEO_V6_1
+0178:         video_source_clips = []
+0179: 
+0180:         beat_video_lookup = {
+0181:             int(
+0182:                 item.get(
+0183:                     "beat_index",
+0184:                     -1,
+0185:                 )
+0186:             ): item
+0187:             for item in (beat_videos or [])
+0188:             if isinstance(
+0189:                 item,
+
+============================================================
+PATTERN: beat_videos
+LINE: 126
+============================================================
+0097:         )
+0098: 
+0099:         scale = cover_scale * max(1.0, float(zoom))
+0100: 
+0101:         target_width = max(
+0102:             self.WIDTH,
+0103:             int(round(source_width * scale)),
+0104:         )
+0105: 
+0106:         target_height = max(
+0107:             self.HEIGHT,
+0108:             int(round(source_height * scale)),
+0109:         )
+0110: 
+0111:         return (
+0112:             clip
+0113:             .resized((target_width, target_height))
+0114:             .with_duration(max(0.05, float(duration)))
+0115:             .with_position(("center", "center"))
+0116:         )
+0117: 
+0118:     async def render(
+0119:         self,
+0120:         content: GeneratedContent,
+0121:         scenes: list[Scene],
+0122:         images: list[GeneratedImage],
+0123:         production_package: dict,
+0124:         visual_beats: list[dict] | None = None,
+0125:         beat_images: list[GeneratedImage] | None = None,
+0126:         beat_videos: list[dict] | None = None,
+0127:     ) -> dict:
+0128: 
+0129:         if not scenes:
+0130:             raise RuntimeError(
+0131:                 "Storyboard contains no scenes."
+0132:             )
+0133: 
+0134:         if not images:
+0135:             raise RuntimeError(
+0136:                 "Renderer received no authorized images."
+0137:             )
+0138: 
+0139:         if len(images) != len(scenes):
+0140:             raise RuntimeError(
+0141:                 "Image/storyboard mismatch."
+0142:             )
+0143: 
+0144:         # Stage 2A deliberately keeps the existing rights-safe
+0145:         # one-authorized-image-per-story-stage acquisition rule.
+0146:         # The renderer creates a denser editorial timeline from
+0147:         # those authorized assets without requesting unverified
+0148:         # media.
+0149: 
+0150:         voice = production_package["voice"]
+0151: 
+0152:         audio_path = Path(
+0153:             voice["audio_path"]
+0154:         )
+0155: 
+0156:         if not audio_path.exists():
+0157:             raise FileNotFoundError(
+0158:                 f"Audio not found: {audio_path}"
+0159:             )
+0160: 
+0161:         audio = AudioFileClip(
+0162:             str(audio_path)
+0163:         )
+0164: 
+0165:         audio_duration = audio.duration
+0166: 
+0167:         if audio_duration <= 0:
+0168:             audio.close()
+0169: 
+0170:             raise RuntimeError(
+0171:                 "Narration has invalid duration."
+0172:             )
+0173: 
+0174:         image_clips = []
+0175:         subtitle_clips = []
+0176: 
+0177:         # RICH_V1_REAL_VIDEO_V6_1
+0178:         video_source_clips = []
+0179: 
+0180:         beat_video_lookup = {
+0181:             int(
+0182:                 item.get(
+0183:                     "beat_index",
+0184:                     -1,
+0185:                 )
+0186:             ): item
+0187:             for item in (beat_videos or [])
+0188:             if isinstance(
+0189:                 item,
+0190:                 dict,
+0191:             )
+0192:         }
+0193: 
+0194:         base_video = None
+0195:         final_video = None
+0196: 
+0197:         caption_mode = "whisper"
+
+============================================================
+PATTERN: beat_videos
+LINE: 187
+============================================================
+0158:                 f"Audio not found: {audio_path}"
+0159:             )
+0160: 
+0161:         audio = AudioFileClip(
+0162:             str(audio_path)
+0163:         )
+0164: 
+0165:         audio_duration = audio.duration
+0166: 
+0167:         if audio_duration <= 0:
+0168:             audio.close()
+0169: 
+0170:             raise RuntimeError(
+0171:                 "Narration has invalid duration."
+0172:             )
+0173: 
+0174:         image_clips = []
+0175:         subtitle_clips = []
+0176: 
+0177:         # RICH_V1_REAL_VIDEO_V6_1
+0178:         video_source_clips = []
+0179: 
+0180:         beat_video_lookup = {
+0181:             int(
+0182:                 item.get(
+0183:                     "beat_index",
+0184:                     -1,
+0185:                 )
+0186:             ): item
+0187:             for item in (beat_videos or [])
+0188:             if isinstance(
+0189:                 item,
+0190:                 dict,
+0191:             )
+0192:         }
+0193: 
+0194:         base_video = None
+0195:         final_video = None
+0196: 
+0197:         caption_mode = "whisper"
+0198: 
+0199:         try:
+0200: 
+0201:             ##################################################
+0202:             # Build synchronized image clips
+0203:             ##################################################
+0204: 
+0205:             # Stage 2B semantic editorial timeline.
+0206:             #
+0207:             # Preferred path:
+0208:             # one visual clip per semantic micro-beat.
+0209:             #
+0210:             # Fallback path:
+0211:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+0212:             # already-authorized story-stage images.
+0213: 
+0214:             use_semantic_beats = bool(
+0215:                 visual_beats
+0216:                 and beat_images
+0217:                 and len(visual_beats)
+0218:                 == len(beat_images)
+0219:             )
+0220: 
+0221:             if use_semantic_beats:
+0222: 
+0223:                 # BLOCK5_RENDERER_QA_BEGIN
+0224:                 #
+0225:                 # Independent last-line defense. Even if a future
+0226:                 # pipeline refactor bypasses the upstream gate,
+0227:                 # Stage2B will not render a sequence dominated by
+0228:                 # repeated physical images.
+0229: 
+0230:                 block5_paths = [
+0231:                     str(
+0232:                         Path(image.image_path)
+0233:                         .resolve()
+0234:                     ).lower()
+0235:                     for image in beat_images
+0236:                 ]
+0237: 
+0238:                 block5_path_counts = {}
+0239: 
+0240:                 for block5_path in block5_paths:
+0241:                     block5_path_counts[
+0242:                         block5_path
+0243:                     ] = (
+0244:                         block5_path_counts.get(
+0245:                             block5_path,
+0246:                             0,
+0247:                         )
+0248:                         + 1
+0249:                     )
+0250: 
+0251:                 block5_renderer_distinct = len(
+0252:                     block5_path_counts
+0253:                 )
+0254: 
+0255:                 block5_renderer_run = 1
+0256:                 block5_renderer_max_run = 1
+0257: 
+0258:                 for block5_index in range(
+
+============================================================
+PATTERN: beat_video_lookup
+LINE: 180
+============================================================
+0151: 
+0152:         audio_path = Path(
+0153:             voice["audio_path"]
+0154:         )
+0155: 
+0156:         if not audio_path.exists():
+0157:             raise FileNotFoundError(
+0158:                 f"Audio not found: {audio_path}"
+0159:             )
+0160: 
+0161:         audio = AudioFileClip(
+0162:             str(audio_path)
+0163:         )
+0164: 
+0165:         audio_duration = audio.duration
+0166: 
+0167:         if audio_duration <= 0:
+0168:             audio.close()
+0169: 
+0170:             raise RuntimeError(
+0171:                 "Narration has invalid duration."
+0172:             )
+0173: 
+0174:         image_clips = []
+0175:         subtitle_clips = []
+0176: 
+0177:         # RICH_V1_REAL_VIDEO_V6_1
+0178:         video_source_clips = []
+0179: 
+0180:         beat_video_lookup = {
+0181:             int(
+0182:                 item.get(
+0183:                     "beat_index",
+0184:                     -1,
+0185:                 )
+0186:             ): item
+0187:             for item in (beat_videos or [])
+0188:             if isinstance(
+0189:                 item,
+0190:                 dict,
+0191:             )
+0192:         }
+0193: 
+0194:         base_video = None
+0195:         final_video = None
+0196: 
+0197:         caption_mode = "whisper"
+0198: 
+0199:         try:
+0200: 
+0201:             ##################################################
+0202:             # Build synchronized image clips
+0203:             ##################################################
+0204: 
+0205:             # Stage 2B semantic editorial timeline.
+0206:             #
+0207:             # Preferred path:
+0208:             # one visual clip per semantic micro-beat.
+0209:             #
+0210:             # Fallback path:
+0211:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+0212:             # already-authorized story-stage images.
+0213: 
+0214:             use_semantic_beats = bool(
+0215:                 visual_beats
+0216:                 and beat_images
+0217:                 and len(visual_beats)
+0218:                 == len(beat_images)
+0219:             )
+0220: 
+0221:             if use_semantic_beats:
+0222: 
+0223:                 # BLOCK5_RENDERER_QA_BEGIN
+0224:                 #
+0225:                 # Independent last-line defense. Even if a future
+0226:                 # pipeline refactor bypasses the upstream gate,
+0227:                 # Stage2B will not render a sequence dominated by
+0228:                 # repeated physical images.
+0229: 
+0230:                 block5_paths = [
+0231:                     str(
+0232:                         Path(image.image_path)
+0233:                         .resolve()
+0234:                     ).lower()
+0235:                     for image in beat_images
+0236:                 ]
+0237: 
+0238:                 block5_path_counts = {}
+0239: 
+0240:                 for block5_path in block5_paths:
+0241:                     block5_path_counts[
+0242:                         block5_path
+0243:                     ] = (
+0244:                         block5_path_counts.get(
+0245:                             block5_path,
+0246:                             0,
+0247:                         )
+0248:                         + 1
+0249:                     )
+0250: 
+0251:                 block5_renderer_distinct = len(
+
+============================================================
+PATTERN: beat_video_lookup
+LINE: 434
+============================================================
+0405:                             f"{image_path}"
+0406:                         )
+0407: 
+0408:                     # Controlled alternating reframes keep static
+0409:                     # licensed imagery alive without fabricating
+0410:                     # content or modifying its meaning.
+0411:                     # Restrained motion pattern:
+0412:                     # enough movement to prevent slideshow feel
+0413:                     # without turning every shot into an effect.
+0414:                     zoom_pattern = (
+0415:                         1.00,
+0416:                         1.025,
+0417:                         1.050,
+0418:                         1.015,
+0419:                         1.040,
+0420:                     )
+0421: 
+0422:                     zoom = zoom_pattern[
+0423:                         (beat_index - 1)
+0424:                         % len(zoom_pattern)
+0425:                     ]
+0426: 
+0427:                     # RICH_V1_REAL_VIDEO_V6_1
+0428:                     #
+0429:                     # Default remains the existing authorized
+0430:                     # image. A strict semantic video match can
+0431:                     # replace it for this beat.
+0432:                     clip = None
+0433: 
+0434:                     video_spec = beat_video_lookup.get(
+0435:                         beat_index
+0436:                     )
+0437: 
+0438:                     if video_spec is not None:
+0439: 
+0440:                         source_path = Path(
+0441:                             str(
+0442:                                 video_spec.get(
+0443:                                     "source_path",
+0444:                                     "",
+0445:                                 )
+0446:                             )
+0447:                         )
+0448: 
+0449:                         if source_path.exists():
+0450: 
+0451:                             source_video = None
+0452: 
+0453:                             try:
+0454: 
+0455:                                 source_video = (
+0456:                                     VideoFileClip(
+0457:                                         str(
+0458:                                             source_path
+0459:                                         )
+0460:                                     )
+0461:                                 )
+0462: 
+0463:                                 video_source_clips.append(
+0464:                                     source_video
+0465:                                 )
+0466: 
+0467:                                 start_time = max(
+0468:                                     0.0,
+0469:                                     float(
+0470:                                         video_spec.get(
+0471:                                             "start_time",
+0472:                                             0.0,
+0473:                                         )
+0474:                                     ),
+0475:                                 )
+0476: 
+0477:                                 end_time = min(
+0478:                                     float(
+0479:                                         source_video.duration
+0480:                                     ),
+0481:                                     float(
+0482:                                         video_spec.get(
+0483:                                             "end_time",
+0484:                                             start_time
+0485:                                             + cut_duration,
+0486:                                         )
+0487:                                     ),
+0488:                                 )
+0489: 
+0490:                                 if (
+0491:                                     end_time
+0492:                                     > start_time
+0493:                                     + 0.05
+0494:                                 ):
+0495: 
+0496:                                     moving_clip = (
+0497:                                         source_video
+0498:                                         .subclipped(
+0499:                                             start_time,
+0500:                                             end_time,
+0501:                                         )
+0502:                                         .without_audio()
+0503:                                     )
+0504: 
+0505:                                     available_duration = (
+
+============================================================
+PATTERN: VideoFileClip
+LINE: 20
+============================================================
+0001: """
+0002: Video Renderer
+0003: 
+0004: Responsible for creating the final MP4.
+0005: 
+0006: MoviePy 2.x compatible.
+0007: """
+0008: 
+0009: from pathlib import Path
+0010: 
+0011: from backend.services.runtime.runtime_config import RuntimeConfig
+0012: from backend.services.video_renderer.moviepy_runtime import (
+0013:     configure_moviepy_ffmpeg,
+0014: )
+0015: 
+0016: from moviepy import (
+0017:     AudioFileClip,
+0018:     CompositeVideoClip,
+0019:     ImageClip,
+0020:     VideoFileClip,
+0021:     concatenate_videoclips,
+0022: )
+0023: 
+0024: from backend.models.generated_content import GeneratedContent
+0025: from backend.services.storyboard.scene import Scene
+0026: from backend.services.image_generation.models import GeneratedImage
+0027: from backend.services.video.caption_aligner import CaptionAligner
+0028: from backend.services.video_renderer.subtitle_renderer import SubtitleRenderer
+0029: 
+0030: 
+0031: class VideoRenderer:
+0032: 
+0033:     WIDTH = 1080
+0034:     HEIGHT = 1920
+0035:     FPS = 30
+0036: 
+0037:     def __init__(
+0038:         self,
+0039:         runtime_config: RuntimeConfig | None = None,
+0040:     ):
+0041: 
+0042:         config = (
+0043:             runtime_config
+0044:             if runtime_config is not None
+0045:             else RuntimeConfig.from_environment()
+0046:         )
+0047: 
+0048:         self.ffmpeg_executable = (
+0049:             configure_moviepy_ffmpeg(
+0050:                 config.ffmpeg_executable
+0051:             )
+0052:         )
+0053: 
+0054:         self.output_dir = (
+0055:             Path(config.generated_dir)
+0056:             / "videos"
+0057:         )
+0058: 
+0059:         self.output_dir.mkdir(
+0060:             parents=True,
+0061:             exist_ok=True,
+0062:         )
+0063: 
+0064:         self.subtitle_renderer = (
+0065:             SubtitleRenderer()
+0066:         )
+0067: 
+0068:         self.caption_aligner = (
+0069:             CaptionAligner()
+0070:         )
+0071: 
+0072:     def _cover_image_clip(
+0073:         self,
+0074:         image_path: Path,
+0075:         duration: float,
+0076:         zoom: float = 1.0,
+0077:     ):
+0078:         """
+0079:         Preserve source aspect ratio while filling the
+0080:         vertical frame. Overscan is centered instead of
+0081:         stretching the source image.
+0082:         """
+0083: 
+0084:         clip = ImageClip(str(image_path))
+0085: 
+0086:         source_width, source_height = clip.size
+0087: 
+0088:         if source_width <= 0 or source_height <= 0:
+0089:             clip.close()
+0090:             raise RuntimeError(
+0091:                 "Invalid source image dimensions."
+
+============================================================
+PATTERN: VideoFileClip
+LINE: 456
+============================================================
+0427:                     # RICH_V1_REAL_VIDEO_V6_1
+0428:                     #
+0429:                     # Default remains the existing authorized
+0430:                     # image. A strict semantic video match can
+0431:                     # replace it for this beat.
+0432:                     clip = None
+0433: 
+0434:                     video_spec = beat_video_lookup.get(
+0435:                         beat_index
+0436:                     )
+0437: 
+0438:                     if video_spec is not None:
+0439: 
+0440:                         source_path = Path(
+0441:                             str(
+0442:                                 video_spec.get(
+0443:                                     "source_path",
+0444:                                     "",
+0445:                                 )
+0446:                             )
+0447:                         )
+0448: 
+0449:                         if source_path.exists():
+0450: 
+0451:                             source_video = None
+0452: 
+0453:                             try:
+0454: 
+0455:                                 source_video = (
+0456:                                     VideoFileClip(
+0457:                                         str(
+0458:                                             source_path
+0459:                                         )
+0460:                                     )
+0461:                                 )
+0462: 
+0463:                                 video_source_clips.append(
+0464:                                     source_video
+0465:                                 )
+0466: 
+0467:                                 start_time = max(
+0468:                                     0.0,
+0469:                                     float(
+0470:                                         video_spec.get(
+0471:                                             "start_time",
+0472:                                             0.0,
+0473:                                         )
+0474:                                     ),
+0475:                                 )
+0476: 
+0477:                                 end_time = min(
+0478:                                     float(
+0479:                                         source_video.duration
+0480:                                     ),
+0481:                                     float(
+0482:                                         video_spec.get(
+0483:                                             "end_time",
+0484:                                             start_time
+0485:                                             + cut_duration,
+0486:                                         )
+0487:                                     ),
+0488:                                 )
+0489: 
+0490:                                 if (
+0491:                                     end_time
+0492:                                     > start_time
+0493:                                     + 0.05
+0494:                                 ):
+0495: 
+0496:                                     moving_clip = (
+0497:                                         source_video
+0498:                                         .subclipped(
+0499:                                             start_time,
+0500:                                             end_time,
+0501:                                         )
+0502:                                         .without_audio()
+0503:                                     )
+0504: 
+0505:                                     available_duration = (
+0506:                                         float(
+0507:                                             moving_clip.duration
+0508:                                         )
+0509:                                     )
+0510: 
+0511:                                     if (
+0512:                                         available_duration
+0513:                                         >= cut_duration
+0514:                                     ):
+0515: 
+0516:                                         moving_clip = (
+0517:                                             moving_clip
+0518:                                             .subclipped(
+0519:                                                 0.0,
+0520:                                                 cut_duration,
+0521:                                             )
+0522:                                         )
+0523: 
+0524:                                         clip = (
+0525:                                             self._fit_visual(
+0526:                                                 moving_clip,
+0527:                                                 cut_duration,
+
+============================================================
+PATTERN: _fit_visual
+LINE: 525
+============================================================
+0496:                                     moving_clip = (
+0497:                                         source_video
+0498:                                         .subclipped(
+0499:                                             start_time,
+0500:                                             end_time,
+0501:                                         )
+0502:                                         .without_audio()
+0503:                                     )
+0504: 
+0505:                                     available_duration = (
+0506:                                         float(
+0507:                                             moving_clip.duration
+0508:                                         )
+0509:                                     )
+0510: 
+0511:                                     if (
+0512:                                         available_duration
+0513:                                         >= cut_duration
+0514:                                     ):
+0515: 
+0516:                                         moving_clip = (
+0517:                                             moving_clip
+0518:                                             .subclipped(
+0519:                                                 0.0,
+0520:                                                 cut_duration,
+0521:                                             )
+0522:                                         )
+0523: 
+0524:                                         clip = (
+0525:                                             self._fit_visual(
+0526:                                                 moving_clip,
+0527:                                                 cut_duration,
+0528:                                             )
+0529:                                         )
+0530: 
+0531:                                     else:
+0532: 
+0533:                                         # Do not stretch/freeze a
+0534:                                         # short clip just to force
+0535:                                         # a match. Fall back to
+0536:                                         # the authorized image.
+0537:                                         clip = None
+0538: 
+0539:                             except Exception:
+0540: 
+0541:                                 clip = None
+0542: 
+0543:                     if clip is None:
+0544: 
+0545:                         clip = self._cover_image_clip(
+0546:                             image_path=image_path,
+0547:                             duration=cut_duration,
+0548:                             zoom=zoom,
+0549:                         )
+0550: 
+0551:                     image_clips.append(
+0552:                         clip
+0553:                     )
+0554: 
+0555:             else:
+0556: 
+0557:                 # Stage 2A fallback.
+0558:                 cut_allocation = {
+0559:                     1: 4,
+0560:                     2: 3,
+0561:                     3: 3,
+0562:                     4: 2,
+0563:                 }
+0564: 
+0565:                 total_scene_duration = sum(
+0566:                     max(
+0567:                         float(scene.duration),
+0568:                         0.01,
+0569:                     )
+0570:                     for scene in scenes
+0571:                 )
+0572: 
+0573:                 for scene_index, (
+0574:                     scene,
+0575:                     image,
+0576:                 ) in enumerate(
+0577:                     zip(
+0578:                         scenes,
+0579:                         images,
+0580:                     ),
+0581:                     start=1,
+0582:                 ):
+0583: 
+0584:                     image_path = Path(
+0585:                         image.image_path
+0586:                     )
+0587: 
+0588:                     if not image_path.exists():
+0589:                         raise FileNotFoundError(
+0590:                             f"Image not found: {image_path}"
+0591:                         )
+0592: 
+0593:                     cuts = cut_allocation.get(
+0594:                         scene_index,
+0595:                         2,
+0596:                     )
+
+============================================================
+PATTERN: subclipped(
+LINE: 498
+============================================================
+0469:                                     float(
+0470:                                         video_spec.get(
+0471:                                             "start_time",
+0472:                                             0.0,
+0473:                                         )
+0474:                                     ),
+0475:                                 )
+0476: 
+0477:                                 end_time = min(
+0478:                                     float(
+0479:                                         source_video.duration
+0480:                                     ),
+0481:                                     float(
+0482:                                         video_spec.get(
+0483:                                             "end_time",
+0484:                                             start_time
+0485:                                             + cut_duration,
+0486:                                         )
+0487:                                     ),
+0488:                                 )
+0489: 
+0490:                                 if (
+0491:                                     end_time
+0492:                                     > start_time
+0493:                                     + 0.05
+0494:                                 ):
+0495: 
+0496:                                     moving_clip = (
+0497:                                         source_video
+0498:                                         .subclipped(
+0499:                                             start_time,
+0500:                                             end_time,
+0501:                                         )
+0502:                                         .without_audio()
+0503:                                     )
+0504: 
+0505:                                     available_duration = (
+0506:                                         float(
+0507:                                             moving_clip.duration
+0508:                                         )
+0509:                                     )
+0510: 
+0511:                                     if (
+0512:                                         available_duration
+0513:                                         >= cut_duration
+0514:                                     ):
+0515: 
+0516:                                         moving_clip = (
+0517:                                             moving_clip
+0518:                                             .subclipped(
+0519:                                                 0.0,
+0520:                                                 cut_duration,
+0521:                                             )
+0522:                                         )
+0523: 
+0524:                                         clip = (
+0525:                                             self._fit_visual(
+0526:                                                 moving_clip,
+0527:                                                 cut_duration,
+0528:                                             )
+0529:                                         )
+0530: 
+0531:                                     else:
+0532: 
+0533:                                         # Do not stretch/freeze a
+0534:                                         # short clip just to force
+0535:                                         # a match. Fall back to
+0536:                                         # the authorized image.
+0537:                                         clip = None
+0538: 
+0539:                             except Exception:
+0540: 
+0541:                                 clip = None
+0542: 
+0543:                     if clip is None:
+0544: 
+0545:                         clip = self._cover_image_clip(
+0546:                             image_path=image_path,
+0547:                             duration=cut_duration,
+0548:                             zoom=zoom,
+0549:                         )
+0550: 
+0551:                     image_clips.append(
+0552:                         clip
+0553:                     )
+0554: 
+0555:             else:
+0556: 
+0557:                 # Stage 2A fallback.
+0558:                 cut_allocation = {
+0559:                     1: 4,
+0560:                     2: 3,
+0561:                     3: 3,
+0562:                     4: 2,
+0563:                 }
+0564: 
+0565:                 total_scene_duration = sum(
+0566:                     max(
+0567:                         float(scene.duration),
+0568:                         0.01,
+0569:                     )
+
+============================================================
+PATTERN: subclipped(
+LINE: 518
+============================================================
+0489: 
+0490:                                 if (
+0491:                                     end_time
+0492:                                     > start_time
+0493:                                     + 0.05
+0494:                                 ):
+0495: 
+0496:                                     moving_clip = (
+0497:                                         source_video
+0498:                                         .subclipped(
+0499:                                             start_time,
+0500:                                             end_time,
+0501:                                         )
+0502:                                         .without_audio()
+0503:                                     )
+0504: 
+0505:                                     available_duration = (
+0506:                                         float(
+0507:                                             moving_clip.duration
+0508:                                         )
+0509:                                     )
+0510: 
+0511:                                     if (
+0512:                                         available_duration
+0513:                                         >= cut_duration
+0514:                                     ):
+0515: 
+0516:                                         moving_clip = (
+0517:                                             moving_clip
+0518:                                             .subclipped(
+0519:                                                 0.0,
+0520:                                                 cut_duration,
+0521:                                             )
+0522:                                         )
+0523: 
+0524:                                         clip = (
+0525:                                             self._fit_visual(
+0526:                                                 moving_clip,
+0527:                                                 cut_duration,
+0528:                                             )
+0529:                                         )
+0530: 
+0531:                                     else:
+0532: 
+0533:                                         # Do not stretch/freeze a
+0534:                                         # short clip just to force
+0535:                                         # a match. Fall back to
+0536:                                         # the authorized image.
+0537:                                         clip = None
+0538: 
+0539:                             except Exception:
+0540: 
+0541:                                 clip = None
+0542: 
+0543:                     if clip is None:
+0544: 
+0545:                         clip = self._cover_image_clip(
+0546:                             image_path=image_path,
+0547:                             duration=cut_duration,
+0548:                             zoom=zoom,
+0549:                         )
+0550: 
+0551:                     image_clips.append(
+0552:                         clip
+0553:                     )
+0554: 
+0555:             else:
+0556: 
+0557:                 # Stage 2A fallback.
+0558:                 cut_allocation = {
+0559:                     1: 4,
+0560:                     2: 3,
+0561:                     3: 3,
+0562:                     4: 2,
+0563:                 }
+0564: 
+0565:                 total_scene_duration = sum(
+0566:                     max(
+0567:                         float(scene.duration),
+0568:                         0.01,
+0569:                     )
+0570:                     for scene in scenes
+0571:                 )
+0572: 
+0573:                 for scene_index, (
+0574:                     scene,
+0575:                     image,
+0576:                 ) in enumerate(
+0577:                     zip(
+0578:                         scenes,
+0579:                         images,
+0580:                     ),
+0581:                     start=1,
+0582:                 ):
+0583: 
+0584:                     image_path = Path(
+0585:                         image.image_path
+0586:                     )
+0587: 
+0588:                     if not image_path.exists():
+0589:                         raise FileNotFoundError(
+
+============================================================
+PATTERN: _cover_image_clip
+LINE: 72
+============================================================
+0043:             runtime_config
+0044:             if runtime_config is not None
+0045:             else RuntimeConfig.from_environment()
+0046:         )
+0047: 
+0048:         self.ffmpeg_executable = (
+0049:             configure_moviepy_ffmpeg(
+0050:                 config.ffmpeg_executable
+0051:             )
+0052:         )
+0053: 
+0054:         self.output_dir = (
+0055:             Path(config.generated_dir)
+0056:             / "videos"
+0057:         )
+0058: 
+0059:         self.output_dir.mkdir(
+0060:             parents=True,
+0061:             exist_ok=True,
+0062:         )
+0063: 
+0064:         self.subtitle_renderer = (
+0065:             SubtitleRenderer()
+0066:         )
+0067: 
+0068:         self.caption_aligner = (
+0069:             CaptionAligner()
+0070:         )
+0071: 
+0072:     def _cover_image_clip(
+0073:         self,
+0074:         image_path: Path,
+0075:         duration: float,
+0076:         zoom: float = 1.0,
+0077:     ):
+0078:         """
+0079:         Preserve source aspect ratio while filling the
+0080:         vertical frame. Overscan is centered instead of
+0081:         stretching the source image.
+0082:         """
+0083: 
+0084:         clip = ImageClip(str(image_path))
+0085: 
+0086:         source_width, source_height = clip.size
+0087: 
+0088:         if source_width <= 0 or source_height <= 0:
+0089:             clip.close()
+0090:             raise RuntimeError(
+0091:                 "Invalid source image dimensions."
+0092:             )
+0093: 
+0094:         cover_scale = max(
+0095:             self.WIDTH / float(source_width),
+0096:             self.HEIGHT / float(source_height),
+0097:         )
+0098: 
+0099:         scale = cover_scale * max(1.0, float(zoom))
+0100: 
+0101:         target_width = max(
+0102:             self.WIDTH,
+0103:             int(round(source_width * scale)),
+0104:         )
+0105: 
+0106:         target_height = max(
+0107:             self.HEIGHT,
+0108:             int(round(source_height * scale)),
+0109:         )
+0110: 
+0111:         return (
+0112:             clip
+0113:             .resized((target_width, target_height))
+0114:             .with_duration(max(0.05, float(duration)))
+0115:             .with_position(("center", "center"))
+0116:         )
+0117: 
+0118:     async def render(
+0119:         self,
+0120:         content: GeneratedContent,
+0121:         scenes: list[Scene],
+0122:         images: list[GeneratedImage],
+0123:         production_package: dict,
+0124:         visual_beats: list[dict] | None = None,
+0125:         beat_images: list[GeneratedImage] | None = None,
+0126:         beat_videos: list[dict] | None = None,
+0127:     ) -> dict:
+0128: 
+0129:         if not scenes:
+0130:             raise RuntimeError(
+0131:                 "Storyboard contains no scenes."
+0132:             )
+0133: 
+0134:         if not images:
+0135:             raise RuntimeError(
+0136:                 "Renderer received no authorized images."
+0137:             )
+0138: 
+0139:         if len(images) != len(scenes):
+0140:             raise RuntimeError(
+0141:                 "Image/storyboard mismatch."
+0142:             )
+0143: 
+
+============================================================
+PATTERN: _cover_image_clip
+LINE: 545
+============================================================
+0516:                                         moving_clip = (
+0517:                                             moving_clip
+0518:                                             .subclipped(
+0519:                                                 0.0,
+0520:                                                 cut_duration,
+0521:                                             )
+0522:                                         )
+0523: 
+0524:                                         clip = (
+0525:                                             self._fit_visual(
+0526:                                                 moving_clip,
+0527:                                                 cut_duration,
+0528:                                             )
+0529:                                         )
+0530: 
+0531:                                     else:
+0532: 
+0533:                                         # Do not stretch/freeze a
+0534:                                         # short clip just to force
+0535:                                         # a match. Fall back to
+0536:                                         # the authorized image.
+0537:                                         clip = None
+0538: 
+0539:                             except Exception:
+0540: 
+0541:                                 clip = None
+0542: 
+0543:                     if clip is None:
+0544: 
+0545:                         clip = self._cover_image_clip(
+0546:                             image_path=image_path,
+0547:                             duration=cut_duration,
+0548:                             zoom=zoom,
+0549:                         )
+0550: 
+0551:                     image_clips.append(
+0552:                         clip
+0553:                     )
+0554: 
+0555:             else:
+0556: 
+0557:                 # Stage 2A fallback.
+0558:                 cut_allocation = {
+0559:                     1: 4,
+0560:                     2: 3,
+0561:                     3: 3,
+0562:                     4: 2,
+0563:                 }
+0564: 
+0565:                 total_scene_duration = sum(
+0566:                     max(
+0567:                         float(scene.duration),
+0568:                         0.01,
+0569:                     )
+0570:                     for scene in scenes
+0571:                 )
+0572: 
+0573:                 for scene_index, (
+0574:                     scene,
+0575:                     image,
+0576:                 ) in enumerate(
+0577:                     zip(
+0578:                         scenes,
+0579:                         images,
+0580:                     ),
+0581:                     start=1,
+0582:                 ):
+0583: 
+0584:                     image_path = Path(
+0585:                         image.image_path
+0586:                     )
+0587: 
+0588:                     if not image_path.exists():
+0589:                         raise FileNotFoundError(
+0590:                             f"Image not found: {image_path}"
+0591:                         )
+0592: 
+0593:                     cuts = cut_allocation.get(
+0594:                         scene_index,
+0595:                         2,
+0596:                     )
+0597: 
+0598:                     scene_share = (
+0599:                         max(
+0600:                             float(scene.duration),
+0601:                             0.01,
+0602:                         )
+0603:                         / total_scene_duration
+0604:                     )
+0605: 
+0606:                     stage_duration = (
+0607:                         audio_duration
+0608:                         * scene_share
+0609:                     )
+0610: 
+0611:                     cut_duration = (
+0612:                         stage_duration
+0613:                         / cuts
+0614:                     )
+0615: 
+0616:                     for local_cut in range(cuts):
+
+============================================================
+PATTERN: _cover_image_clip
+LINE: 628
+============================================================
+0599:                         max(
+0600:                             float(scene.duration),
+0601:                             0.01,
+0602:                         )
+0603:                         / total_scene_duration
+0604:                     )
+0605: 
+0606:                     stage_duration = (
+0607:                         audio_duration
+0608:                         * scene_share
+0609:                     )
+0610: 
+0611:                     cut_duration = (
+0612:                         stage_duration
+0613:                         / cuts
+0614:                     )
+0615: 
+0616:                     for local_cut in range(cuts):
+0617: 
+0618:                         zoom = (
+0619:                             1.00
+0620:                             if local_cut % 3 == 0
+0621:                             else (
+0622:                                 1.035
+0623:                                 if local_cut % 3 == 1
+0624:                                 else 1.065
+0625:                             )
+0626:                         )
+0627: 
+0628:                         clip = self._cover_image_clip(
+0629:                             image_path=image_path,
+0630:                             duration=cut_duration,
+0631:                             zoom=zoom,
+0632:                         )
+0633: 
+0634:                         image_clips.append(
+0635:                             clip
+0636:                         )
+0637: 
+0638:             ##################################################
+0639:             # Combine micro-shot editorial timeline
+0640:             ##################################################
+0641: 
+0642:             base_video = concatenate_videoclips(
+0643:                 image_clips,
+0644:                 method="compose",
+0645:             )
+0646: 
+0647:             ##################################################
+0648:             # Build speech-aligned subtitles
+0649:             ##################################################
+0650: 
+0651:             try:
+0652: 
+0653:                 phrases = (
+0654:                     await self.caption_aligner
+0655:                     .align_phrases(
+0656:                         str(audio_path)
+0657:                     )
+0658:                 )
+0659: 
+0660:                 for phrase in phrases:
+0661: 
+0662:                     subtitle = (
+0663:                         self.subtitle_renderer
+0664:                         .create_clip(
+0665:                             text=phrase["text"],
+0666:                             start_time=phrase[
+0667:                                 "start_time"
+0668:                             ],
+0669:                             end_time=phrase[
+0670:                                 "end_time"
+0671:                             ],
+0672:                         )
+0673:                     )
+0674: 
+0675:                     subtitle_clips.append(
+0676:                         subtitle
+0677:                     )
+0678: 
+0679:             except Exception as exc:
+0680: 
+0681:                 caption_mode = "fallback"
+0682: 
+0683:                 print(
+0684:                     "Whisper caption alignment "
+0685:                     "failed. Using fallback "
+0686:                     "captions."
+0687:                 )
+0688: 
+0689:                 print(
+0690:                     f"Alignment error: {exc}"
+0691:                 )
+0692: 
+0693:                 ##################################################
+0694:                 # Fallback proportional captions
+0695:                 ##################################################
+0696: 
+0697:                 for scene in scenes:
+0698: 
+0699:                     phrase_clips = (

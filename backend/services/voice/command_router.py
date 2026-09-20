@@ -1,4 +1,4 @@
-﻿"""Safe natural-language routing for Jarvis voice commands."""
+"""Safe natural-language routing for Jarvis voice commands."""
 
 from __future__ import annotations
 
@@ -44,6 +44,17 @@ class VoiceCommandRouter:
         r"\bwhat(?:'s|\s+is)\s+trending\b",
     )
 
+    _SYSTEM_STATUS_PATTERNS = (
+        r"\bjarvis\s+status\b",
+        r"\bsystem\s+status\b",
+        r"\bwhat(?:'s|\s+is)\s+(?:the\s+)?progress\b",
+        r"\bhow\s+many\s+videos?\s+(?:have\s+we\s+made|are\s+done|have\s+been\s+made|did\s+we\s+make)\b",
+        r"\bhow\s+(?:are|is)\s+(?:the\s+)?analytics\b",
+        r"\bhow\s+is\s+(?:the\s+)?channel\s+doing\b",
+        r"\bwhat\s+happened\s+in\s+(?:the\s+)?last\s+production\s+cycle\b",
+        r"\bgive\s+me\s+(?:an?\s+)?update\b",
+    )
+
     _CREATE_VIDEO_PATTERNS = (
         r"\bcreate\s+(?:a\s+)?video\b",
         r"\bmake\s+(?:a\s+)?video\b",
@@ -81,6 +92,7 @@ class VoiceCommandRouter:
             ("youtube", "analyze_trends"),
             ("youtube", "create_video"),
             ("youtube", "upload_video"),
+            ("system", "get_status"),
             ("goal", "list_goals"),
             ("goal", "get_goal_status"),
             ("goal", "create_goal"),
@@ -139,6 +151,18 @@ class VoiceCommandRouter:
                 (
                     "youtube",
                     "analyze_trends",
+                    None,
+                )
+            )
+
+        if self._matches_any(
+            transcript,
+            self._SYSTEM_STATUS_PATTERNS,
+        ):
+            candidates.append(
+                (
+                    "system",
+                    "get_status",
                     None,
                 )
             )

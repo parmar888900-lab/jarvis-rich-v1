@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable.wav",
+    "duration": 35.16662131519274,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable_scene_001.wav",
+            "duration": 14.86077097505669,
+            "start_time": 0.0,
+            "end_time": 14.86077097505669,
+            "narration": "In The Dark Knight, Heath Ledger plays the Joker without a clich\u00e9 origin story, mirroring Christopher Nolan's fear of anarchy. [E1] The Dark Knight is a 2008 superhero film directed by Christopher Nolan, who co-wrote the screenplay with his brother Jonathan."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable_scene_002.wav",
+            "duration": 6.246167800453515,
+            "start_time": 14.86077097505669,
+            "end_time": 21.106938775510205,
+            "narration": "The Joker's anarchistic motives create a constant sense of dread, shifting unpredictably, forcing Batman and the city to adapt."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable_scene_003.wav",
+            "duration": 7.999274376417233,
+            "start_time": 21.106938775510205,
+            "end_time": 29.106213151927438,
+            "narration": "Ledger's performance, supported by unorthodox storytelling, turns everyday situations into moments of terror, like the factory explosion."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable_scene_004.wav",
+            "duration": 6.060408163265306,
+            "start_time": 29.106213151927438,
+            "end_time": 35.16662131519274,
+            "narration": "The film's raw unpredictability makes Ledger's Joker one of the most iconic portrayals in superhero history."
+        }
+    ],
+    "script": "In The Dark Knight, Heath Ledger plays the Joker without a clich\u00e9 origin story, mirroring Christopher Nolan's fear of anarchy. [E1] The Dark Knight is a 2008 superhero film directed by Christopher Nolan, who co-wrote the screenplay with his brother Jonathan.\nThe Joker's anarchistic motives create a constant sense of dread, shifting unpredictably, forcing Batman and the city to adapt.\nLedger's performance, supported by unorthodox storytelling, turns everyday situations into moments of terror, like the factory explosion.\nThe film's raw unpredictability makes Ledger's Joker one of the most iconic portrayals in superhero history."
+}

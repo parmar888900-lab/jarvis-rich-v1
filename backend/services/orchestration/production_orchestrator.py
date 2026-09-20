@@ -1,4 +1,4 @@
-﻿"""Production-cycle orchestration.
+"""Production-cycle orchestration.
 
 Coordinates analysis and production without placing workflow logic
 inside Commander or individual agent handlers.
@@ -7,6 +7,7 @@ inside Commander or individual agent handlers.
 from typing import Any
 
 from backend.services.commander import Commander
+from backend.services.orchestration.youtube_release_service import YoutubeReleaseService
 from backend.services.orchestration.failure_classification import (
     classify_failure_category,
 )
@@ -28,10 +29,15 @@ class ProductionOrchestrator:
         commander: Commander | None = None,
         cycle_service: ProductionCycleService | None = None,
         session_factory: Any | None = None,
+        release_service: Any | None = None,
     ) -> None:
         self.commander = commander or Commander()
         self.cycle_service = cycle_service
         self.session_factory = session_factory
+        self.release_service = (
+            release_service
+            or YoutubeReleaseService()
+        )
 
     async def run_cycle(
         self,
@@ -330,6 +336,9 @@ class ProductionOrchestrator:
                 "production_score"
             )
 
+            # Persist the completed private-upload cycle first.
+            # YoutubeReleaseEvidenceService evaluates this stored
+            # result before public release is authorized.
             await self._complete_cycle(
                 cycle_id,
                 selected_topic=str(
@@ -345,6 +354,74 @@ class ProductionOrchestrator:
                 ),
                 result=result,
             )
+
+            # Autonomous production is the trusted approval
+            # boundary. The existing release policy still
+            # validates the completed cycle, score, upload
+            # evidence, video identity, and target visibility.
+            release = await self.release_service.release_cycle(
+                cycle_id=cycle_id,
+                manual_approved=True,
+            )
+
+            result["release"] = release
+
+            if release.get("status") not in {
+                "completed",
+                "already_completed",
+            }:
+                result["status"] = "release_failed"
+                result["failure"] = {
+                    "category": "youtube_release",
+                    "retryable": False,
+                    "detail": (
+                        "Private upload completed but public "
+                        "release was not completed."
+                    ),
+                }
+                return result
+
+            # PUBLIC RELEASE SUCCESS BOUNDARY
+            #
+            # Only now may the six-format rotation advance.
+            # Topic reservation already happens in the selector so a
+            # failed attempt does not immediately reuse the same topic.
+            youtube_handler = getattr(
+                self.commander,
+                "agents",
+                {},
+            ).get("youtube")
+
+            if youtube_handler is None:
+                youtube_handler = getattr(
+                    self.commander,
+                    "handlers",
+                    {},
+                ).get("youtube")
+
+            if youtube_handler is not None:
+                selector = getattr(
+                    youtube_handler,
+                    "selector",
+                    None,
+                )
+                format_rotator = getattr(
+                    youtube_handler,
+                    "format_rotator",
+                    None,
+                )
+
+                if (
+                    selector is not None
+                    and format_rotator is not None
+                ):
+                    selector._format_cursor = (
+                        format_rotator.next_cursor(
+                            cursor=selector._format_cursor,
+                            produced_count=1,
+                        )
+                    )
+                    selector._save_state()
 
             return result
 

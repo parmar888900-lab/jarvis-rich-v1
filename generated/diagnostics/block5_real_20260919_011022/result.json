@@ -1,0 +1,12 @@
+{
+  "success": false,
+  "topic": "Why movie sound effects are often recorded separately",
+  "content_id": "benchmark_8d3f9a8ebe5d",
+  "input_type": "dict",
+  "output": null,
+  "output_bytes": null,
+  "elapsed_seconds": null,
+  "exception_type": "RuntimeError",
+  "exception": "Visual diversity gate rejected sequence: same asset appears for 3 consecutive beats; maximum is 2.",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\hp\\jarvis.ai\\generated\\diagnostics\\block5_real_20260919_011022\\run_real_benchmark.py\", line 545, in <module>\n    asyncio.run(\n    ~~~~~~~~~~~^\n        main()\n        ^^^^^^\n    )\n    ^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\asyncio\\runners.py\", line 196, in run\n    return runner.run(main)\n           ~~~~~~~~~~^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\asyncio\\runners.py\", line 119, in run\n    return self._loop.run_until_complete(task)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\asyncio\\base_events.py\", line 725, in run_until_complete\n    return future.result()\n           ~~~~~~~~~~~~~^^\n  File \"C:\\Users\\hp\\jarvis.ai\\generated\\diagnostics\\block5_real_20260919_011022\\run_real_benchmark.py\", line 296, in main\n    value = await value\n            ^^^^^^^^^^^\n  File \"C:\\Users\\hp\\jarvis.ai\\backend\\services\\pipelines\\video_pipeline.py\", line 698, in run\n    raise RuntimeError(\n    ...<4 lines>...\n    )\nRuntimeError: Visual diversity gate rejected sequence: same asset appears for 3 consecutive beats; maximum is 2.\n"
+}

@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Camera movement in films can dramatically increase tension, like in a thrilling chase scene.",
+        "image_prompt": "Camera movement in films can dramatically increase tension, like in a thrilling chase scene.",
+        "duration": 4.690430839002268,
+        "start_time": 0.0,
+        "end_time": 4.690430839002268
+    },
+    {
+        "narration": "By panning, tilting, or dolly shots, filmmakers guide the viewer\u2019s attention, heightening suspense. Filmmaking, or film production, is the process of creating a motion picture.",
+        "image_prompt": "By panning, tilting, or dolly shots, filmmakers guide the viewer\u2019s attention, heightening suspense. Filmmaking, or film production, is the process of creating a motion picture.",
+        "duration": 10.263219954648527,
+        "start_time": 4.690430839002268,
+        "end_time": 14.953650793650795
+    },
+    {
+        "narration": "For example, a slow, steady zoom in on a character's frightened face can evoke fear and unease. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later.",
+        "image_prompt": "For example, a slow, steady zoom in on a character's frightened face can evoke fear and unease. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later.",
+        "duration": 13.64172335600907,
+        "start_time": 14.953650793650795,
+        "end_time": 28.595374149659865
+    },
+    {
+        "narration": "Mastering these techniques adds depth and emotion to any scene, enhancing the overall storytelling.",
+        "image_prompt": "Mastering these techniques adds depth and emotion to any scene, enhancing the overall storytelling.",
+        "duration": 5.201269841269841,
+        "start_time": 28.595374149659865,
+        "end_time": 33.79664399092971
+    }
+]

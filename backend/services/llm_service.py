@@ -1,4 +1,4 @@
-﻿"""Portable LLM integration for Jarvis."""
+"""Portable LLM integration for Jarvis."""
 
 from __future__ import annotations
 

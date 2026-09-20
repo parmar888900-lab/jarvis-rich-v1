@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:07,872
+Imagine a car factory where robots work tirelessly, precision welding and assembling parts, 24/7 with no breaks.
+
+2
+00:00:07,872 --> 00:00:18,146
+With up to 4.7 million industrial robots in operation globally, these machines handle tasks with speed and accuracy. An industrial robot is a robot used for manufacturing.
+
+3
+00:00:18,146 --> 00:00:30,674
+From welding to packaging, robots boost efficiency and reduce human error, making them indispensable in modern manufacturing. Industrial robots are automated, programmable and capable of movement on three or more axes.
+
+4
+00:00:30,674 --> 00:00:36,780
+By automating labor-intensive tasks, they increase productivity and help car factories stay competitive.

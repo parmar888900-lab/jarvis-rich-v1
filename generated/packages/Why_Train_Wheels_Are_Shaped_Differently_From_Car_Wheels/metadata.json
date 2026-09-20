@@ -1,0 +1,30 @@
+{
+    "title": "Why train wheels are shaped differently from car wheels",
+    "hashtags": [
+        "#TrainWheels",
+        "#CarWheels",
+        "#RailwayTechnology"
+    ],
+    "scene_count": 4,
+    "duration": 35.59619047619048,
+    "created_by": "Jarvis Rich V1",
+    "metadata": {
+        "source": "Why train wheels are shaped differently from car wheels",
+        "generator": "Jarvis Rich V1",
+        "content_format": "visual_explainer",
+        "movie_title": "",
+        "evidence_ids": [],
+        "word_count": 106,
+        "repaired": true,
+        "repair_attempt": 2,
+        "repair_issues": [
+            {
+                "type": "high_risk_claim",
+                "pattern": "\\bperfect(?:ed|ly)?\\b",
+                "matches": [
+                    "perfectly"
+                ]
+            }
+        ]
+    }
+}

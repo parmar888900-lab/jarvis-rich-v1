@@ -1,4 +1,4 @@
-﻿"""Persistent production-cycle model."""
+"""Persistent production-cycle model."""
 
 import enum
 import uuid

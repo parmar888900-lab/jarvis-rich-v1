@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:04,981
+Transform any scene with chroma keying, making subjects appear in front of any background.
+
+2
+00:00:04,981 --> 00:00:20,782
+Green and blue screens are the most common, but any uniform color can work for chroma keying. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).
+
+3
+00:00:20,782 --> 00:00:26,424
+Filmmakers use this technique for everything from weather forecasts to complex visual effects in movies and games.
+
+4
+00:00:26,424 --> 00:00:33,297
+By making a specific color transparent, you can replace the background with anything, from CGI maps to stunning landscapes.

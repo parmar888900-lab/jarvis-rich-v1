@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:06,455
+Previsualization helps filmmakers plan complex scenes, ensuring smoother production and better visual effects integration.
+
+2
+00:00:06,455 --> 00:00:19,273
+By creating 3D models and animation sequences, directors can visualize the final product early, making adjustments before shooting starts. Filmmaking, or film production, is the process of creating a motion picture.
+
+3
+00:00:19,273 --> 00:00:31,997
+This process saves time and resources, enhancing the overall quality of the film. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later.
+
+4
+00:00:31,997 --> 00:00:38,580
+Previsualization is crucial for coordinating complex action sequences and visual effects in modern blockbusters.

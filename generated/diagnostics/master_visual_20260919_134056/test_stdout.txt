@@ -1,0 +1,3 @@
+[ROLLBACK] Verification failed.
+[ROLLBACK] RuntimeError: Missing pipeline marker: distinct_selected_assets
+[PASS] Original source restored.

@@ -1,0 +1,1741 @@
+FILE: backend\services\video_renderer\renderer.py
+TOTAL LINES: 682
+
+==============================================================================
+CONTEXT AROUND LINE 123
+==============================================================================
+0088:             clip.close()
+0089:             raise RuntimeError(
+0090:                 "Invalid source image dimensions."
+0091:             )
+0092: 
+0093:         cover_scale = max(
+0094:             self.WIDTH / float(source_width),
+0095:             self.HEIGHT / float(source_height),
+0096:         )
+0097: 
+0098:         scale = cover_scale * max(1.0, float(zoom))
+0099: 
+0100:         target_width = max(
+0101:             self.WIDTH,
+0102:             int(round(source_width * scale)),
+0103:         )
+0104: 
+0105:         target_height = max(
+0106:             self.HEIGHT,
+0107:             int(round(source_height * scale)),
+0108:         )
+0109: 
+0110:         return (
+0111:             clip
+0112:             .resized((target_width, target_height))
+0113:             .with_duration(max(0.05, float(duration)))
+0114:             .with_position(("center", "center"))
+0115:         )
+0116: 
+0117:     async def render(
+0118:         self,
+0119:         content: GeneratedContent,
+0120:         scenes: list[Scene],
+0121:         images: list[GeneratedImage],
+0122:         production_package: dict,
+0123:         visual_beats: list[dict] | None = None,
+0124:         beat_images: list[GeneratedImage] | None = None,
+0125:     ) -> dict:
+0126: 
+0127:         if not scenes:
+0128:             raise RuntimeError(
+0129:                 "Storyboard contains no scenes."
+0130:             )
+0131: 
+0132:         if not images:
+0133:             raise RuntimeError(
+0134:                 "Renderer received no authorized images."
+0135:             )
+0136: 
+0137:         if len(images) != len(scenes):
+0138:             raise RuntimeError(
+0139:                 "Image/storyboard mismatch."
+0140:             )
+0141: 
+0142:         # Stage 2A deliberately keeps the existing rights-safe
+0143:         # one-authorized-image-per-story-stage acquisition rule.
+0144:         # The renderer creates a denser editorial timeline from
+0145:         # those authorized assets without requesting unverified
+0146:         # media.
+0147: 
+0148:         voice = production_package["voice"]
+0149: 
+0150:         audio_path = Path(
+0151:             voice["audio_path"]
+0152:         )
+0153: 
+0154:         if not audio_path.exists():
+0155:             raise FileNotFoundError(
+0156:                 f"Audio not found: {audio_path}"
+0157:             )
+0158: 
+0159:         audio = AudioFileClip(
+0160:             str(audio_path)
+0161:         )
+0162: 
+0163:         audio_duration = audio.duration
+0164: 
+0165:         if audio_duration <= 0:
+0166:             audio.close()
+0167: 
+0168:             raise RuntimeError(
+0169:                 "Narration has invalid duration."
+0170:             )
+0171: 
+0172:         image_clips = []
+0173:         subtitle_clips = []
+0174: 
+0175:         base_video = None
+0176:         final_video = None
+0177: 
+
+==============================================================================
+CONTEXT AROUND LINE 124
+==============================================================================
+0089:             raise RuntimeError(
+0090:                 "Invalid source image dimensions."
+0091:             )
+0092: 
+0093:         cover_scale = max(
+0094:             self.WIDTH / float(source_width),
+0095:             self.HEIGHT / float(source_height),
+0096:         )
+0097: 
+0098:         scale = cover_scale * max(1.0, float(zoom))
+0099: 
+0100:         target_width = max(
+0101:             self.WIDTH,
+0102:             int(round(source_width * scale)),
+0103:         )
+0104: 
+0105:         target_height = max(
+0106:             self.HEIGHT,
+0107:             int(round(source_height * scale)),
+0108:         )
+0109: 
+0110:         return (
+0111:             clip
+0112:             .resized((target_width, target_height))
+0113:             .with_duration(max(0.05, float(duration)))
+0114:             .with_position(("center", "center"))
+0115:         )
+0116: 
+0117:     async def render(
+0118:         self,
+0119:         content: GeneratedContent,
+0120:         scenes: list[Scene],
+0121:         images: list[GeneratedImage],
+0122:         production_package: dict,
+0123:         visual_beats: list[dict] | None = None,
+0124:         beat_images: list[GeneratedImage] | None = None,
+0125:     ) -> dict:
+0126: 
+0127:         if not scenes:
+0128:             raise RuntimeError(
+0129:                 "Storyboard contains no scenes."
+0130:             )
+0131: 
+0132:         if not images:
+0133:             raise RuntimeError(
+0134:                 "Renderer received no authorized images."
+0135:             )
+0136: 
+0137:         if len(images) != len(scenes):
+0138:             raise RuntimeError(
+0139:                 "Image/storyboard mismatch."
+0140:             )
+0141: 
+0142:         # Stage 2A deliberately keeps the existing rights-safe
+0143:         # one-authorized-image-per-story-stage acquisition rule.
+0144:         # The renderer creates a denser editorial timeline from
+0145:         # those authorized assets without requesting unverified
+0146:         # media.
+0147: 
+0148:         voice = production_package["voice"]
+0149: 
+0150:         audio_path = Path(
+0151:             voice["audio_path"]
+0152:         )
+0153: 
+0154:         if not audio_path.exists():
+0155:             raise FileNotFoundError(
+0156:                 f"Audio not found: {audio_path}"
+0157:             )
+0158: 
+0159:         audio = AudioFileClip(
+0160:             str(audio_path)
+0161:         )
+0162: 
+0163:         audio_duration = audio.duration
+0164: 
+0165:         if audio_duration <= 0:
+0166:             audio.close()
+0167: 
+0168:             raise RuntimeError(
+0169:                 "Narration has invalid duration."
+0170:             )
+0171: 
+0172:         image_clips = []
+0173:         subtitle_clips = []
+0174: 
+0175:         base_video = None
+0176:         final_video = None
+0177: 
+0178:         caption_mode = "whisper"
+
+==============================================================================
+CONTEXT AROUND LINE 195
+==============================================================================
+0160:             str(audio_path)
+0161:         )
+0162: 
+0163:         audio_duration = audio.duration
+0164: 
+0165:         if audio_duration <= 0:
+0166:             audio.close()
+0167: 
+0168:             raise RuntimeError(
+0169:                 "Narration has invalid duration."
+0170:             )
+0171: 
+0172:         image_clips = []
+0173:         subtitle_clips = []
+0174: 
+0175:         base_video = None
+0176:         final_video = None
+0177: 
+0178:         caption_mode = "whisper"
+0179: 
+0180:         try:
+0181: 
+0182:             ##################################################
+0183:             # Build synchronized image clips
+0184:             ##################################################
+0185: 
+0186:             # Stage 2B semantic editorial timeline.
+0187:             #
+0188:             # Preferred path:
+0189:             # one visual clip per semantic micro-beat.
+0190:             #
+0191:             # Fallback path:
+0192:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+0193:             # already-authorized story-stage images.
+0194: 
+0195:             use_semantic_beats = bool(
+0196:                 visual_beats
+0197:                 and beat_images
+0198:                 and len(visual_beats)
+0199:                 == len(beat_images)
+0200:             )
+0201: 
+0202:             if use_semantic_beats:
+0203: 
+0204:                 # BLOCK5_RENDERER_QA_BEGIN
+0205:                 #
+0206:                 # Independent last-line defense. Even if a future
+0207:                 # pipeline refactor bypasses the upstream gate,
+0208:                 # Stage2B will not render a sequence dominated by
+0209:                 # repeated physical images.
+0210: 
+0211:                 block5_paths = [
+0212:                     str(
+0213:                         Path(image.image_path)
+0214:                         .resolve()
+0215:                     ).lower()
+0216:                     for image in beat_images
+0217:                 ]
+0218: 
+0219:                 block5_path_counts = {}
+0220: 
+0221:                 for block5_path in block5_paths:
+0222:                     block5_path_counts[
+0223:                         block5_path
+0224:                     ] = (
+0225:                         block5_path_counts.get(
+0226:                             block5_path,
+0227:                             0,
+0228:                         )
+0229:                         + 1
+0230:                     )
+0231: 
+0232:                 block5_renderer_distinct = len(
+0233:                     block5_path_counts
+0234:                 )
+0235: 
+0236:                 block5_renderer_run = 1
+0237:                 block5_renderer_max_run = 1
+0238: 
+0239:                 for block5_index in range(
+0240:                     1,
+0241:                     len(block5_paths),
+0242:                 ):
+0243:                     if (
+0244:                         block5_paths[block5_index]
+0245:                         == block5_paths[
+0246:                             block5_index - 1
+0247:                         ]
+0248:                     ):
+0249:                         block5_renderer_run += 1
+
+==============================================================================
+CONTEXT AROUND LINE 196
+==============================================================================
+0161:         )
+0162: 
+0163:         audio_duration = audio.duration
+0164: 
+0165:         if audio_duration <= 0:
+0166:             audio.close()
+0167: 
+0168:             raise RuntimeError(
+0169:                 "Narration has invalid duration."
+0170:             )
+0171: 
+0172:         image_clips = []
+0173:         subtitle_clips = []
+0174: 
+0175:         base_video = None
+0176:         final_video = None
+0177: 
+0178:         caption_mode = "whisper"
+0179: 
+0180:         try:
+0181: 
+0182:             ##################################################
+0183:             # Build synchronized image clips
+0184:             ##################################################
+0185: 
+0186:             # Stage 2B semantic editorial timeline.
+0187:             #
+0188:             # Preferred path:
+0189:             # one visual clip per semantic micro-beat.
+0190:             #
+0191:             # Fallback path:
+0192:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+0193:             # already-authorized story-stage images.
+0194: 
+0195:             use_semantic_beats = bool(
+0196:                 visual_beats
+0197:                 and beat_images
+0198:                 and len(visual_beats)
+0199:                 == len(beat_images)
+0200:             )
+0201: 
+0202:             if use_semantic_beats:
+0203: 
+0204:                 # BLOCK5_RENDERER_QA_BEGIN
+0205:                 #
+0206:                 # Independent last-line defense. Even if a future
+0207:                 # pipeline refactor bypasses the upstream gate,
+0208:                 # Stage2B will not render a sequence dominated by
+0209:                 # repeated physical images.
+0210: 
+0211:                 block5_paths = [
+0212:                     str(
+0213:                         Path(image.image_path)
+0214:                         .resolve()
+0215:                     ).lower()
+0216:                     for image in beat_images
+0217:                 ]
+0218: 
+0219:                 block5_path_counts = {}
+0220: 
+0221:                 for block5_path in block5_paths:
+0222:                     block5_path_counts[
+0223:                         block5_path
+0224:                     ] = (
+0225:                         block5_path_counts.get(
+0226:                             block5_path,
+0227:                             0,
+0228:                         )
+0229:                         + 1
+0230:                     )
+0231: 
+0232:                 block5_renderer_distinct = len(
+0233:                     block5_path_counts
+0234:                 )
+0235: 
+0236:                 block5_renderer_run = 1
+0237:                 block5_renderer_max_run = 1
+0238: 
+0239:                 for block5_index in range(
+0240:                     1,
+0241:                     len(block5_paths),
+0242:                 ):
+0243:                     if (
+0244:                         block5_paths[block5_index]
+0245:                         == block5_paths[
+0246:                             block5_index - 1
+0247:                         ]
+0248:                     ):
+0249:                         block5_renderer_run += 1
+0250:                         block5_renderer_max_run = max(
+
+==============================================================================
+CONTEXT AROUND LINE 197
+==============================================================================
+0162: 
+0163:         audio_duration = audio.duration
+0164: 
+0165:         if audio_duration <= 0:
+0166:             audio.close()
+0167: 
+0168:             raise RuntimeError(
+0169:                 "Narration has invalid duration."
+0170:             )
+0171: 
+0172:         image_clips = []
+0173:         subtitle_clips = []
+0174: 
+0175:         base_video = None
+0176:         final_video = None
+0177: 
+0178:         caption_mode = "whisper"
+0179: 
+0180:         try:
+0181: 
+0182:             ##################################################
+0183:             # Build synchronized image clips
+0184:             ##################################################
+0185: 
+0186:             # Stage 2B semantic editorial timeline.
+0187:             #
+0188:             # Preferred path:
+0189:             # one visual clip per semantic micro-beat.
+0190:             #
+0191:             # Fallback path:
+0192:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+0193:             # already-authorized story-stage images.
+0194: 
+0195:             use_semantic_beats = bool(
+0196:                 visual_beats
+0197:                 and beat_images
+0198:                 and len(visual_beats)
+0199:                 == len(beat_images)
+0200:             )
+0201: 
+0202:             if use_semantic_beats:
+0203: 
+0204:                 # BLOCK5_RENDERER_QA_BEGIN
+0205:                 #
+0206:                 # Independent last-line defense. Even if a future
+0207:                 # pipeline refactor bypasses the upstream gate,
+0208:                 # Stage2B will not render a sequence dominated by
+0209:                 # repeated physical images.
+0210: 
+0211:                 block5_paths = [
+0212:                     str(
+0213:                         Path(image.image_path)
+0214:                         .resolve()
+0215:                     ).lower()
+0216:                     for image in beat_images
+0217:                 ]
+0218: 
+0219:                 block5_path_counts = {}
+0220: 
+0221:                 for block5_path in block5_paths:
+0222:                     block5_path_counts[
+0223:                         block5_path
+0224:                     ] = (
+0225:                         block5_path_counts.get(
+0226:                             block5_path,
+0227:                             0,
+0228:                         )
+0229:                         + 1
+0230:                     )
+0231: 
+0232:                 block5_renderer_distinct = len(
+0233:                     block5_path_counts
+0234:                 )
+0235: 
+0236:                 block5_renderer_run = 1
+0237:                 block5_renderer_max_run = 1
+0238: 
+0239:                 for block5_index in range(
+0240:                     1,
+0241:                     len(block5_paths),
+0242:                 ):
+0243:                     if (
+0244:                         block5_paths[block5_index]
+0245:                         == block5_paths[
+0246:                             block5_index - 1
+0247:                         ]
+0248:                     ):
+0249:                         block5_renderer_run += 1
+0250:                         block5_renderer_max_run = max(
+0251:                             block5_renderer_max_run,
+
+==============================================================================
+CONTEXT AROUND LINE 198
+==============================================================================
+0163:         audio_duration = audio.duration
+0164: 
+0165:         if audio_duration <= 0:
+0166:             audio.close()
+0167: 
+0168:             raise RuntimeError(
+0169:                 "Narration has invalid duration."
+0170:             )
+0171: 
+0172:         image_clips = []
+0173:         subtitle_clips = []
+0174: 
+0175:         base_video = None
+0176:         final_video = None
+0177: 
+0178:         caption_mode = "whisper"
+0179: 
+0180:         try:
+0181: 
+0182:             ##################################################
+0183:             # Build synchronized image clips
+0184:             ##################################################
+0185: 
+0186:             # Stage 2B semantic editorial timeline.
+0187:             #
+0188:             # Preferred path:
+0189:             # one visual clip per semantic micro-beat.
+0190:             #
+0191:             # Fallback path:
+0192:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+0193:             # already-authorized story-stage images.
+0194: 
+0195:             use_semantic_beats = bool(
+0196:                 visual_beats
+0197:                 and beat_images
+0198:                 and len(visual_beats)
+0199:                 == len(beat_images)
+0200:             )
+0201: 
+0202:             if use_semantic_beats:
+0203: 
+0204:                 # BLOCK5_RENDERER_QA_BEGIN
+0205:                 #
+0206:                 # Independent last-line defense. Even if a future
+0207:                 # pipeline refactor bypasses the upstream gate,
+0208:                 # Stage2B will not render a sequence dominated by
+0209:                 # repeated physical images.
+0210: 
+0211:                 block5_paths = [
+0212:                     str(
+0213:                         Path(image.image_path)
+0214:                         .resolve()
+0215:                     ).lower()
+0216:                     for image in beat_images
+0217:                 ]
+0218: 
+0219:                 block5_path_counts = {}
+0220: 
+0221:                 for block5_path in block5_paths:
+0222:                     block5_path_counts[
+0223:                         block5_path
+0224:                     ] = (
+0225:                         block5_path_counts.get(
+0226:                             block5_path,
+0227:                             0,
+0228:                         )
+0229:                         + 1
+0230:                     )
+0231: 
+0232:                 block5_renderer_distinct = len(
+0233:                     block5_path_counts
+0234:                 )
+0235: 
+0236:                 block5_renderer_run = 1
+0237:                 block5_renderer_max_run = 1
+0238: 
+0239:                 for block5_index in range(
+0240:                     1,
+0241:                     len(block5_paths),
+0242:                 ):
+0243:                     if (
+0244:                         block5_paths[block5_index]
+0245:                         == block5_paths[
+0246:                             block5_index - 1
+0247:                         ]
+0248:                     ):
+0249:                         block5_renderer_run += 1
+0250:                         block5_renderer_max_run = max(
+0251:                             block5_renderer_max_run,
+0252:                             block5_renderer_run,
+
+==============================================================================
+CONTEXT AROUND LINE 199
+==============================================================================
+0164: 
+0165:         if audio_duration <= 0:
+0166:             audio.close()
+0167: 
+0168:             raise RuntimeError(
+0169:                 "Narration has invalid duration."
+0170:             )
+0171: 
+0172:         image_clips = []
+0173:         subtitle_clips = []
+0174: 
+0175:         base_video = None
+0176:         final_video = None
+0177: 
+0178:         caption_mode = "whisper"
+0179: 
+0180:         try:
+0181: 
+0182:             ##################################################
+0183:             # Build synchronized image clips
+0184:             ##################################################
+0185: 
+0186:             # Stage 2B semantic editorial timeline.
+0187:             #
+0188:             # Preferred path:
+0189:             # one visual clip per semantic micro-beat.
+0190:             #
+0191:             # Fallback path:
+0192:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+0193:             # already-authorized story-stage images.
+0194: 
+0195:             use_semantic_beats = bool(
+0196:                 visual_beats
+0197:                 and beat_images
+0198:                 and len(visual_beats)
+0199:                 == len(beat_images)
+0200:             )
+0201: 
+0202:             if use_semantic_beats:
+0203: 
+0204:                 # BLOCK5_RENDERER_QA_BEGIN
+0205:                 #
+0206:                 # Independent last-line defense. Even if a future
+0207:                 # pipeline refactor bypasses the upstream gate,
+0208:                 # Stage2B will not render a sequence dominated by
+0209:                 # repeated physical images.
+0210: 
+0211:                 block5_paths = [
+0212:                     str(
+0213:                         Path(image.image_path)
+0214:                         .resolve()
+0215:                     ).lower()
+0216:                     for image in beat_images
+0217:                 ]
+0218: 
+0219:                 block5_path_counts = {}
+0220: 
+0221:                 for block5_path in block5_paths:
+0222:                     block5_path_counts[
+0223:                         block5_path
+0224:                     ] = (
+0225:                         block5_path_counts.get(
+0226:                             block5_path,
+0227:                             0,
+0228:                         )
+0229:                         + 1
+0230:                     )
+0231: 
+0232:                 block5_renderer_distinct = len(
+0233:                     block5_path_counts
+0234:                 )
+0235: 
+0236:                 block5_renderer_run = 1
+0237:                 block5_renderer_max_run = 1
+0238: 
+0239:                 for block5_index in range(
+0240:                     1,
+0241:                     len(block5_paths),
+0242:                 ):
+0243:                     if (
+0244:                         block5_paths[block5_index]
+0245:                         == block5_paths[
+0246:                             block5_index - 1
+0247:                         ]
+0248:                     ):
+0249:                         block5_renderer_run += 1
+0250:                         block5_renderer_max_run = max(
+0251:                             block5_renderer_max_run,
+0252:                             block5_renderer_run,
+0253:                         )
+
+==============================================================================
+CONTEXT AROUND LINE 202
+==============================================================================
+0167: 
+0168:             raise RuntimeError(
+0169:                 "Narration has invalid duration."
+0170:             )
+0171: 
+0172:         image_clips = []
+0173:         subtitle_clips = []
+0174: 
+0175:         base_video = None
+0176:         final_video = None
+0177: 
+0178:         caption_mode = "whisper"
+0179: 
+0180:         try:
+0181: 
+0182:             ##################################################
+0183:             # Build synchronized image clips
+0184:             ##################################################
+0185: 
+0186:             # Stage 2B semantic editorial timeline.
+0187:             #
+0188:             # Preferred path:
+0189:             # one visual clip per semantic micro-beat.
+0190:             #
+0191:             # Fallback path:
+0192:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+0193:             # already-authorized story-stage images.
+0194: 
+0195:             use_semantic_beats = bool(
+0196:                 visual_beats
+0197:                 and beat_images
+0198:                 and len(visual_beats)
+0199:                 == len(beat_images)
+0200:             )
+0201: 
+0202:             if use_semantic_beats:
+0203: 
+0204:                 # BLOCK5_RENDERER_QA_BEGIN
+0205:                 #
+0206:                 # Independent last-line defense. Even if a future
+0207:                 # pipeline refactor bypasses the upstream gate,
+0208:                 # Stage2B will not render a sequence dominated by
+0209:                 # repeated physical images.
+0210: 
+0211:                 block5_paths = [
+0212:                     str(
+0213:                         Path(image.image_path)
+0214:                         .resolve()
+0215:                     ).lower()
+0216:                     for image in beat_images
+0217:                 ]
+0218: 
+0219:                 block5_path_counts = {}
+0220: 
+0221:                 for block5_path in block5_paths:
+0222:                     block5_path_counts[
+0223:                         block5_path
+0224:                     ] = (
+0225:                         block5_path_counts.get(
+0226:                             block5_path,
+0227:                             0,
+0228:                         )
+0229:                         + 1
+0230:                     )
+0231: 
+0232:                 block5_renderer_distinct = len(
+0233:                     block5_path_counts
+0234:                 )
+0235: 
+0236:                 block5_renderer_run = 1
+0237:                 block5_renderer_max_run = 1
+0238: 
+0239:                 for block5_index in range(
+0240:                     1,
+0241:                     len(block5_paths),
+0242:                 ):
+0243:                     if (
+0244:                         block5_paths[block5_index]
+0245:                         == block5_paths[
+0246:                             block5_index - 1
+0247:                         ]
+0248:                     ):
+0249:                         block5_renderer_run += 1
+0250:                         block5_renderer_max_run = max(
+0251:                             block5_renderer_max_run,
+0252:                             block5_renderer_run,
+0253:                         )
+0254:                     else:
+0255:                         block5_renderer_run = 1
+0256: 
+
+==============================================================================
+CONTEXT AROUND LINE 216
+==============================================================================
+0181: 
+0182:             ##################################################
+0183:             # Build synchronized image clips
+0184:             ##################################################
+0185: 
+0186:             # Stage 2B semantic editorial timeline.
+0187:             #
+0188:             # Preferred path:
+0189:             # one visual clip per semantic micro-beat.
+0190:             #
+0191:             # Fallback path:
+0192:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+0193:             # already-authorized story-stage images.
+0194: 
+0195:             use_semantic_beats = bool(
+0196:                 visual_beats
+0197:                 and beat_images
+0198:                 and len(visual_beats)
+0199:                 == len(beat_images)
+0200:             )
+0201: 
+0202:             if use_semantic_beats:
+0203: 
+0204:                 # BLOCK5_RENDERER_QA_BEGIN
+0205:                 #
+0206:                 # Independent last-line defense. Even if a future
+0207:                 # pipeline refactor bypasses the upstream gate,
+0208:                 # Stage2B will not render a sequence dominated by
+0209:                 # repeated physical images.
+0210: 
+0211:                 block5_paths = [
+0212:                     str(
+0213:                         Path(image.image_path)
+0214:                         .resolve()
+0215:                     ).lower()
+0216:                     for image in beat_images
+0217:                 ]
+0218: 
+0219:                 block5_path_counts = {}
+0220: 
+0221:                 for block5_path in block5_paths:
+0222:                     block5_path_counts[
+0223:                         block5_path
+0224:                     ] = (
+0225:                         block5_path_counts.get(
+0226:                             block5_path,
+0227:                             0,
+0228:                         )
+0229:                         + 1
+0230:                     )
+0231: 
+0232:                 block5_renderer_distinct = len(
+0233:                     block5_path_counts
+0234:                 )
+0235: 
+0236:                 block5_renderer_run = 1
+0237:                 block5_renderer_max_run = 1
+0238: 
+0239:                 for block5_index in range(
+0240:                     1,
+0241:                     len(block5_paths),
+0242:                 ):
+0243:                     if (
+0244:                         block5_paths[block5_index]
+0245:                         == block5_paths[
+0246:                             block5_index - 1
+0247:                         ]
+0248:                     ):
+0249:                         block5_renderer_run += 1
+0250:                         block5_renderer_max_run = max(
+0251:                             block5_renderer_max_run,
+0252:                             block5_renderer_run,
+0253:                         )
+0254:                     else:
+0255:                         block5_renderer_run = 1
+0256: 
+0257:                 block5_renderer_share = (
+0258:                     max(
+0259:                         block5_path_counts.values()
+0260:                     )
+0261:                     / len(block5_paths)
+0262:                 )
+0263: 
+0264:                 if (
+0265:                     block5_renderer_distinct
+0266:                     < min(
+0267:                         4,
+0268:                         len(block5_paths),
+0269:                     )
+0270:                 ):
+
+==============================================================================
+CONTEXT AROUND LINE 296
+==============================================================================
+0261:                     / len(block5_paths)
+0262:                 )
+0263: 
+0264:                 if (
+0265:                     block5_renderer_distinct
+0266:                     < min(
+0267:                         4,
+0268:                         len(block5_paths),
+0269:                     )
+0270:                 ):
+0271:                     raise RuntimeError(
+0272:                         "Stage2B renderer visual QA rejected "
+0273:                         "insufficient distinct imagery."
+0274:                     )
+0275: 
+0276:                 if block5_renderer_max_run > 2:
+0277:                     raise RuntimeError(
+0278:                         "Stage2B renderer visual QA rejected "
+0279:                         "more than 2 consecutive identical "
+0280:                         "beat images."
+0281:                     )
+0282: 
+0283:                 if (
+0284:                     len(block5_paths) >= 8
+0285:                     and block5_renderer_share > 0.42
+0286:                 ):
+0287:                     raise RuntimeError(
+0288:                         "Stage2B renderer visual QA rejected "
+0289:                         "a dominant repeated beat image."
+0290:                     )
+0291: 
+0292:                 # BLOCK5_RENDERER_QA_END
+0293: 
+0294:                 raw_durations = []
+0295: 
+0296:                 for beat in visual_beats:
+0297: 
+0298:                     try:
+0299:                         duration = float(
+0300:                             beat.get(
+0301:                                 "target_duration",
+0302:                                 2.5,
+0303:                             )
+0304:                         )
+0305:                     except (
+0306:                         TypeError,
+0307:                         ValueError,
+0308:                     ):
+0309:                         duration = 2.5
+0310: 
+0311:                     # Hook-biased pacing:
+0312:                     # first visual changes are deliberately
+0313:                     # quicker; later explanation/payoff beats
+0314:                     # are allowed slightly more breathing room.
+0315:                     beat_position = len(
+0316:                         raw_durations
+0317:                     )
+0318: 
+0319:                     if beat_position == 0:
+0320:                         pace_multiplier = 0.62
+0321:                     elif beat_position == 1:
+0322:                         pace_multiplier = 0.72
+0323:                     elif beat_position == 2:
+0324:                         pace_multiplier = 0.82
+0325:                     elif beat_position >= max(
+0326:                         0,
+0327:                         len(visual_beats) - 2,
+0328:                     ):
+0329:                         pace_multiplier = 1.12
+0330:                     else:
+0331:                         pace_multiplier = 1.0
+0332: 
+0333:                     duration *= pace_multiplier
+0334: 
+0335:                     raw_durations.append(
+0336:                         max(
+0337:                             0.65,
+0338:                             min(
+0339:                                 duration,
+0340:                                 3.5,
+0341:                             ),
+0342:                         )
+0343:                     )
+0344: 
+0345:                 raw_total = sum(
+0346:                     raw_durations
+0347:                 )
+0348: 
+0349:                 if raw_total <= 0:
+0350:                     raw_total = float(
+
+==============================================================================
+CONTEXT AROUND LINE 327
+==============================================================================
+0292:                 # BLOCK5_RENDERER_QA_END
+0293: 
+0294:                 raw_durations = []
+0295: 
+0296:                 for beat in visual_beats:
+0297: 
+0298:                     try:
+0299:                         duration = float(
+0300:                             beat.get(
+0301:                                 "target_duration",
+0302:                                 2.5,
+0303:                             )
+0304:                         )
+0305:                     except (
+0306:                         TypeError,
+0307:                         ValueError,
+0308:                     ):
+0309:                         duration = 2.5
+0310: 
+0311:                     # Hook-biased pacing:
+0312:                     # first visual changes are deliberately
+0313:                     # quicker; later explanation/payoff beats
+0314:                     # are allowed slightly more breathing room.
+0315:                     beat_position = len(
+0316:                         raw_durations
+0317:                     )
+0318: 
+0319:                     if beat_position == 0:
+0320:                         pace_multiplier = 0.62
+0321:                     elif beat_position == 1:
+0322:                         pace_multiplier = 0.72
+0323:                     elif beat_position == 2:
+0324:                         pace_multiplier = 0.82
+0325:                     elif beat_position >= max(
+0326:                         0,
+0327:                         len(visual_beats) - 2,
+0328:                     ):
+0329:                         pace_multiplier = 1.12
+0330:                     else:
+0331:                         pace_multiplier = 1.0
+0332: 
+0333:                     duration *= pace_multiplier
+0334: 
+0335:                     raw_durations.append(
+0336:                         max(
+0337:                             0.65,
+0338:                             min(
+0339:                                 duration,
+0340:                                 3.5,
+0341:                             ),
+0342:                         )
+0343:                     )
+0344: 
+0345:                 raw_total = sum(
+0346:                     raw_durations
+0347:                 )
+0348: 
+0349:                 if raw_total <= 0:
+0350:                     raw_total = float(
+0351:                         len(raw_durations)
+0352:                     )
+0353: 
+0354:                     raw_durations = [
+0355:                         1.0
+0356:                         for _ in raw_durations
+0357:                     ]
+0358: 
+0359:                 scaled_durations = [
+0360:                     audio_duration
+0361:                     * duration
+0362:                     / raw_total
+0363:                     for duration in raw_durations
+0364:                 ]
+0365: 
+0366:                 for beat_index, (
+0367:                     beat,
+0368:                     image,
+0369:                     cut_duration,
+0370:                 ) in enumerate(
+0371:                     zip(
+0372:                         visual_beats,
+0373:                         beat_images,
+0374:                         scaled_durations,
+0375:                     ),
+0376:                     start=1,
+0377:                 ):
+0378: 
+0379:                     image_path = Path(
+0380:                         image.image_path
+0381:                     )
+
+==============================================================================
+CONTEXT AROUND LINE 372
+==============================================================================
+0337:                             0.65,
+0338:                             min(
+0339:                                 duration,
+0340:                                 3.5,
+0341:                             ),
+0342:                         )
+0343:                     )
+0344: 
+0345:                 raw_total = sum(
+0346:                     raw_durations
+0347:                 )
+0348: 
+0349:                 if raw_total <= 0:
+0350:                     raw_total = float(
+0351:                         len(raw_durations)
+0352:                     )
+0353: 
+0354:                     raw_durations = [
+0355:                         1.0
+0356:                         for _ in raw_durations
+0357:                     ]
+0358: 
+0359:                 scaled_durations = [
+0360:                     audio_duration
+0361:                     * duration
+0362:                     / raw_total
+0363:                     for duration in raw_durations
+0364:                 ]
+0365: 
+0366:                 for beat_index, (
+0367:                     beat,
+0368:                     image,
+0369:                     cut_duration,
+0370:                 ) in enumerate(
+0371:                     zip(
+0372:                         visual_beats,
+0373:                         beat_images,
+0374:                         scaled_durations,
+0375:                     ),
+0376:                     start=1,
+0377:                 ):
+0378: 
+0379:                     image_path = Path(
+0380:                         image.image_path
+0381:                     )
+0382: 
+0383:                     if not image_path.exists():
+0384:                         raise FileNotFoundError(
+0385:                             "Beat image not found: "
+0386:                             f"{image_path}"
+0387:                         )
+0388: 
+0389:                     # Controlled alternating reframes keep static
+0390:                     # licensed imagery alive without fabricating
+0391:                     # content or modifying its meaning.
+0392:                     # Restrained motion pattern:
+0393:                     # enough movement to prevent slideshow feel
+0394:                     # without turning every shot into an effect.
+0395:                     zoom_pattern = (
+0396:                         1.00,
+0397:                         1.025,
+0398:                         1.050,
+0399:                         1.015,
+0400:                         1.040,
+0401:                     )
+0402: 
+0403:                     zoom = zoom_pattern[
+0404:                         (beat_index - 1)
+0405:                         % len(zoom_pattern)
+0406:                     ]
+0407: 
+0408:                     clip = self._cover_image_clip(
+0409:                         image_path=image_path,
+0410:                         duration=cut_duration,
+0411:                         zoom=zoom,
+0412:                     )
+0413: 
+0414:                     image_clips.append(
+0415:                         clip
+0416:                     )
+0417: 
+0418:             else:
+0419: 
+0420:                 # Stage 2A fallback.
+0421:                 cut_allocation = {
+0422:                     1: 4,
+0423:                     2: 3,
+0424:                     3: 3,
+0425:                     4: 2,
+0426:                 }
+
+==============================================================================
+CONTEXT AROUND LINE 373
+==============================================================================
+0338:                             min(
+0339:                                 duration,
+0340:                                 3.5,
+0341:                             ),
+0342:                         )
+0343:                     )
+0344: 
+0345:                 raw_total = sum(
+0346:                     raw_durations
+0347:                 )
+0348: 
+0349:                 if raw_total <= 0:
+0350:                     raw_total = float(
+0351:                         len(raw_durations)
+0352:                     )
+0353: 
+0354:                     raw_durations = [
+0355:                         1.0
+0356:                         for _ in raw_durations
+0357:                     ]
+0358: 
+0359:                 scaled_durations = [
+0360:                     audio_duration
+0361:                     * duration
+0362:                     / raw_total
+0363:                     for duration in raw_durations
+0364:                 ]
+0365: 
+0366:                 for beat_index, (
+0367:                     beat,
+0368:                     image,
+0369:                     cut_duration,
+0370:                 ) in enumerate(
+0371:                     zip(
+0372:                         visual_beats,
+0373:                         beat_images,
+0374:                         scaled_durations,
+0375:                     ),
+0376:                     start=1,
+0377:                 ):
+0378: 
+0379:                     image_path = Path(
+0380:                         image.image_path
+0381:                     )
+0382: 
+0383:                     if not image_path.exists():
+0384:                         raise FileNotFoundError(
+0385:                             "Beat image not found: "
+0386:                             f"{image_path}"
+0387:                         )
+0388: 
+0389:                     # Controlled alternating reframes keep static
+0390:                     # licensed imagery alive without fabricating
+0391:                     # content or modifying its meaning.
+0392:                     # Restrained motion pattern:
+0393:                     # enough movement to prevent slideshow feel
+0394:                     # without turning every shot into an effect.
+0395:                     zoom_pattern = (
+0396:                         1.00,
+0397:                         1.025,
+0398:                         1.050,
+0399:                         1.015,
+0400:                         1.040,
+0401:                     )
+0402: 
+0403:                     zoom = zoom_pattern[
+0404:                         (beat_index - 1)
+0405:                         % len(zoom_pattern)
+0406:                     ]
+0407: 
+0408:                     clip = self._cover_image_clip(
+0409:                         image_path=image_path,
+0410:                         duration=cut_duration,
+0411:                         zoom=zoom,
+0412:                     )
+0413: 
+0414:                     image_clips.append(
+0415:                         clip
+0416:                     )
+0417: 
+0418:             else:
+0419: 
+0420:                 # Stage 2A fallback.
+0421:                 cut_allocation = {
+0422:                     1: 4,
+0423:                     2: 3,
+0424:                     3: 3,
+0425:                     4: 2,
+0426:                 }
+0427: 
+
+==============================================================================
+CONTEXT AROUND LINE 414
+==============================================================================
+0379:                     image_path = Path(
+0380:                         image.image_path
+0381:                     )
+0382: 
+0383:                     if not image_path.exists():
+0384:                         raise FileNotFoundError(
+0385:                             "Beat image not found: "
+0386:                             f"{image_path}"
+0387:                         )
+0388: 
+0389:                     # Controlled alternating reframes keep static
+0390:                     # licensed imagery alive without fabricating
+0391:                     # content or modifying its meaning.
+0392:                     # Restrained motion pattern:
+0393:                     # enough movement to prevent slideshow feel
+0394:                     # without turning every shot into an effect.
+0395:                     zoom_pattern = (
+0396:                         1.00,
+0397:                         1.025,
+0398:                         1.050,
+0399:                         1.015,
+0400:                         1.040,
+0401:                     )
+0402: 
+0403:                     zoom = zoom_pattern[
+0404:                         (beat_index - 1)
+0405:                         % len(zoom_pattern)
+0406:                     ]
+0407: 
+0408:                     clip = self._cover_image_clip(
+0409:                         image_path=image_path,
+0410:                         duration=cut_duration,
+0411:                         zoom=zoom,
+0412:                     )
+0413: 
+0414:                     image_clips.append(
+0415:                         clip
+0416:                     )
+0417: 
+0418:             else:
+0419: 
+0420:                 # Stage 2A fallback.
+0421:                 cut_allocation = {
+0422:                     1: 4,
+0423:                     2: 3,
+0424:                     3: 3,
+0425:                     4: 2,
+0426:                 }
+0427: 
+0428:                 total_scene_duration = sum(
+0429:                     max(
+0430:                         float(scene.duration),
+0431:                         0.01,
+0432:                     )
+0433:                     for scene in scenes
+0434:                 )
+0435: 
+0436:                 for scene_index, (
+0437:                     scene,
+0438:                     image,
+0439:                 ) in enumerate(
+0440:                     zip(
+0441:                         scenes,
+0442:                         images,
+0443:                     ),
+0444:                     start=1,
+0445:                 ):
+0446: 
+0447:                     image_path = Path(
+0448:                         image.image_path
+0449:                     )
+0450: 
+0451:                     if not image_path.exists():
+0452:                         raise FileNotFoundError(
+0453:                             f"Image not found: {image_path}"
+0454:                         )
+0455: 
+0456:                     cuts = cut_allocation.get(
+0457:                         scene_index,
+0458:                         2,
+0459:                     )
+0460: 
+0461:                     scene_share = (
+0462:                         max(
+0463:                             float(scene.duration),
+0464:                             0.01,
+0465:                         )
+0466:                         / total_scene_duration
+0467:                     )
+0468: 
+
+==============================================================================
+CONTEXT AROUND LINE 497
+==============================================================================
+0462:                         max(
+0463:                             float(scene.duration),
+0464:                             0.01,
+0465:                         )
+0466:                         / total_scene_duration
+0467:                     )
+0468: 
+0469:                     stage_duration = (
+0470:                         audio_duration
+0471:                         * scene_share
+0472:                     )
+0473: 
+0474:                     cut_duration = (
+0475:                         stage_duration
+0476:                         / cuts
+0477:                     )
+0478: 
+0479:                     for local_cut in range(cuts):
+0480: 
+0481:                         zoom = (
+0482:                             1.00
+0483:                             if local_cut % 3 == 0
+0484:                             else (
+0485:                                 1.035
+0486:                                 if local_cut % 3 == 1
+0487:                                 else 1.065
+0488:                             )
+0489:                         )
+0490: 
+0491:                         clip = self._cover_image_clip(
+0492:                             image_path=image_path,
+0493:                             duration=cut_duration,
+0494:                             zoom=zoom,
+0495:                         )
+0496: 
+0497:                         image_clips.append(
+0498:                             clip
+0499:                         )
+0500: 
+0501:             ##################################################
+0502:             # Combine micro-shot editorial timeline
+0503:             ##################################################
+0504: 
+0505:             base_video = concatenate_videoclips(
+0506:                 image_clips,
+0507:                 method="compose",
+0508:             )
+0509: 
+0510:             ##################################################
+0511:             # Build speech-aligned subtitles
+0512:             ##################################################
+0513: 
+0514:             try:
+0515: 
+0516:                 phrases = (
+0517:                     await self.caption_aligner
+0518:                     .align_phrases(
+0519:                         str(audio_path)
+0520:                     )
+0521:                 )
+0522: 
+0523:                 for phrase in phrases:
+0524: 
+0525:                     subtitle = (
+0526:                         self.subtitle_renderer
+0527:                         .create_clip(
+0528:                             text=phrase["text"],
+0529:                             start_time=phrase[
+0530:                                 "start_time"
+0531:                             ],
+0532:                             end_time=phrase[
+0533:                                 "end_time"
+0534:                             ],
+0535:                         )
+0536:                     )
+0537: 
+0538:                     subtitle_clips.append(
+0539:                         subtitle
+0540:                     )
+0541: 
+0542:             except Exception as exc:
+0543: 
+0544:                 caption_mode = "fallback"
+0545: 
+0546:                 print(
+0547:                     "Whisper caption alignment "
+0548:                     "failed. Using fallback "
+0549:                     "captions."
+0550:                 )
+0551: 
+
+==============================================================================
+CONTEXT AROUND LINE 653
+==============================================================================
+0618:                 fps=self.FPS,
+0619:                 codec="libx264",
+0620:                 audio_codec="aac",
+0621:                 logger=None,
+0622:             )
+0623: 
+0624:         finally:
+0625: 
+0626:             if final_video is not None:
+0627:                 final_video.close()
+0628: 
+0629:             if base_video is not None:
+0630:                 base_video.close()
+0631: 
+0632:             for subtitle in subtitle_clips:
+0633:                 subtitle.close()
+0634: 
+0635:             for clip in image_clips:
+0636:                 clip.close()
+0637: 
+0638:             audio.close()
+0639: 
+0640:         return {
+0641:             "status": "success",
+0642:             "video_path": str(output),
+0643:             "title": content.title,
+0644:             "duration": audio_duration,
+0645:             "resolution": (
+0646:                 f"{self.WIDTH}x{self.HEIGHT}"
+0647:             ),
+0648:             "fps": self.FPS,
+0649:             "captions": True,
+0650:             "caption_mode": caption_mode,
+0651:             "visual_engine": (
+0652:                 "stage2b_semantic_microbeat"
+0653:                 if use_semantic_beats
+0654:                 else "stage2a_microshot_fallback"
+0655:             ),
+0656:             "visual_cut_count": len(image_clips),
+0657:             "story_stage_count": len(scenes),
+0658:             "average_visual_cut_seconds": round(
+0659:                 audio_duration / max(1, len(image_clips)),
+0660:                 3,
+0661:             ),
+0662:             "hook_visual_strategy": (
+0663:                 "accelerated_first_three_beats"
+0664:                 if use_semantic_beats
+0665:                 else "stage2a_fallback"
+0666:             ),
+0667:             "semantic_beat_count": (
+0668:                 len(visual_beats)
+0669:                 if visual_beats
+0670:                 else 0
+0671:             ),
+0672:             "semantic_media_enabled": (
+0673:                 use_semantic_beats
+0674:             ),
+0675:             "editorial_pacing": (
+0676:                 "hook_biased_dynamic"
+0677:                 if use_semantic_beats
+0678:                 else "stage2a_fallback"
+0679:             ),
+0680:             "caption_phrase_target_words": 3,
+0681:             "visual_framing": "aspect_preserving_cover",
+0682:         }
+
+==============================================================================
+CONTEXT AROUND LINE 664
+==============================================================================
+0629:             if base_video is not None:
+0630:                 base_video.close()
+0631: 
+0632:             for subtitle in subtitle_clips:
+0633:                 subtitle.close()
+0634: 
+0635:             for clip in image_clips:
+0636:                 clip.close()
+0637: 
+0638:             audio.close()
+0639: 
+0640:         return {
+0641:             "status": "success",
+0642:             "video_path": str(output),
+0643:             "title": content.title,
+0644:             "duration": audio_duration,
+0645:             "resolution": (
+0646:                 f"{self.WIDTH}x{self.HEIGHT}"
+0647:             ),
+0648:             "fps": self.FPS,
+0649:             "captions": True,
+0650:             "caption_mode": caption_mode,
+0651:             "visual_engine": (
+0652:                 "stage2b_semantic_microbeat"
+0653:                 if use_semantic_beats
+0654:                 else "stage2a_microshot_fallback"
+0655:             ),
+0656:             "visual_cut_count": len(image_clips),
+0657:             "story_stage_count": len(scenes),
+0658:             "average_visual_cut_seconds": round(
+0659:                 audio_duration / max(1, len(image_clips)),
+0660:                 3,
+0661:             ),
+0662:             "hook_visual_strategy": (
+0663:                 "accelerated_first_three_beats"
+0664:                 if use_semantic_beats
+0665:                 else "stage2a_fallback"
+0666:             ),
+0667:             "semantic_beat_count": (
+0668:                 len(visual_beats)
+0669:                 if visual_beats
+0670:                 else 0
+0671:             ),
+0672:             "semantic_media_enabled": (
+0673:                 use_semantic_beats
+0674:             ),
+0675:             "editorial_pacing": (
+0676:                 "hook_biased_dynamic"
+0677:                 if use_semantic_beats
+0678:                 else "stage2a_fallback"
+0679:             ),
+0680:             "caption_phrase_target_words": 3,
+0681:             "visual_framing": "aspect_preserving_cover",
+0682:         }
+
+==============================================================================
+CONTEXT AROUND LINE 668
+==============================================================================
+0633:                 subtitle.close()
+0634: 
+0635:             for clip in image_clips:
+0636:                 clip.close()
+0637: 
+0638:             audio.close()
+0639: 
+0640:         return {
+0641:             "status": "success",
+0642:             "video_path": str(output),
+0643:             "title": content.title,
+0644:             "duration": audio_duration,
+0645:             "resolution": (
+0646:                 f"{self.WIDTH}x{self.HEIGHT}"
+0647:             ),
+0648:             "fps": self.FPS,
+0649:             "captions": True,
+0650:             "caption_mode": caption_mode,
+0651:             "visual_engine": (
+0652:                 "stage2b_semantic_microbeat"
+0653:                 if use_semantic_beats
+0654:                 else "stage2a_microshot_fallback"
+0655:             ),
+0656:             "visual_cut_count": len(image_clips),
+0657:             "story_stage_count": len(scenes),
+0658:             "average_visual_cut_seconds": round(
+0659:                 audio_duration / max(1, len(image_clips)),
+0660:                 3,
+0661:             ),
+0662:             "hook_visual_strategy": (
+0663:                 "accelerated_first_three_beats"
+0664:                 if use_semantic_beats
+0665:                 else "stage2a_fallback"
+0666:             ),
+0667:             "semantic_beat_count": (
+0668:                 len(visual_beats)
+0669:                 if visual_beats
+0670:                 else 0
+0671:             ),
+0672:             "semantic_media_enabled": (
+0673:                 use_semantic_beats
+0674:             ),
+0675:             "editorial_pacing": (
+0676:                 "hook_biased_dynamic"
+0677:                 if use_semantic_beats
+0678:                 else "stage2a_fallback"
+0679:             ),
+0680:             "caption_phrase_target_words": 3,
+0681:             "visual_framing": "aspect_preserving_cover",
+0682:         }
+
+==============================================================================
+CONTEXT AROUND LINE 669
+==============================================================================
+0634: 
+0635:             for clip in image_clips:
+0636:                 clip.close()
+0637: 
+0638:             audio.close()
+0639: 
+0640:         return {
+0641:             "status": "success",
+0642:             "video_path": str(output),
+0643:             "title": content.title,
+0644:             "duration": audio_duration,
+0645:             "resolution": (
+0646:                 f"{self.WIDTH}x{self.HEIGHT}"
+0647:             ),
+0648:             "fps": self.FPS,
+0649:             "captions": True,
+0650:             "caption_mode": caption_mode,
+0651:             "visual_engine": (
+0652:                 "stage2b_semantic_microbeat"
+0653:                 if use_semantic_beats
+0654:                 else "stage2a_microshot_fallback"
+0655:             ),
+0656:             "visual_cut_count": len(image_clips),
+0657:             "story_stage_count": len(scenes),
+0658:             "average_visual_cut_seconds": round(
+0659:                 audio_duration / max(1, len(image_clips)),
+0660:                 3,
+0661:             ),
+0662:             "hook_visual_strategy": (
+0663:                 "accelerated_first_three_beats"
+0664:                 if use_semantic_beats
+0665:                 else "stage2a_fallback"
+0666:             ),
+0667:             "semantic_beat_count": (
+0668:                 len(visual_beats)
+0669:                 if visual_beats
+0670:                 else 0
+0671:             ),
+0672:             "semantic_media_enabled": (
+0673:                 use_semantic_beats
+0674:             ),
+0675:             "editorial_pacing": (
+0676:                 "hook_biased_dynamic"
+0677:                 if use_semantic_beats
+0678:                 else "stage2a_fallback"
+0679:             ),
+0680:             "caption_phrase_target_words": 3,
+0681:             "visual_framing": "aspect_preserving_cover",
+0682:         }
+
+==============================================================================
+CONTEXT AROUND LINE 673
+==============================================================================
+0638:             audio.close()
+0639: 
+0640:         return {
+0641:             "status": "success",
+0642:             "video_path": str(output),
+0643:             "title": content.title,
+0644:             "duration": audio_duration,
+0645:             "resolution": (
+0646:                 f"{self.WIDTH}x{self.HEIGHT}"
+0647:             ),
+0648:             "fps": self.FPS,
+0649:             "captions": True,
+0650:             "caption_mode": caption_mode,
+0651:             "visual_engine": (
+0652:                 "stage2b_semantic_microbeat"
+0653:                 if use_semantic_beats
+0654:                 else "stage2a_microshot_fallback"
+0655:             ),
+0656:             "visual_cut_count": len(image_clips),
+0657:             "story_stage_count": len(scenes),
+0658:             "average_visual_cut_seconds": round(
+0659:                 audio_duration / max(1, len(image_clips)),
+0660:                 3,
+0661:             ),
+0662:             "hook_visual_strategy": (
+0663:                 "accelerated_first_three_beats"
+0664:                 if use_semantic_beats
+0665:                 else "stage2a_fallback"
+0666:             ),
+0667:             "semantic_beat_count": (
+0668:                 len(visual_beats)
+0669:                 if visual_beats
+0670:                 else 0
+0671:             ),
+0672:             "semantic_media_enabled": (
+0673:                 use_semantic_beats
+0674:             ),
+0675:             "editorial_pacing": (
+0676:                 "hook_biased_dynamic"
+0677:                 if use_semantic_beats
+0678:                 else "stage2a_fallback"
+0679:             ),
+0680:             "caption_phrase_target_words": 3,
+0681:             "visual_framing": "aspect_preserving_cover",
+0682:         }
+
+==============================================================================
+CONTEXT AROUND LINE 677
+==============================================================================
+0642:             "video_path": str(output),
+0643:             "title": content.title,
+0644:             "duration": audio_duration,
+0645:             "resolution": (
+0646:                 f"{self.WIDTH}x{self.HEIGHT}"
+0647:             ),
+0648:             "fps": self.FPS,
+0649:             "captions": True,
+0650:             "caption_mode": caption_mode,
+0651:             "visual_engine": (
+0652:                 "stage2b_semantic_microbeat"
+0653:                 if use_semantic_beats
+0654:                 else "stage2a_microshot_fallback"
+0655:             ),
+0656:             "visual_cut_count": len(image_clips),
+0657:             "story_stage_count": len(scenes),
+0658:             "average_visual_cut_seconds": round(
+0659:                 audio_duration / max(1, len(image_clips)),
+0660:                 3,
+0661:             ),
+0662:             "hook_visual_strategy": (
+0663:                 "accelerated_first_three_beats"
+0664:                 if use_semantic_beats
+0665:                 else "stage2a_fallback"
+0666:             ),
+0667:             "semantic_beat_count": (
+0668:                 len(visual_beats)
+0669:                 if visual_beats
+0670:                 else 0
+0671:             ),
+0672:             "semantic_media_enabled": (
+0673:                 use_semantic_beats
+0674:             ),
+0675:             "editorial_pacing": (
+0676:                 "hook_biased_dynamic"
+0677:                 if use_semantic_beats
+0678:                 else "stage2a_fallback"
+0679:             ),
+0680:             "caption_phrase_target_words": 3,
+0681:             "visual_framing": "aspect_preserving_cover",
+0682:         }
+

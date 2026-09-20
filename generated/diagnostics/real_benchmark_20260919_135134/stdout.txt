@@ -1,0 +1,21 @@
+====================================================================
+JARVIS CONTROLLED REFERENCE-QUALITY BENCHMARK
+====================================================================
+[INFO] Project root: C:\Users\hp\jarvis.ai
+[INFO] Topic: Why movie sound effects are often recorded separately
+[INFO] Content ID: benchmark_20260919_135134
+[INFO] Direct VideoPipeline: YES
+[INFO] Orchestrator: DISABLED
+[INFO] Publisher: DISABLED
+[INFO] YouTube upload: DISABLED
+
+[PASS] backend package import.
+[PASS] Real VideoPipeline imported.
+[PASS] VideoPipeline constructed.
+[PASS] Mandatory content_id supplied.
+
+====================================================================
+STARTING REAL PIPELINE
+====================================================================
+
+[EvergreenResearch] MISS -> Why movie sound effects are often recorded separately

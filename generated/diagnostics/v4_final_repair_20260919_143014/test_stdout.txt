@@ -1,0 +1,10 @@
+===== V4 RUNTIME TEST =====
+[PASS] _master_query_variants: descriptor is valid.
+[PASS] _master_metadata_score: descriptor is valid.
+[PASS] _master_choose_asset: descriptor is valid.
+[PASS] Query helper executed.
+[INFO] Query 1: Foley artist recording footsteps
+[INFO] Query 2: movie footsteps sound effects
+[PASS] Metadata scorer executed: 0.890
+[PASS] Asset selector executed.
+[PASS] 'classmethod object is not callable' defect is cleared.

@@ -1,4 +1,4 @@
-﻿"""Persistence service for Jarvis goals."""
+"""Persistence service for Jarvis goals."""
 
 from datetime import datetime
 

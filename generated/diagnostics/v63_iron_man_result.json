@@ -1,0 +1,8 @@
+{
+  "status": "FAIL",
+  "elapsed_seconds": 321.77,
+  "topic": "Why Iron Man's first suit-building scene became iconic",
+  "exception_type": "RuntimeError",
+  "exception": "Grounded content generation failed for topic: Why Iron Man's first suit-building scene became iconic",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\hp\\jarvis.ai\\generated\\diagnostics\\run_v63_iron_man.py\", line 42, in main\n    result = await pipeline.run(trend)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\hp\\jarvis.ai\\backend\\services\\pipelines\\video_pipeline.py\", line 1653, in run\n    generated = await self.generator.generate(\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        trend\n        ^^^^^\n    )\n    ^\n  File \"C:\\Users\\hp\\jarvis.ai\\backend\\services\\content_generator.py\", line 233, in generate\n    data = self._fallback(\n        topic=topic,\n        research=research,\n    )\n  File \"C:\\Users\\hp\\jarvis.ai\\backend\\services\\content_generator.py\", line 3370, in _fallback\n    raise RuntimeError(\n        f\"Grounded content generation failed for topic: {topic}\"\n    )\nRuntimeError: Grounded content generation failed for topic: Why Iron Man's first suit-building scene became iconic\n"
+}

@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Hollywood records sound effects separately to match visuals, enhancing realism and clarity during post-production.",
+        "image_prompt": "Hollywood records sound effects separately to match visuals, enhancing realism and clarity during post-production.",
+        "duration": 7.163356009070295,
+        "start_time": 0.0,
+        "end_time": 7.163356009070295
+    },
+    {
+        "narration": "Sound designers use specialized equipment to capture everything from footsteps to explosions, ensuring precise timing. Sound design is the art and practice of creating auditory elements of media.",
+        "image_prompt": "Sound designers use specialized equipment to capture everything from footsteps to explosions, ensuring precise timing. Sound design is the art and practice of creating auditory elements of media.",
+        "duration": 9.833650793650794,
+        "start_time": 7.163356009070295,
+        "end_time": 16.99700680272109
+    },
+    {
+        "narration": "For example, a gunshot is recorded in a soundproof booth, then synced with the scene, adding authenticity. It involves specifying, acquiring and creating audio using production techniques and equipment or software.",
+        "image_prompt": "For example, a gunshot is recorded in a soundproof booth, then synced with the scene, adding authenticity. It involves specifying, acquiring and creating audio using production techniques and equipment or software.",
+        "duration": 13.421133786848072,
+        "start_time": 16.99700680272109,
+        "end_time": 30.418140589569163
+    },
+    {
+        "narration": "This technique allows editors to adjust each element independently, creating a seamless audio experience.",
+        "image_prompt": "This technique allows editors to adjust each element independently, creating a seamless audio experience.",
+        "duration": 5.793378684807256,
+        "start_time": 30.418140589569163,
+        "end_time": 36.21151927437642
+    }
+]

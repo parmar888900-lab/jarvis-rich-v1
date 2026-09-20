@@ -1,0 +1,1087 @@
+﻿======================================================================
+MOVIE VISUAL BEAT PLANNER
+======================================================================
+"""Movie visual-beat planning for Jarvis Rich V1."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import asdict, dataclass
+
+from backend.models.generated_content import GeneratedContent
+
+
+@dataclass(slots=True)
+class MovieVisualBeat:
+    """
+    One visual editing beat inside a movie-commentary Short.
+    """
+
+    beat_id: str
+    narration_index: int
+    purpose: str
+    visual_query: str
+    preferred_media: list[str]
+    target_duration: float
+    priority: str
+    evidence_ids: list[str]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+class MovieVisualBeatPlanner:
+    """
+    Convert four narration lines into a fast multi-cut movie
+    commentary visual plan.
+
+    This planner describes required visuals.
+    It does not authorize or download copyrighted footage.
+    """
+
+    TARGET_BEATS = 14
+    MIN_BEATS = 10
+    MAX_BEATS = 16
+
+    BEATS_PER_LINE = (
+        4,
+        4,
+        3,
+        3,
+    )
+
+    STOPWORDS = {
+        "about",
+        "after",
+        "again",
+        "against",
+        "also",
+        "because",
+        "being",
+        "between",
+        "both",
+        "could",
+        "does",
+        "from",
+        "have",
+        "into",
+        "more",
+        "most",
+        "movie",
+        "scene",
+        "scenes",
+        "that",
+        "their",
+        "there",
+        "these",
+        "they",
+        "this",
+        "those",
+        "through",
+        "very",
+        "what",
+        "when",
+        "where",
+        "which",
+        "while",
+        "with",
+        "would",
+    }
+
+    def plan(
+        self,
+        *,
+        content: GeneratedContent,
+        movie_title: str,
+        topic: str,
+    ) -> list[MovieVisualBeat]:
+
+        lines = list(
+            content.script_lines
+        )
+
+        if len(lines) != 4:
+            raise RuntimeError(
+                "Movie visual planning requires "
+                "exactly four narration lines."
+            )
+
+        raw_evidence = (
+            content.metadata.get(
+                "evidence_ids",
+                [],
+            )
+        )
+
+        if not isinstance(
+            raw_evidence,
+            list,
+        ):
+            raw_evidence = []
+
+        beats: list[MovieVisualBeat] = []
+
+        for narration_index, line in enumerate(
+            lines,
+            start=1,
+        ):
+
+            target_count = self.BEATS_PER_LINE[
+                narration_index - 1
+            ]
+
+            concepts = self._visual_concepts(
+                line=line,
+                movie_title=movie_title,
+                topic=topic,
+                target_count=target_count,
+            )
+
+            evidence_ids = []
+
+            if (
+                narration_index - 1
+                < len(raw_evidence)
+                and isinstance(
+                    raw_evidence[
+                        narration_index - 1
+                    ],
+                    list,
+                )
+            ):
+                evidence_ids = [
+                    str(item).strip().upper()
+                    for item in raw_evidence[
+                        narration_index - 1
+                    ]
+                    if str(item).strip()
+                ]
+
+            for local_index, query in enumerate(
+                concepts,
+                start=1,
+            ):
+
+                beats.append(
+                    MovieVisualBeat(
+                        beat_id=(
+                            f"n{narration_index}"
+                            f"_b{local_index}"
+                        ),
+                        narration_index=narration_index,
+                        purpose=self._purpose(
+                            narration_index,
+                            local_index,
+                        ),
+                        visual_query=query,
+                        preferred_media=(
+                            self._preferred_media(
+                                narration_index,
+                                local_index,
+                            )
+                        ),
+                        target_duration=(
+                            self._target_duration(
+                                narration_index,
+                                local_index,
+                            )
+                        ),
+                        priority=(
+                            "high"
+                            if (
+                                narration_index == 1
+                                or narration_index == 4
+                            )
+                            else "normal"
+                        ),
+                        evidence_ids=evidence_ids,
+                    )
+                )
+
+        if not (
+            self.MIN_BEATS
+            <= len(beats)
+            <= self.MAX_BEATS
+        ):
+            raise RuntimeError(
+                "Movie beat count outside allowed "
+                f"range: {len(beats)}"
+            )
+
+        return beats
+
+    def _visual_concepts(
+        self,
+        *,
+        line: str,
+        movie_title: str,
+        topic: str,
+        target_count: int,
+    ) -> list[str]:
+
+        text = " ".join(
+            str(line).split()
+        )
+
+        lower = text.lower()
+
+        candidates: list[str] = []
+
+        ####################################################
+        # Movie-specific concrete concepts
+        ####################################################
+
+        concept_rules = [
+            (
+                "mirror dimension",
+                f"{movie_title} Mirror Dimension",
+            ),
+            (
+                "visual effects",
+                f"{movie_title} visual effects",
+            ),
+            (
+                "vfx",
+                f"{movie_title} VFX production",
+            ),
+            (
+                "scott derrickson",
+                "Scott Derrickson Doctor Strange director",
+            ),
+            (
+                "different dimensions",
+                f"{movie_title} different dimensions",
+            ),
+            (
+                "dimensions",
+                f"{movie_title} dimensional action",
+            ),
+            (
+                "action sequence",
+                f"{movie_title} action sequence",
+            ),
+            (
+                "action sequences",
+                f"{movie_title} action sequences",
+            ),
+            (
+                "superhero action",
+                f"{movie_title} superhero action",
+            ),
+            (
+                "mysticism",
+                f"{movie_title} mystic arts visuals",
+            ),
+            (
+                "surreal",
+                f"{movie_title} surreal visual effects",
+            ),
+            (
+                "inception",
+                f"{movie_title} Mirror Dimension Inception comparison",
+            ),
+            (
+                "production",
+                f"{movie_title} behind the scenes production",
+            ),
+            (
+                "effects",
+                f"{movie_title} visual effects breakdown",
+            ),
+        ]
+
+        for trigger, query in concept_rules:
+
+            if trigger in lower:
+                candidates.append(
+                    query
+                )
+
+        ####################################################
+        # Concrete entities
+        ####################################################
+
+        if "derrickson" in lower:
+            candidates.append(
+                "Scott Derrickson directing Doctor Strange"
+            )
+
+        if "framestore" in lower:
+            candidates.append(
+                "Framestore Doctor Strange visual effects"
+            )
+
+        if (
+            "industrial light" in lower
+            or "ilm" in lower
+        ):
+            candidates.append(
+                "Industrial Light Magic Doctor Strange VFX"
+            )
+
+        ####################################################
+        # Topic-level visual anchors
+        ####################################################
+
+        topic_lower = topic.lower()
+
+        if "mirror dimension" in topic_lower:
+            candidates.extend(
+                [
+                    f"{movie_title} Mirror Dimension",
+                    f"{movie_title} Mirror Dimension chase",
+                    f"{movie_title} dimensional city visuals",
+                ]
+            )
+
+        ####################################################
+        # Safe generic production anchors
+        ####################################################
+
+        candidates.extend(
+            [
+                f"{movie_title} film still",
+                f"{movie_title} visual effects",
+                f"{movie_title} production still",
+                f"{movie_title} action sequence",
+                f"{movie_title} behind the scenes",
+            ]
+        )
+
+        ####################################################
+        # Deduplicate and reject weak fragments
+        ####################################################
+
+        result = []
+        seen = set()
+
+        for candidate in candidates:
+
+            clean = " ".join(
+                str(candidate).split()
+            ).strip()
+
+            key = clean.lower()
+
+            if not clean:
+                continue
+
+            if key in seen:
+                continue
+
+            if len(clean.split()) < 2:
+                continue
+
+            if clean.endswith("'s"):
+                continue
+
+            seen.add(key)
+
+            result.append(
+                clean
+            )
+
+            if len(result) >= target_count:
+                break
+
+        if len(result) < target_count:
+            raise RuntimeError(
+                "Movie visual planner could not create "
+                "enough concrete visual concepts for: "
+                f"{line}"
+            )
+
+        return result
+
+
+    @staticmethod
+    def _purpose(
+        narration_index: int,
+        local_index: int,
+    ) -> str:
+
+        if narration_index == 1:
+            return (
+                "hook_subject"
+                if local_index == 1
+                else "hook_detail"
+            )
+
+        if narration_index == 2:
+            return (
+                "filmmaker_context"
+                if local_index == 1
+                else "explanation"
+            )
+
+        if narration_index == 3:
+            return (
+                "technical_detail"
+                if local_index == 1
+                else "supporting_visual"
+            )
+
+        return (
+            "payoff"
+            if local_index == 1
+            else "closing_visual"
+        )
+
+    @staticmethod
+    def _preferred_media(
+        narration_index: int,
+        local_index: int,
+    ) -> list[str]:
+
+        if narration_index == 2:
+            return [
+                "authorized_movie_excerpt",
+                "licensed_production_media",
+                "licensed_image",
+            ]
+
+        if narration_index == 3:
+            return [
+                "licensed_production_media",
+                "authorized_movie_excerpt",
+                "licensed_image",
+            ]
+
+        return [
+            "authorized_movie_excerpt",
+            "licensed_promotional_media",
+            "licensed_image",
+        ]
+
+    @staticmethod
+    def _target_duration(
+        narration_index: int,
+        local_index: int,
+    ) -> float:
+
+        if (
+            narration_index == 1
+            and local_index == 1
+        ):
+            return 2.2
+
+        if narration_index == 4:
+            return 3.0
+
+        return 2.6
+
+    @staticmethod
+    def to_dicts(
+        beats: list[MovieVisualBeat],
+    ) -> list[dict]:
+
+        return [
+            beat.to_dict()
+            for beat in beats
+        ]
+
+
+======================================================================
+PIPELINE STORYBOARD / BEAT / MEDIA SECTION
+======================================================================
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1:import asyncio
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2:"""
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:3:Rich V1 video production pipeline.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:4:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:5:Responsibilities:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:6:    - Generate grounded content
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:7:    - Validate/repair content
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:8:    - Build narration storyboard
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:9:    - Acquire real licensed media
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:10:    - Validate media provenance and relevance
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:11:    - Build production package
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:12:    - Render final video
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:13:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:14:AI-generated imagery is no longer the primary visual source.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:15:"""
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:16:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:17:import re
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:18:from pathlib import Path
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:19:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:20:from backend.services.content_generator import ContentGenerator
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:21:from backend.services.content_validator import ContentValidator
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:22:from backend.services.intelligence.content_format_classifier import ContentFormatClassifier
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:23:from backend.services.intelligence.movie_topic_parser import MovieTopicParser
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:24:from backend.services.research.evergreen_research_service import EvergreenResearchService
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:25:from backend.services.research.movie_research_service import MovieResearchService > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:26:from backend.services.storyboard.generator import StoryboardGenerator
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:27:from backend.services.video.asset_collector import AssetCollector
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:28:from backend.services.video.media_query_builder import MediaQueryBuilder
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:29:from backend.services.video.media_sources.wikimedia import (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:30:    WikimediaCommonsProvider,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:31:)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:32:from backend.services.video.production_package import (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:33:    ProductionPackageBuilder,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:34:) > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:35:from backend.services.video.visual_beat_planner import VisualBeatPlanner
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:36:from backend.services.video.source_footage_resolver import (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:37:    SourceFootageResolver,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:38:)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:39:from backend.services.video_renderer.renderer import VideoRenderer
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:40:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:41:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:42:# RICH_V1_REAL_VIDEO_V6_1
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:43:from backend.services.video.source_clip_indexer import (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:44:    SourceClipIndexer,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:45:)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:46:from backend.services.video.strict_clip_matcher import (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:47:    StrictClipMatcher,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:48:) > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:49:from backend.services.video.visual_beat_source_planner import (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:50:    SourceVisualBeat,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:51:)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:52:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:53:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:54:class VideoPipeline:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:55:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:56:    MIN_ASSETS_PER_SCENE = 1
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:57:    TARGET_ASSETS_PER_SCENE = 1
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:58:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:59:    # Stage media remains mandatory and rights-validated.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:60:    # Beat-level provider searches are optional enrichment.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:61:    MAX_SEMANTIC_MEDIA_ENRICHMENTS = 10
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:62:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:63:    # MASTER_VISUAL_ACQUISITION_V2
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:64:    STAGE_MEDIA_CANDIDATE_LIMIT = 3
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:65:    BEAT_MEDIA_CANDIDATE_LIMIT = 3
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:66:    TARGET_DISTINCT_BEAT_ASSETS = 6
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:67:    SEMANTIC_VISUAL_V4 = True   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:69:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:70:    def __init__(self):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:71:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:72:        self.generator = ContentGenerator()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:73:        self.content_validator = ContentValidator()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:74:        self.research_service = EvergreenResearchService()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:75:        self.movie_research_service = MovieResearchService()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:76:        self.format_classifier = ContentFormatClassifier()
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:77:        self.storyboard = StoryboardGenerator()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:78:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:79:        self.media_provider = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:80:            WikimediaCommonsProvider()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:81:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:82:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:83:        self.asset_collector = AssetCollector()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:84:        self.media_query_builder = MediaQueryBuilder()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:85: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:86:        self.visual_beat_planner = VisualBeatPlanner()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:87:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:88:        # RICH_V1_VIDEO_ACQUISITION_V6_2
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:89:        #
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:90:        # Existing rights-aware resolver:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:91:        # Wikimedia / Internet Archive -> Pexels fallback.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:92:        # It validates assets before returning video footage.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:93:        self.source_footage_resolver = SourceFootageResolver()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:94:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:95:        self.package_builder = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:96:            ProductionPackageBuilder()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:97:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:98:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:99:        self.renderer = VideoRenderer()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:100:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:101:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:102:    # MASTER_VISUAL_HELPERS_V2
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:103:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:104:    @staticmethod   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1178:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1179:        except Exception:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1180:            return None
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1181:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1182:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1183:    def _v61_build_video_matches(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1184:        self,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1185:        *,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1186:        media_groups, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1187:        visual_beats,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1188:        content_id: str,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1189:    ) -> dict:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1190:        """
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1191:        Existing authorized MediaAsset videos
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1192:            -> SourceClipIndexer
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1193:            -> StrictClipMatcher
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1194:            -> exact source timestamps.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1195:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1196:        Failure at any point returns to V5 image rendering.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1197:        """
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1198:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1199:        videos = []
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1200:        seen = set()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1201:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1202:        # ----------------------------------------------------
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1203:        # Only use assets that already passed the production
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1204:        # acquisition/authorization layer.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1205:        # ----------------------------------------------------   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1206:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1207:        for group in media_groups:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1208:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1209:            for asset in group:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1210:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1211:                if (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1212:                    getattr(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1213:                        asset,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1214:                        "asset_type",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1215:                        "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1216:                    )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1217:                    != "video"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1218:                ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1219:                    continue
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1220:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1221:                source_path = str(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1222:                    getattr(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1223:                        asset,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1224:                        "file_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1225:                        "",   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1331:                "matches":
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1332:                    [],
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1333:            }
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1334:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1335:        source_beats = []
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1336:        index_by_beat_id = {}
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1337:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1338:        for zero_index, beat in enumerate(
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1339:            visual_beats
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1340:        ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1341:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1342:            source_beat = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1343:                self._v61_make_source_beat(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1344:                    beat,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1345:                    zero_index,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1346:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1347:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1348:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1349:            if source_beat is None:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1350:                continue
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1351:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1352:            source_beats.append(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1353:                source_beat
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1354:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1355:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1356:            # Renderer beat_index starts at 1.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1357:            index_by_beat_id[   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1688:                    "validation: "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1689:                    f"{repaired_validation['issues']}"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1690:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1691:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1692:            generated = repaired
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1693:            validation = repaired_validation
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1694:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1695:        ####################################################
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1696:        # 5. Build narration storyboard
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1697:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1698: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1699:        storyboard = self.storyboard.generate(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1700:            generated
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1701:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1702: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1703:        if not storyboard:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1704:            raise RuntimeError( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1705:                "StoryboardGenerator produced no scenes."
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1706:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1707:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1708:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1709:        # 6. Acquire real licensed media
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1710:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1711: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1712:        media_groups = []
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1713:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1714:        topic = str(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1715:            trend.get(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1716:                "title",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1717:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1718:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1719:        ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1720:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1721:        genre = str(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1722:            trend.get(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1723:                "genre",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1724:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1725:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1726:        ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1727:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1728:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1729:        # Stage 2B - semantic visual micro-beats
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1730:        #   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1731:        # Narration remains four grounded story stages.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1732:        # Visuals are planned independently at a denser cadence.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1733:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1734:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1735:        visual_beats = self.visual_beat_planner.plan(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1736:            content=generated,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1737:            topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1738:            genre=genre,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1739:            format_name=(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1740:                format_decision.format_name
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1741:            ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1742:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1743: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1744:        if not visual_beats:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1745:            raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1746:                "VisualBeatPlanner produced no visual beats."
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1747:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1748: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1749:        visual_beat_dicts = ( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1750:            self.visual_beat_planner.to_dicts( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1751:                visual_beats
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1752:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1753:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1754:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1755:        for index, scene in enumerate( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1756:            storyboard,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1757:            start=1,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1758:        ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1759:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1760:            queries = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1761:                self.media_query_builder.build(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1762:                    topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1763:                    genre=genre,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1764:                    narration=scene.narration,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1765:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1766:            )[:3]
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1767:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1768:            authorized_scene_assets = []
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1769:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1770:            for query in queries:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1771:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1772:                found = await (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1773:                    self.media_provider
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1774:                    .search_and_download(   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1839:            if not authorized_scene_assets:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1840:                raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1841:                    "Scene "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1842:                    f"{index} produced no authorized "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1843:                    "image after limited media search. "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1844:                    f"Queries: {queries}"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1845:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1846:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1847:            media_groups.append(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1848:                authorized_scene_assets
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1849:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1850:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1851:        if ( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1852:            len(media_groups) > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1853:            != len(storyboard)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1854:        ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1855:            raise RuntimeError( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1856:                "Storyboard/media group mismatch."
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1857:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1858:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1859:        # Stage 2B - beat-specific authorized media
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1860:        #
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1861:        # IMPORTANT:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1862:        # This layer is deliberately fail-soft.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1863:        #
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1864:        # Every beat has a known-good authorized fallback from
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1865:        # its narration stage. A failed provider query therefore
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1866:        # reduces visual specificity instead of failing the video.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1867:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1868: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1869:        beat_render_assets = []
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1870:        beat_media_evidence = []
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1871:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1872:        semantic_enrichment_attempts = 0
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1873:        semantic_enrichment_successes = 0
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1874:        semantic_fallback_count = 0
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1875:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1876:        master_candidate_count = 0
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1877:        master_semantic_rejections = 0
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1878:        master_duplicate_avoidance_events = 0
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1879:        master_query_count = 0
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1880:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1881:        used_identities: set[str] = set()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1882:        previous_identity = ""
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1883:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1884:        for beat_index, beat in enumerate( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1885:            visual_beats
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1886:        ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1887:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1888:            narration_index = int(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1889:                beat.narration_index
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1890:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1891:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1892:            stage_index = max(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1893:                0,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1894:                min(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1895:                    narration_index - 1, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1896:                    len(media_groups) - 1,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1897:                ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1898:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1899:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1900:            stage_candidates = [
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1901:                asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1902:                for asset > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1903:                in media_groups[stage_index]
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1904:                if asset.asset_type == "image"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1905:            ]
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1906:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1907:            if not stage_candidates:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1908:                raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1909:                    "Stage 2B fallback media missing for "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1910:                    f"narration stage {narration_index}."
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1911:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1912:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1913:            query_variants = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1914:                self._master_query_variants(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1915:                    topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1916:                    beat=beat,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1917:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1918:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1919:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1920:            primary_query = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1921:                query_variants[0]   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2150:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2151:            if identity:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2152:                used_identities.add(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2153:                    identity
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2154:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2155:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2156:            previous_identity = identity
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2157:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2158:            beat_render_assets.append(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2159:                selected_asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2160:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2161:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2162:            beat_media_evidence.append(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2163:                {
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2164:                    "beat_id": beat.beat_id,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2165:                    "narration_index": narration_index,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2166:                    "purpose": beat.purpose,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2167:                    "query": primary_query,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2168:                    "query_variants": query_variants,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2169:                    "selected_via": selected_via,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2170:                    "asset_id": selected_asset.asset_id,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2171:                    "source_name": selected_asset.source_name,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2172:                    "source_url": selected_asset.source_url,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2173:                    "license_name": selected_asset.license_name,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2174:                    "commercial_use_allowed": (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2175:                        selected_asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2176:                        .commercial_use_allowed   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2177:                    ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2178:                }
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2179:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2180:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2181:        if (
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2182:            len(beat_render_assets) > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2183:            != len(visual_beats)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2184:        ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2185:            raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2186:                "Visual beat/media timeline mismatch."
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2187:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2188:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2189:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2190:        # 7. Temporary renderer compatibility
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2191:        #
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2192:        # The existing renderer still accepts one image
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2193:        # object per narration scene. For this integration
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2194:        # test we pass the strongest authorized IMAGE from
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2195:        # each group.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2196:        #
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2197:        # The next renderer patch will consume the complete > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2198:        # media_groups structure and produce multiple cuts.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2199:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2200: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2201:        render_assets = []
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2202:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2203:        for index, group in enumerate( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2204:            media_groups,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2205:            start=1,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2206:        ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2207:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2208:            image_asset = next(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2209:                (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2210:                    asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2211:                    for asset in group
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2212:                    if asset.asset_type
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2213:                    == "image"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2214:                ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2215:                None,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2216:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2217:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2218:            if image_asset is None:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2219:                raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2220:                    "Scene "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2221:                    f"{index} has no image-compatible "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2222:                    "asset for the current renderer."   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2223:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2224:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2225:            render_assets.append(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2226:                image_asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2227:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2228:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2229:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2230:        # 8. Build production package
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2231:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2232:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2233:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2234:        # ====================================================
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2235:        # RICH_V1_REAL_VIDEO_V6_1
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2236:        # ====================================================
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2237:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2238:        # ====================================================
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2239:        # RICH_V1_VIDEO_ACQUISITION_V6_2
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2240:        # ====================================================
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2241:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2242:        v62_format_name = str(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2243:            getattr(   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2268:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2269:        v62_source_assets = list(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2270:            v62_source_result.pop(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2271:                "assets",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2272:                [],
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2273:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2274:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2275:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2276:        if v62_source_assets and media_groups:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2277:            existing_video_ids = {
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2278:                self._master_asset_identity(asset) > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2279:                for group in media_groups
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2280:                for asset in group
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2281:                if getattr(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2282:                    asset,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2283:                    "asset_type",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2284:                    "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2285:                ) == "video"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2286:            }
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2287: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2288:            group_count = len(media_groups)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2289:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2290:            for asset_index, asset in enumerate(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2291:                v62_source_assets
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2292:            ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2293:                identity = self._master_asset_identity(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2294:                    asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2295:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2296:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2297:                if (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2298:                    not identity
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2299:                    or identity in existing_video_ids
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2300:                ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2301:                    continue
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2302:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2303:                target_group = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2304:                    asset_index
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2305:                    % group_count
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2306:                )   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2307:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2308:                media_groups[
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2309:                    target_group
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2310:                ].append(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2311:                    asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2312:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2313:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2314:                existing_video_ids.add(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2315:                    identity
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2316:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2317:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2318:        v62_source_result[
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2319:            "injected_video_assets"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2320:        ] = sum(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2321:            1 > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2322:            for group in media_groups
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2323:            for asset in group
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2324:            if getattr(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2325:                asset,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2326:                "asset_type",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2327:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2328:            ) == "video"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2329:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2330:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2331:        v61_video_result = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2332:            self._v61_build_video_matches( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2333:                media_groups=media_groups, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2334:                visual_beats=visual_beats,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2335:                content_id=str(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2336:                    content_id
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2337:                ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2338:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2339:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2340:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2341:        v61_video_matches = list(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2342:            v61_video_result.get(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2343:                "matches",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2344:                [],
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2345:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2346:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2347:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2348:        package = await self.package_builder.build(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2349:            content=generated, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2350:            scenes=storyboard, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2351:            images=render_assets,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2352:            trend=trend,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2353:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2354:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2355:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2356:        # 9. Render
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2357:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2358:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2359:        # BLOCK5_VISUAL_QA_BEGIN
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2360:        #
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2361:        # The previous Stage2B implementation could legally
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2362:        # resolve many semantic beats to the same authorized
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2363:        # fallback image. That produced a technically valid
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2364:        # 12-cut video which visually behaved like a slideshow.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2365:        #
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2366:        # Rights authorization has already happened upstream.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2367:        # This gate does not authorize media and does not weaken
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2368:        # any rights/evidence requirement. It only evaluates the
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2369:        # final authorized beat sequence before expensive render.   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2402:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2403:                    if value:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2404:                        return str(value).strip().lower()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2405:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2406:            return str(asset).strip().lower()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2407:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2408:        block5_identities = [
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2409:            _block5_asset_identity(asset)
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2410:            for asset in beat_render_assets
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2411:        ]
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2412:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2413:        if (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2414:            not block5_identities
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2415:            or len(block5_identities) > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2416:            != len(visual_beat_dicts)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2417:        ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2418:            raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2419:                "Visual QA rejected semantic sequence: "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2420:                "beat/image coverage mismatch."
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2421:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2422:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2423:        block5_counts = {}
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2424:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2425:        for identity in block5_identities:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2426:            if not identity:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2427:                raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2428:                    "Visual QA rejected semantic sequence: "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2429:                    "unidentifiable authorized asset."
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2430:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2431:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2432:            block5_counts[identity] = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2433:                block5_counts.get(identity, 0)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2434:                + 1   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2515:            ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2516:            "quality_gate": "passed",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2517:        }
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2518:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2519:        # BLOCK5_VISUAL_QA_END
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2520:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2521:        video = await self.renderer.render(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2522:            content=generated,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2523:            scenes=storyboard, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2524:            images=render_assets,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2525:            production_package=package, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2526:            visual_beats=visual_beat_dicts, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2527:            beat_images=beat_render_assets, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2528:            beat_videos=v61_video_matches,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2529:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2530:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2531:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2532:        # 10. Return production evidence
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2533:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2534:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2535:        return {
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2536:            "generated": generated,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2537:            "content_validation": validation, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2538:            "storyboard": storyboard,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2539:            "licensed_media": [
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2540:                [
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2541:                    {
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2542:                        "asset_id": asset.asset_id,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2543:                        "asset_type": asset.asset_type,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2544:                        "file_path": asset.file_path,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2545:                        "source_url": asset.source_url,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2546:                        "source_name": asset.source_name,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2547:                        "creator": asset.creator,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2548:                        "license_name": asset.license_name,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2549:                        "license_url": asset.license_url,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2550:                        "attribution_required": (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2551:                            asset.attribution_required
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2552:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2553:                        "commercial_use_allowed": (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2554:                            asset.commercial_use_allowed
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2555:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2556:                        "relevance_score": (   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2557:                            asset.relevance_score
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2558:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2559:                        "content_id": asset.content_id,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2560:                    }
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2561:                    for asset in group
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2562:                ]
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2563:                for group in media_groups
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2564:            ],
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2565:            "production_package": package, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2566:            "visual_beats": visual_beat_dicts,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2567:            "beat_media": beat_media_evidence,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2568:            "v6_video_acquisition": v62_source_result,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2569:            "v6_video_matching": v61_video_result,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2570:            "semantic_media_metrics": {
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2571:                "enrichment_budget": self.MAX_SEMANTIC_MEDIA_ENRICHMENTS,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2572:                "enrichment_attempts": semantic_enrichment_attempts,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2573:                "enrichment_successes": semantic_enrichment_successes,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2574:                "fallback_count": semantic_fallback_count, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2575:                "total_beats": len(visual_beats),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2576:                "visual_quality": block5_visual_metrics,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2577:            },
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2578:            "video": video,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2579:            "status": "success",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2580:        }
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2581:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2582:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2583:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2584:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2585:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2586:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2587:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2588:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2589:
+
+======================================================================
+END
+======================================================================

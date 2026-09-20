@@ -1,0 +1,251 @@
+﻿0600:             for evidence_id, text
+0601:             in evidence_map.items()
+0602:         )
+0603: 
+0604:         current_candidate = data
+0605: 
+0606:         for attempt in range(1, 4):
+0607: 
+0608:             candidate_words = self._word_count(
+0609:                 current_candidate
+0610:             )
+0611: 
+0612:             current_json = json.dumps(
+0613:                 current_candidate,
+0614:                 indent=2,
+0615:             )
+0616: 
+0617:             missing_words = max(
+0618:                 0,
+0619:                 85 - candidate_words,
+0620:             )
+0621: 
+0622:             if attempt == 1:
+0623:                 correction = f"""
+0624: The current narration has {candidate_words} words.
+0625: 
+0626: Rewrite it to 85-100 narration words total.
+0627: 
+0628: Approximately {missing_words} additional useful words
+0629: are needed if the script is short.
+0630: 
+0631: Add only explanation directly supported by the
+0632: evidence packet below.
+0633: """
+0634:             else:
+0635:                 correction = f"""
+0636: THIS IS RECOVERY ATTEMPT {attempt} OF 3.
+0637: 
+0638: The previous candidate failed validation.
+0639: 
+0640: It contains {candidate_words} narration words.
+0641: 
+0642: Return 85-100 narration words.
+0643: Use exactly four narration lines.
+0644: Aim for 21-25 words per line.
+0645: 
+0646: Count the words before responding.
+0647: Do not add filler.
+0648: Do not invent facts.
+0649: Use only the allowed evidence IDs.
+0650: """
+0651: 
+0652:             messages = [
+0653:                 {
+0654:                     "role": "system",
+0655:                     "content": f"""
+0656: You are repairing a grounded movie-facts
+0657: YouTube Short.
+0658: 
+0659: Return ONLY one JSON object.
+0660: 
+0661: Required keys:
+0662: "title"
+0663: "hashtags"
+0664: "script_lines"
+0665: "evidence_ids"
+0666: 
+0667: MANDATORY:
+0668: 
+0669: - exactly four script_lines
+0670: - exactly four evidence_ids lists
+0671: - 85-100 narration words total
+0672: - no narration line over 29 words
+0673: - natural spoken vertical-video narration
+0674: - line 1 creates the information gap
+0675: - line 2 gives only necessary context
+0676: - line 3 gives the strongest supported mechanism,
+0677:   example, action, contrast, number, or consequence
+0678: - line 4 resolves the opening gap
+0679: - every line adds new information
+0680: - no generic CTA
+0681: - no filler
+0682: - no invented facts
+0683: - evidence labels never appear inside narration
+0684: 
+0685: The ONLY legal evidence IDs are:
+0686: 
+0687: {allowed_evidence_text}
+0688: 
+0689: Every narration line must cite at least one legal
+0690: evidence ID.
+0691: 
+0692: Never create another ID.
+0693: 
+0694: {correction}
+0695: """,
+0696:                 },
+0697:                 {
+0698:                     "role": "user",
+0699:                     "content": f"""
+0700: MOVIE:
+0701: {movie_title}
+0702: 
+0703: TOPIC:
+0704: {topic}
+0705: 
+0706: CURRENT SCRIPT:
+0707: {current_json}
+0708: 
+0709: GROUNDED EVIDENCE PACKET:
+0710: {evidence_packet}
+0711: 
+0712: Produce the corrected script.
+0713: 
+0714: Return JSON only.
+0715: """,
+0716:                 },
+0717:             ]
+0718: 
+0719:             raw = await self.llm.chat(
+0720:                 messages,
+0721:                 json_mode=True,
+0722:             )
+0723: 
+0724:             recovered = self._extract_json(
+0725:                 raw
+0726:             )
+0727: 
+0728:             if not isinstance(
+0729:                 recovered,
+0730:                 dict,
+0731:             ):
+0732:                 logger.warning(
+0733:                     "Movie recovery attempt %s "
+0734:                     "returned invalid JSON.",
+0735:                     attempt,
+0736:                 )
+0737:                 continue
+0738: 
+0739:             if not self._is_structurally_valid_content(
+0740:                 recovered
+0741:             ):
+0742:                 logger.warning(
+0743:                     "Movie recovery attempt %s "
+0744:                     "failed structural validation.",
+0745:                     attempt,
+0746:                 )
+0747: 
+0748:                 current_candidate = recovered
+0749:                 continue
+0750: 
+0751:             recovered_words = self._word_count(
+0752:                 recovered
+0753:             )
+0754: 
+0755:             if not (
+0756:                 self.MIN_WORDS
+0757:                 <= recovered_words
+0758:                 <= self.MAX_WORDS
+0759:             ):
+0760:                 logger.warning(
+0761:                     "Movie recovery attempt %s "
+0762:                     "failed length validation: %s words.",
+0763:                     attempt,
+0764:                     recovered_words,
+0765:                 )
+0766: 
+0767:                 current_candidate = recovered
+0768:                 continue
+0769: 
+0770:             recovered_lines = [
+0771:                 str(line).strip()
+0772:                 for line in recovered.get(
+0773:                     "script_lines",
+0774:                     []
+0775:                 )
+0776:             ]
+0777: 
+0778:             if len(recovered_lines) != 4:
+0779:                 logger.warning(
+0780:                     "Movie recovery attempt %s "
+0781:                     "did not return four lines.",
+0782:                     attempt,
+0783:                 )
+0784: 
+0785:                 current_candidate = recovered
+0786:                 continue
+0787: 
+0788:             if any(
+0789:                 len(line.split()) > 29
+0790:                 for line in recovered_lines
+0791:             ):
+0792:                 logger.warning(
+0793:                     "Movie recovery attempt %s "
+0794:                     "contains a line over 29 words.",
+0795:                     attempt,
+0796:                 )
+0797: 
+0798:                 current_candidate = recovered
+0799:                 continue
+0800: 
+0801:             raw_ids = recovered.get(
+0802:                 "evidence_ids",
+0803:                 [],
+0804:             )
+0805: 
+0806:             if (
+0807:                 not isinstance(raw_ids, list)
+0808:                 or len(raw_ids) != 4
+0809:             ):
+0810:                 logger.warning(
+0811:                     "Movie recovery attempt %s "
+0812:                     "returned invalid evidence structure.",
+0813:                     attempt,
+0814:                 )
+0815: 
+0816:                 current_candidate = recovered
+0817:                 continue
+0818: 
+0819:             sanitized = []
+0820:             unknown = []
+0821: 
+0822:             for line_ids in raw_ids:
+0823: 
+0824:                 if not isinstance(
+0825:                     line_ids,
+0826:                     list,
+0827:                 ):
+0828:                     unknown.append(
+0829:                         "<invalid-list>"
+0830:                     )
+0831:                     sanitized.append([])
+0832:                     continue
+0833: 
+0834:                 clean_line = []
+0835: 
+0836:                 for evidence_id in line_ids:
+0837: 
+0838:                     normalized = (
+0839:                         str(evidence_id)
+0840:                         .strip()
+0841:                         .upper()
+0842:                     )
+0843: 
+0844:                     if (
+0845:                         normalized
+0846:                         in allowed_evidence_set
+0847:                     ):
+0848:                         if (
+0849:                             normalized
+0850:                             not in clean_line

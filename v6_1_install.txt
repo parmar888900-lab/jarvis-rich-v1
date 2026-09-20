@@ -1,0 +1,29 @@
+====================================================================
+ RICH V1 — V6.1 REAL VIDEO INTEGRATION
+====================================================================
+
+BASELINE COMPILE: PASS
+BACKUP: C:\Users\hp\jarvis.ai\generated\diagnostics\v6_1_20260919_182332\backup
+PATCHED SOURCE COMPILE: PASS
+
+====================================================================
+ V6.1 VERIFICATION
+====================================================================
+pipeline_marker: PASS
+renderer_marker: PASS
+pipeline_v61_helper: PASS
+source_clip_indexer: PASS
+strict_clip_matcher: PASS
+renderer_accepts_beat_videos: PASS
+renderer_keeps_beat_images: PASS
+renderer_video_file_clip: PASS
+exact_image_fallback_preserved: PASS
+
+====================================================================
+ V6.1 INSTALL: PASS
+====================================================================
+
+Real-video production path is now connected.
+V5 authorized images remain per-beat fallback.
+
+NEXT: run controlled benchmark.

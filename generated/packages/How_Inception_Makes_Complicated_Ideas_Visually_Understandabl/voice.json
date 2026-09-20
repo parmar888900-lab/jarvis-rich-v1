@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\How_Inception_Makes_Complicated_Ideas_Visually_Understandabl\\How_Inception_Makes_Complicated_Ideas_Visually_Understandabl.wav",
+    "duration": 31.950657596371883,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\How_Inception_Makes_Complicated_Ideas_Visually_Understandabl_scene_001.wav",
+            "duration": 9.369251700680271,
+            "start_time": 0.0,
+            "end_time": 9.369251700680271,
+            "narration": "Inception uses complex nested dream layers to explain subconscious manipulation, showing how reality and illusion blur in our minds."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\How_Inception_Makes_Complicated_Ideas_Visually_Understandabl_scene_002.wav",
+            "duration": 7.163356009070295,
+            "start_time": 9.369251700680271,
+            "end_time": 16.532607709750565,
+            "narration": "Christopher Nolan crafts intricate dreamscapes that challenge viewers to decode reality, creating a mental puzzle within a film."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\How_Inception_Makes_Complicated_Ideas_Visually_Understandabl_scene_003.wav",
+            "duration": 8.17342403628118,
+            "start_time": 16.532607709750565,
+            "end_time": 24.706031746031744,
+            "narration": "The meticulous use of Escher-like geometry in Inception exemplifies how visual storytelling can convey abstract concepts through precise design."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\How_Inception_Makes_Complicated_Ideas_Visually_Understandabl_scene_004.wav",
+            "duration": 7.244625850340136,
+            "start_time": 24.706031746031744,
+            "end_time": 31.95065759637188,
+            "narration": "By using these visual tricks, Inception not only entertains but also educates, making deep themes accessible through striking imagery."
+        }
+    ],
+    "script": "Inception uses complex nested dream layers to explain subconscious manipulation, showing how reality and illusion blur in our minds.\nChristopher Nolan crafts intricate dreamscapes that challenge viewers to decode reality, creating a mental puzzle within a film.\nThe meticulous use of Escher-like geometry in Inception exemplifies how visual storytelling can convey abstract concepts through precise design.\nBy using these visual tricks, Inception not only entertains but also educates, making deep themes accessible through striking imagery."
+}

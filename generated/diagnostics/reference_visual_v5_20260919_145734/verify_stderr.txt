@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py", line 162, in <module>
+    raise RuntimeError(
+        "Editing visual routing failed."
+    )
+RuntimeError: Editing visual routing failed.

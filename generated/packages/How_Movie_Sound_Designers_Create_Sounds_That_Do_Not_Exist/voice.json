@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist.wav",
+    "duration": 39.172063492063494,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist_scene_001.wav",
+            "duration": 8.463673469387755,
+            "start_time": 0.0,
+            "end_time": 8.463673469387755,
+            "narration": "Sound designers research alien atmospheres, blending samples to craft the soundscape. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist_scene_002.wav",
+            "duration": 21.861587301587303,
+            "start_time": 8.463673469387755,
+            "end_time": 30.325260770975056,
+            "narration": "Using advanced software, they shape these sounds to fit the scene, making the impossible real. It involves a number of distinct stages, including an initial story idea or commission, followed by screenwriting, casting, pre-production, shooting, sound recording, post-production, and screening the finished product before an audience, which may result in a film release distribution and exhibition."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist_scene_003.wav",
+            "duration": 5.270929705215419,
+            "start_time": 30.325260770975056,
+            "end_time": 35.59619047619047,
+            "narration": "The result? An immersive experience that transports audiences to new, uncharted worlds."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist_scene_004.wav",
+            "duration": 3.575873015873016,
+            "start_time": 35.59619047619047,
+            "end_time": 39.17206349206349,
+            "narration": "All through the power of sound, these designers bring the unknown to life."
+        }
+    ],
+    "script": "Sound designers research alien atmospheres, blending samples to craft the soundscape. Filmmaking, or film production, is the process of creating a motion picture.\nUsing advanced software, they shape these sounds to fit the scene, making the impossible real. It involves a number of distinct stages, including an initial story idea or commission, followed by screenwriting, casting, pre-production, shooting, sound recording, post-production, and screening the finished product before an audience, which may result in a film release distribution and exhibition.\nThe result? An immersive experience that transports audiences to new, uncharted worlds.\nAll through the power of sound, these designers bring the unknown to life."
+}

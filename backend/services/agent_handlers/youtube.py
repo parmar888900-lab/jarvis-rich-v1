@@ -13,14 +13,13 @@ from backend.services.analytics.youtube_performance_collector import (
 from backend.services.analytics.youtube_performance_evidence_service import (
     YoutubePerformanceEvidenceService,
 )
-from backend.services.intelligence.production_selector import (
-    ProductionTopicSelector,
+from backend.services.intelligence.evergreen_content_selector import EvergreenContentSelector
+from backend.services.orchestration.daily_format_rotator import (
+    DailyFormatRotator,
 )
-from backend.services.intelligence.trend_engine import TrendEngine
 from backend.services.orchestration.goal_production_strategy_service import (
     GoalProductionStrategyService,
 )
-from backend.services.providers.registry import build_trend_manager
 from backend.services.orchestration.idempotency import (
     OperationType,
     build_idempotency_key,
@@ -71,8 +70,8 @@ class YoutubeAgentHandler(BaseAgentHandler):
         goal_strategy_service=None,
         session_factory=None,
     ):
-        self.engine = TrendEngine()
-        self.selector = ProductionTopicSelector()
+        self.selector = EvergreenContentSelector()
+        self.format_rotator = DailyFormatRotator()
         self.pipeline = VideoPipeline()
         self.publisher = YoutubePublisher()
 
@@ -392,25 +391,22 @@ class YoutubeAgentHandler(BaseAgentHandler):
         self,
         command_id: str,
     ) -> dict:
+        """
+        Select an evergreen production topic.
 
-        manager = build_trend_manager()
+        The method name remains for orchestration compatibility.
+        Rich V1 no longer depends on current trends for autonomous
+        production.
+        """
 
-        raw_trends = manager.collect_candidates(
-            per_provider_limit=25,
+        content_id = (
+            command_id.split(
+                ":",
+                1,
+            )[0]
+            if command_id
+            else "unknown"
         )
-
-        ranked_trends = self.engine.process(
-            raw_trends,
-            limit=10,
-        )
-
-        if not ranked_trends:
-            return {
-                "agent": self.name,
-                "task": "analyze_trends",
-                "command_id": command_id,
-                "status": "no_trends_found",
-            }
 
         (
             performance,
@@ -422,25 +418,27 @@ class YoutubeAgentHandler(BaseAgentHandler):
             goal_strategy_status,
         ) = await self._goal_strategy()
 
-        best_trend = self.selector.select(
-            ranked_trends,
-            performance=performance,
-            goal_strategy=goal_strategy,
+        slots = self.format_rotator.build_slots(
+            cursor=self.selector._format_cursor,
+            daily_target=1,
         )
 
-        if best_trend is None:
+        locked_format = slots[0].format_name
+
+        best_topic = self.selector.select(
+            content_id=content_id,
+            performance=performance,
+            goal_strategy=goal_strategy,
+            format_name=locked_format,
+        )
+
+        if best_topic is None:
             return {
                 "agent": self.name,
                 "task": "analyze_trends",
                 "command_id": command_id,
-                "provider_count": len(
-                    manager.providers
-                ),
-                "raw_trend_count": len(
-                    raw_trends
-                ),
-                "final_trend_count": len(
-                    ranked_trends
+                "content_strategy": (
+                    "evergreen_storytelling"
                 ),
                 "analytics": analytics,
                 "goal_strategy": (
@@ -455,23 +453,22 @@ class YoutubeAgentHandler(BaseAgentHandler):
             "agent": self.name,
             "task": "analyze_trends",
             "command_id": command_id,
-            "provider_count": len(
-                manager.providers
+            "content_strategy": (
+                "evergreen_storytelling"
             ),
-            "raw_trend_count": len(
-                raw_trends
-            ),
-            "final_trend_count": len(
-                ranked_trends
-            ),
+            "trend_system_active": False,
+            "provider_count": 0,
+            "raw_trend_count": 0,
+            "final_trend_count": 1,
             "analytics": analytics,
             "goal_strategy": (
                 goal_strategy_status
             ),
-            "best_trend": best_trend,
+            # Kept as best_trend so the already-tested
+            # ProductionOrchestrator requires no rewrite.
+            "best_trend": best_topic,
             "status": "success",
         }
-
     async def _create_video(
         self,
         command_id: str,
@@ -686,3 +683,5 @@ class YoutubeAgentHandler(BaseAgentHandler):
             "privacy_status": privacy,
             "upload": operation_result,
         }
+
+

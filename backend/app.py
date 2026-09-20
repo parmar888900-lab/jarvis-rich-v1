@@ -1,4 +1,5 @@
-﻿"""JARVIS AI - FastAPI application entry point."""
+import asyncio
+"""JARVIS AI - FastAPI application entry point."""
 
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -15,9 +16,13 @@ from backend.routes import (
     health,
     production,
     settings as settings_routes,
+    remote,
 )
 from backend.services.orchestration.production_operation_recovery_runner import (
     ProductionOperationRecoveryRunner,
+)
+from backend.services.orchestration.daily_production_batch import (
+    DailyProductionBatch,
 )
 from backend.services.orchestration.production_scheduler import (
     ProductionScheduler,
@@ -105,6 +110,10 @@ async def lifespan(app: FastAPI):
         )
     )
 
+    ########################################################
+    # Autonomous four-successful-shorts-per-day controller
+    ########################################################
+
     production_scheduler = ProductionScheduler(
         production.orchestrator,
         interval_seconds=(
@@ -112,16 +121,69 @@ async def lifespan(app: FastAPI):
         ),
         enabled=(
             readiness.scheduler_enabled
+            and readiness.production_ready
         ),
         production_allowed=(
             readiness.production_ready
         ),
     )
 
-    production_scheduler.start()
+    daily_production_batch = DailyProductionBatch(
+        production_scheduler,
+        daily_target=4,
+    )
+
+    async def daily_production_supervisor():
+        """
+        Reconcile today's production quota immediately and continue
+        checking it while Jarvis remains online.
+        """
+
+        while True:
+
+            try:
+                await daily_production_batch.run_daily_batch()
+
+            except asyncio.CancelledError:
+                raise
+
+            except Exception:
+                import logging
+
+                logging.getLogger(
+                    __name__
+                ).exception(
+                    "Daily autonomous production batch failed."
+                )
+
+            # State persistence prevents production above today's quota.
+            # Frequent checks also allow recovery after temporary
+            # provider/network failures.
+            await asyncio.sleep(
+                15 * 60
+            )
+
+    daily_production_task = None
+
+    if (
+        readiness.scheduler_enabled
+        and readiness.production_ready
+    ):
+        daily_production_task = asyncio.create_task(
+            daily_production_supervisor(),
+            name="daily-production-supervisor",
+        )
 
     app.state.production_scheduler = (
         production_scheduler
+    )
+
+    app.state.daily_production_batch = (
+        daily_production_batch
+    )
+
+    app.state.daily_production_task = (
+        daily_production_task
     )
 
     app.state.production_capabilities = (
@@ -135,6 +197,18 @@ async def lifespan(app: FastAPI):
     try:
         yield
     finally:
+
+        if (
+            daily_production_task is not None
+            and not daily_production_task.done()
+        ):
+            daily_production_task.cancel()
+
+            try:
+                await daily_production_task
+            except asyncio.CancelledError:
+                pass
+
         await production_scheduler.stop()
 
 
@@ -181,6 +255,7 @@ app.include_router(
     prefix="/api/settings",
     tags=["settings"],
 )
+app.include_router(remote.router)
 
 
 @app.get("/")
@@ -191,3 +266,4 @@ async def root():
         "status": "running",
         "docs": "/docs",
     }
+

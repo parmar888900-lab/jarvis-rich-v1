@@ -1,0 +1,56 @@
+{
+    "title": "How actors perform scenes surrounded by green screens",
+    "topic": "How actors perform scenes surrounded by green screens",
+    "genre": "movie_facts",
+    "content_id": "fee5017f-6bd3-4dbb-85f4-e3a82f567023",
+    "content_strategy": "evergreen_storytelling",
+    "requires_trend": false,
+    "production_selection": {
+        "eligible": true,
+        "selected": true,
+        "production_score": 87.0,
+        "curiosity_score": 88.0,
+        "story_strength": 82.0,
+        "visual_supply": 86.0,
+        "evergreen_value": 92.0,
+        "credibility": 90.0,
+        "channel_fit": 86.0,
+        "reason": "Evergreen topic passed Rich V1 story and production criteria.",
+        "rejection_reasons": []
+    },
+    "locked_format": "movie_facts",
+    "content_format": {
+        "format_name": "cinematic_explainer",
+        "target_duration_min": 35.0,
+        "target_duration_max": 60.0,
+        "preferred_media": [
+            "authorized_movie_excerpt",
+            "licensed_promotional_media",
+            "licensed_image",
+            "archive_media"
+        ],
+        "narration_mode": "voiceover",
+        "pacing": "cinematic",
+        "rights_gate_required": true
+    },
+    "research": "Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range). The technique has been used in many fields to remove a background from the subject of a photo or video \u2014 particularly the newscasting, motion picture, and video game industries. A colour range in the foreground footage is made transparent, allowing separately filmed background footage or a static image to be inserted into the scene. The chroma keying technique is commonly used in video production and post-production. This technique is also referred to as colour keying or colour separation overlay (CSO; primarily by the BBC), or by various terms for specific colour-related variants such as green screen or blue screen; chroma keying can be done with backgrounds of any colour that are uniform and distinct, but green and blue backgrounds are more commonly used because they differ most distinctly in hue from any human skin colour. No part of the subject being filmed or photographed may duplicate the colour used as the backing, or the part may be erroneously identified as part of the backing.\nIt is commonly used for live weather forecast broadcasts in which a news presenter is seen standing in front of a CGI map instead of a large blue or green background. Chroma keying is also common in the entertainment industry for visual effects in filmmaking and video games. Rotoscopy may instead be carried out on subjects that are not in front of a green (or blue) screen. Motion tracking can also be used in conjunction with chroma keying, such as to move the background as the subject moves.",
+    "knowledge": {
+        "topic": "How actors perform scenes surrounded by green screens",
+        "summary": "Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range). The technique has been used in many fields to remove a background from the subject of a photo or video \u2014 particularly the newscasting, motion picture, and video game industries. A colour range in the foreground footage is made transparent, allowing separately filmed background footage or a static image to be inserted into the scene. The chroma keying technique is commonly used in video production and post-production. This technique is also referred to as colour keying or colour separation overlay (CSO; primarily by the BBC), or by various terms for specific colour-related variants such as green screen or blue screen; chroma keying can be done with backgrounds of any colour that are uniform and distinct, but green and blue backgrounds are more commonly used because they differ most distinctly in hue from any human skin colour. No part of the subject being filmed or photographed may duplicate the colour used as the backing, or the part may be erroneously identified as part of the backing.\nIt is commonly used for live weather forecast broadcasts in which a news presenter is seen standing in front of a CGI map instead of a large blue or green background. Chroma keying is also common in the entertainment industry for visual effects in filmmaking and video games. Rotoscopy may instead be carried out on subjects that are not in front of a green (or blue) screen. Motion tracking can also be used in conjunction with chroma keying, such as to move the background as the subject moves.",
+        "facts": [
+            "Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range). The technique has been used in many fields to remove a background from the subject of a photo or video \u2014 particularly the newscasting, motion picture, and video game industries. A colour range in the foreground footage is made transparent, allowing separately filmed background footage or a static image to be inserted into the scene. The chroma keying technique is commonly used in video production and post-production. This technique is also referred to as colour keying or colour separation overlay (CSO; primarily by the BBC), or by various terms for specific colour-related variants such as green screen or blue screen; chroma keying can be done with backgrounds of any colour that are uniform and distinct, but green and blue backgrounds are more commonly used because they differ most distinctly in hue from any human skin colour. No part of the subject being filmed or photographed may duplicate the colour used as the backing, or the part may be erroneously identified as part of the backing.\nIt is commonly used for live weather forecast broadcasts in which a news presenter is seen standing in front of a CGI map instead of a large blue or green background. Chroma keying is also common in the entertainment industry for visual effects in filmmaking and video games. Rotoscopy may instead be carried out on subjects that are not in front of a green (or blue) screen. Motion tracking can also be used in conjunction with chroma keying, such as to move the background as the subject moves."
+        ],
+        "keywords": [],
+        "sources": [
+            {
+                "title": "Chroma key",
+                "content": "Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range). The technique has been used in many fields to remove a background from the subject of a photo or video \u2014 particularly the newscasting, motion picture, and video game industries. A colour range in the foreground footage is made transparent, allowing separately filmed background footage or a static image to be inserted into the scene. The chroma keying technique is commonly used in video production and post-production. This technique is also referred to as colour keying or colour separation overlay (CSO; primarily by the BBC), or by various terms for specific colour-related variants such as green screen or blue screen; chroma keying can be done with backgrounds of any colour that are uniform and distinct, but green and blue backgrounds are more commonly used because they differ most distinctly in hue from any human skin colour. No part of the subject being filmed or photographed may duplicate the colour used as the backing, or the part may be erroneously identified as part of the backing.\nIt is commonly used for live weather forecast broadcasts in which a news presenter is seen standing in front of a CGI map instead of a large blue or green background. Chroma keying is also common in the entertainment industry for visual effects in filmmaking and video games. Rotoscopy may instead be carried out on subjects that are not in front of a green (or blue) screen. Motion tracking can also be used in conjunction with chroma keying, such as to move the background as the subject moves.",
+                "source": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Chroma_key",
+                "confidence": 0.95
+            }
+        ],
+        "score": 0.0,
+        "category": "Evergreen"
+    }
+}

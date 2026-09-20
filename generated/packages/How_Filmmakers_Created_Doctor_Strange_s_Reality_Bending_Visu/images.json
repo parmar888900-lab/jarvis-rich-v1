@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Hospital._Ste._Justine_BAnQ_P48S1P12204.jpg",
+        "image_path": "generated\\packages\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu\\images\\scene_001.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Traditional_Northwestern_University_Hall,_June_1977_(2984002823).jpg",
+        "image_path": "generated\\packages\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu\\images\\scene_002.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Hospital._Ste._Justine_BAnQ_P48S1P12204.jpg",
+        "image_path": "generated\\packages\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:23_0044468_Convair_Negative_Image_-_Final_steps_of_Tomahawk_missile_production_process_(53769329951).jpg",
+        "image_path": "generated\\packages\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu\\images\\scene_004.jpg",
+        "width": null,
+        "height": null
+    }
+]

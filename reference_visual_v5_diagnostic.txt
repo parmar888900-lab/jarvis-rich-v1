@@ -1,0 +1,1200 @@
+=== REFERENCE VISUAL V5 DIAGNOSTIC ===
+Generated: 2026-09-19T16:14:23.9311572-06:00
+
+=== GIT STATUS ===
+ M agents/default_agent.py
+ M backend/app.py
+ M backend/config.py
+ M backend/database.py
+ M backend/models/__init__.py
+ M backend/models/goal.py
+ M backend/models/production_cycle.py
+ M backend/models/production_operation.py
+ M backend/models/schemas.py
+ M backend/routes/__init__.py
+ M backend/routes/agents.py
+ M backend/routes/commander.py
+ M backend/routes/production.py
+ M backend/routes/settings.py
+ M backend/services/agent_handlers/__init__.py
+ M backend/services/agent_handlers/goal.py
+ M backend/services/agent_handlers/youtube.py
+ M backend/services/agent_registry.py
+ M backend/services/analytics/youtube_historical_intelligence.py
+ M backend/services/commander.py
+ M backend/services/content_generator.py
+ M backend/services/content_validator.py
+ M backend/services/goal_engine.py
+ M backend/services/goal_service.py
+ M backend/services/image_generation/cloudflare_flux_provider.py
+ M backend/services/image_generation/generator.py
+ M backend/services/image_generation/image_cache.py
+ M backend/services/intelligence/goal_topic_intelligence.py
+ M backend/services/intelligence/production_selector.py
+ M backend/services/intelligence/scorer.py
+ M backend/services/intelligence/suitability.py
+ M backend/services/intelligence/trend_engine.py
+ M backend/services/llm_service.py
+ M backend/services/orchestration/__init__.py
+ M backend/services/orchestration/autonomous_retry.py
+ M backend/services/orchestration/failure_classification.py
+ M backend/services/orchestration/goal_production_strategy.py
+ M backend/services/orchestration/goal_production_strategy_service.py
+ M backend/services/orchestration/idempotency.py
+ M backend/services/orchestration/idempotent_operation_executor.py
+ M backend/services/orchestration/operation_reconciliation.py
+ M backend/services/orchestration/production_operation_reconciliation.py
+ M backend/services/orchestration/production_operation_recovery.py
+ M backend/services/orchestration/production_operation_service.py
+ M backend/services/orchestration/production_orchestrator.py
+ M backend/services/orchestration/production_runner.py
+ M backend/services/orchestration/production_runtime.py
+ M backend/services/orchestration/production_scheduler.py
+ M backend/services/orchestration/production_scheduler_config.py
+ M backend/services/orchestration/youtube_release_evidence.py
+ M backend/services/orchestration/youtube_release_policy.py
+ M backend/services/orchestration/youtube_release_service.py
+ M backend/services/pipelines/video_pipeline.py
+ M backend/services/production_cycle_service.py
+ M backend/services/providers/rss_provider.py
+ M backend/services/providers/youtube_publish_reconciler.py
+ M backend/services/providers/youtube_publisher.py
+ M backend/services/reddit_service.py
+ M backend/services/research/confidence.py
+ M backend/services/research/providers/news.py
+ M backend/services/runtime/runtime_config.py
+ M backend/services/storyboard/scene.py
+ M backend/services/video/caption_aligner.py
+ M backend/services/video/production_package.py
+ M backend/services/video/voice_generator.py
+ M backend/services/video_renderer/renderer.py
+ M backend/services/video_renderer/subtitle_renderer.py
+ M backend/services/voice/audio_capture.py
+ M backend/services/voice/command_executor.py
+ M backend/services/voice/command_router.py
+ M backend/services/voice/transcriber.py
+ M backend/services/voice/wake_phrase.py
+ D configs/.env.example
+?? Actors_on_Green_Screen_StagesTEMP_MPY_wvf_snd.mp4
+?? Blockbuster_Movies_Use_Previsualization_to_Ensure_Smooth_FilTEMP_MPY_wvf_snd.mp4
+?? Camera_Movement_for_TensionTEMP_MPY_wvf_snd.mp4
+?? Camera_Movement_in_Film__Building_TensionTEMP_MPY_wvf_snd.mp4
+?? Camera_Movement_in_Film__Increasing_TensionTEMP_MPY_wvf_snd.mp4
+?? Camera_Movement_in_FilmmakingTEMP_MPY_wvf_snd.mp4
+?? Great_Movie_Openings_Reveal_Character_Without_Explaining_EveTEMP_MPY_wvf_snd.mp4
+?? Great_Movie_Openings_Reveal_Character__Not_Explain_EverythinTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic__Filmmaking_s_Colorful_TrickTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic__How_Actors_Perform_Behind_the_ScenesTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic__How_Actors_Perform_ScenesTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_VirtualTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_the_SceTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic__How_Actors_Perform_on_Empty_StagesTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic__How_Actors_Perform_with_Chroma_KeyTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic__How_Actors_Perform_with_Chroma_KeyingTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic__How_Filmmakers_Create_Unreal_WorldsTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Magic_in_FilmmakingTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_SecretsTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Secrets__How_Actors_Perform_on_Empty_SpaceTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Secrets__How_Actors_Perform_with_Chroma_KeyTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Secrets__How_Actors_Perform_with_Chroma_KeyingTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Secrets__How_Filmmakers_Create_MagicTEMP_MPY_wvf_snd.mp4
+?? Green_Screen_Secrets__Why_Filmmakers_Love_ItTEMP_MPY_wvf_snd.mp4
+?? How_Camera_Movement_Increases_Tension_in_FilmsTEMP_MPY_wvf_snd.mp4
+?? How_Editing_Changes_the_Emotional_Impact_of_a_SceneTEMP_MPY_wvf_snd.mp4
+?? How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_VisuTEMP_MPY_wvf_snd.mp4
+?? How_Filmmakers_Use_Camera_Movement_to_Increase_TensionTEMP_MPY_wvf_snd.mp4
+?? How_Inception_Makes_Complicated_Ideas_Visually_UnderstandablTEMP_MPY_wvf_snd.mp4
+?? How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_ExistTEMP_MPY_wvf_snd.mp4
+?? How_Shipping_Containers_Revolutionized_Global_TradeTEMP_MPY_wvf_snd.mp4
+?? How_actors_perform_scenes_surrounded_by_green_screensTEMP_MPY_wvf_snd.mp4
+?? Inception__Visualizing_Complex_IdeasTEMP_MPY_wvf_snd.mp4
+?? Inception_s_Mind_Bending_Visuals_Make_Complex_Ideas_AccessibTEMP_MPY_wvf_snd.mp4
+?? Jurassic_Park__Dinosaurs_That_Feel_RealTEMP_MPY_wvf_snd.mp4
+?? Jurassic_Park__Making_Dinosaurs_Feel_RealTEMP_MPY_wvf_snd.mp4
+?? Mastering_Camera_Movement_in_FilmmakingTEMP_MPY_wvf_snd.mp4
+?? Mastering_Tension__Camera_Movement_in_FilmmakingTEMP_MPY_wvf_snd.mp4
+?? Mastering_Tension_with_Camera_MovementTEMP_MPY_wvf_snd.mp4
+?? Rolex_Daytona_Luxury_Reference_Benchmark_V2_luxury_benchmark_v1TEMP_MPY_wvf_snd.mp4
+?? Spider_Man_No_Way_Home__The_Multiverse_Bursting_OpenTEMP_MPY_wvf_snd.mp4
+?? The_Matrix__Revolutionizing_Action_Sequences_with_Bullet_TimTEMP_MPY_wvf_snd.mp4
+?? The_Matrix_s_Bullet_Time_Sequence__A_Game_ChangerTEMP_MPY_wvf_snd.mp4
+?? The_Power_of_Editing_in_FilmTEMP_MPY_wvf_snd.mp4
+?? Using_Camera_Movement_to_Increase_TensionTEMP_MPY_wvf_snd.mp4
+?? Why_Airplane_Windows_are_RoundedTEMP_MPY_wvf_snd.mp4
+?? Why_Filmmakers_Use_Green_ScreensTEMP_MPY_wvf_snd.mp4
+?? Why_Great_Movie_Openings_Reveal_Character_Without_ExplainingTEMP_MPY_wvf_snd.mp4
+?? Why_Sound_Effects_Are_Recorded_SeparatelyTEMP_MPY_wvf_snd.mp4
+?? Why_blockbuster_movies_use_previsualization_before_filmingTEMP_MPY_wvf_snd.mp4
+?? apply_v18_final_master.py
+?? backend/app.py.before-autonomy-fix-20260915_190757
+?? backend/app.py.before-daily-autonomy-20260915_190637
+?? backend/export_files.py
+?? backend/remote_app.py
+?? backend/remote_app.py.before-ipad-mic
+?? backend/remote_app.py.dashboard-backup
+?? backend/remote_app.py.ipad-voice-backup
+?? backend/remote_app.py.voice-backup
+?? backend/routes/commander.py.remote-backup
+?? backend/routes/remote.py
+?? backend/routes/remote.py.ipad-voice-backup
+?? backend/services/agent_handlers/system.py
+?? backend/services/agent_handlers/youtube.py.publish-backup
+?? backend/services/agent_registry.py.status-backup
+?? backend/services/intelligence/claim_evidence_validator.py
+?? backend/services/intelligence/content_format_classifier.py
+?? backend/services/intelligence/evergreen_content_selector.py
+?? backend/services/intelligence/genre_topic_selector.py
+?? backend/services/intelligence/movie_topic_parser.py
+?? backend/services/intelligence/reference_format_profiles.py
+?? backend/services/intelligence/semantic_claim_evidence_validator.py
+?? backend/services/orchestration/daily_format_rotator.py
+?? backend/services/orchestration/daily_production_batch.py
+?? backend/services/orchestration/daily_production_planner.py
+?? backend/services/orchestration/production_operation_reconciliation.py.publish-backup
+?? backend/services/providers/news_provider.py
+?? backend/services/providers/reddit_provider.py
+?? backend/services/providers/youtube_publisher.py.publish-backup
+?? backend/services/remote_auth.py
+?? backend/services/research/evergreen_research_service.py
+?? backend/services/research/luxury_source_lead_selector.py
+?? backend/services/research/movie_research_service.py
+?? backend/services/research/providers/google_web.py
+?? backend/services/research/providers/youtube.py
+?? backend/services/research/source_ranker.py
+?? backend/services/research/summarizer.py
+?? backend/services/research/youtube_thumbnail_verifier.py
+?? backend/services/storyboard/models.py
+?? backend/services/storyboard/movie_visual_beat_planner.py
+?? backend/services/storyboard/prompt_builder.py
+?? backend/services/storyboard/storyboard_generator.py
+?? backend/services/video/__init__.py
+?? backend/services/video/asset_collector.py
+?? backend/services/video/clip_matcher.py
+?? backend/services/video/editor.py
+?? backend/services/video/editorial_sequence.py
+?? backend/services/video/luxury_reference_timeline.py
+?? backend/services/video/media_asset.py
+?? backend/services/video/media_query_builder.py
+?? backend/services/video/media_sources/
+?? backend/services/video/movie_commentary_planner.py
+?? backend/services/video/movie_contextual_query_builder.py
+?? backend/services/video/movie_media_resolver.py
+?? backend/services/video/reference_profiles.py
+?? backend/services/video/renderer.py
+?? backend/services/video/scene_planner.py
+?? backend/services/video/script_parser.py
+?? backend/services/video/source_clip_indexer.py
+?? backend/services/video/source_footage_resolver.py
+?? backend/services/video/strict_clip_matcher.py
+?? backend/services/video/targeted_beat_resolver.py
+?? backend/services/video/v18_final_master.py
+?? backend/services/video/visual_audit.py
+?? backend/services/video/visual_beat_planner.py
+?? backend/services/video/visual_beat_source_planner.py
+?? backend/services/video/visual_identity_verifier.py
+?? backend/services/video/visual_quality_validator.py
+?? backend/services/video/visual_semantic_validator.py
+?? backend/services/video_renderer/audio_mixer.py
+?? backend/services/video_renderer/ffmpeg_renderer.py
+?? backend/services/video_renderer/luxury_benchmark_renderer.py
+?? backend/services/video_renderer/matched_clip_renderer.py
+?? backend/services/video_renderer/models.py
+?? backend/services/video_renderer/movie_clip_renderer.py
+?? backend/services/video_renderer/rich_multi_shot_renderer.py
+?? backend/services/video_renderer/transition_engine.py
+?? backend/services/video_renderer/v18_visual_engine.py
+?? backend/services/voice/command_executor.py.status-backup
+?? backend/services/voice/command_router.py.status-backup
+?? backend/services/voice/voice_runtime.py
+?? cleanup_goal_test.py
+?? configs/workflows/flux_schnell_full_text_to_image.json
+?? content_engine_current.txt
+?? create_strict_jet_audit.py
+?? data/
+?? generated/
+?? install_v15_1_prerender_stop.py
+?? install_v15_engine.py
+?? jarvis.db
+?? jarvis_pipeline_summary.txt
+?? jarvis_recovery_check.ps1
+?? models/
+?? patch_google_discovery_config.py
+?? patch_ipad_voice.py
+?? patch_ipad_whisper_voice.py
+?? patch_jarvis_status.py
+?? patch_media_library_config.py
+?? patch_movie_v10.py
+?? patch_movie_v11.py
+?? patch_movie_v12.py
+?? patch_movie_v13.py
+?? patch_movie_v5.py
+?? patch_movie_v6.py
+?? patch_movie_v7.py
+?? patch_movie_v8.py
+?? patch_movie_v9.py
+?? patch_v10_1.py
+?? patch_v15_1_ending.py
+?? patch_v15_1_ending_chronology.py
+?? patch_v4_global_story.py
+?? patch_v4_optional_faces.py
+?? patch_v9_recovery.py
+?? patch_youtube_authority.py
+?? pipeline_only.txt
+?? reference_visual_v5_diagnostic.txt
+?? render_best_c0_luxury_benchmark.py
+?? render_luxury_benchmark_v1.py
+?? render_luxury_benchmark_v2.py
+?? render_modern_movie_reference_proof.py
+?? render_modern_movie_reference_proof_v2.py
+?? render_narrative_movie_proof_v10.py
+?? render_narrative_movie_proof_v11.py
+?? render_narrative_movie_proof_v12.py
+?? render_narrative_movie_proof_v13.py
+?? render_narrative_movie_proof_v14.py
+?? render_narrative_movie_proof_v14_before_continuity_patch.py
+?? render_narrative_movie_proof_v14_before_ollama_patch.py
+?? render_narrative_movie_proof_v14_before_ollama_patch_v2.py
+?? render_narrative_movie_proof_v14_before_patch.py
+?? render_narrative_movie_proof_v14_frozen_20260914_200607.py
+?? render_narrative_movie_proof_v15.py
+?? render_narrative_movie_proof_v15.py.v15_2_scope_backup
+?? render_narrative_movie_proof_v15.py.v15_3_full_render_backup
+?? render_narrative_movie_proof_v15_before_installer_v2.py
+?? render_narrative_movie_proof_v15_before_prerender_stop.py
+?? render_narrative_movie_proof_v15_before_safe_install.py
+?? render_narrative_movie_proof_v15_before_v15_1_ending_chronology.py
+?? render_narrative_movie_proof_v15_before_v15_1_ending_fix.py
+?? render_narrative_movie_proof_v4.py
+?? render_narrative_movie_proof_v5.py
+?? render_narrative_movie_proof_v6.py
+?? render_narrative_movie_proof_v7.py
+?? render_narrative_movie_proof_v8.py
+?? render_narrative_movie_proof_v9.py
+?? render_real_movie_reference_proof.py
+?? render_semantic_movie_proof_v3.py
+?? render_semantic_movie_proof_v3_1.py
+?? rich_v1_content_layer.txt
+?? rich_v1_research_layer.txt
+?? rich_v1_timing_layer.txt
+?? show_movie_evidence.py
+?? start_jarvis.ps1
+?? start_jarvis.ps1.corrupted-backup
+?? start_jarvis_watchdog.cmd
+?? test_caption_aligner.py
+?? test_clip_matcher.py
+?? test_commander_goal.py
+?? test_commander_parameters.py
+?? test_content_repair.py
+?? test_content_validator.py
+?? test_daily_production_planner.py
+?? test_daily_topic_rotation.py
+?? test_evergreen_research.py
+?? test_evergreen_selector.py
+?? test_full_pipeline.py
+?? test_goal_agent.py
+?? test_goal_agent_registry.py
+?? test_goal_database.py
+?? test_goal_engine.py
+?? test_goal_real_db.py
+?? test_goal_service.py
+?? test_legal_movie_short.py
+?? test_luxury_source_lead_selector.py
+?? test_luxury_v2_acquisition.py
+?? test_matched_clip_renderer.py
+?? test_media_provider.py
+?? test_movie_commentary_planner.py
+?? test_movie_media_resolver.py
+?? test_movie_research.py
+?? test_movie_script.py
+?? test_movie_visual_audit.py
+?? test_movie_visual_planner.py
+?? test_nasa_provider.py
+?? test_nasa_targeted_recovery.py
+?? test_pexels_provider.py
+?? test_pipeline.py
+?? test_pipeline_content_gate.py
+?? test_pipeline_repair.py
+?? test_production_package.py
+?? test_qwen_content.py
+?? test_qwen_repair.py
+?? test_rail_media.py
+?? test_real_movie_media_coverage.py
+?? test_reference_planner.py
+?? test_reference_style_video.py
+?? test_remote_command.ps1
+?? test_remote_natural.ps1
+?? test_rich_multi_shot_renderer.py
+?? test_scene_timing.py
+?? test_source_clip_indexer.py
+?? test_source_footage_resolver.py
+?? test_storyboard_images.py
+?? test_strict_clip_matcher.py
+?? test_system_status.py
+?? test_system_status_router.py
+?? test_targeted_beat_resolver.py
+?? test_video_renderer.py
+?? test_visual_beat_source_planner.py
+?? test_visual_identity_verifier.py
+?? test_visual_quality_calibration.py
+?? test_visual_semantic_calibration.py
+?? test_visual_semantic_validator.py
+?? test_voice_generator.py
+?? test_whisper_alignment.py
+?? test_youtube_discovery.py
+?? test_youtube_real_analytics.py
+?? test_youtube_runtime_real_analytics.py
+?? test_youtube_thumbnail_verifier.py
+?? v15_crash.txt
+?? v15_full_test.log
+
+=== FILES CONTAINING VISUAL ROUTING / FOLEY / ADR / EDITING ===
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:42: "How editing changes the emotional impact of a scene",
+C:\Users\hp\jarvis.ai\backend\services\orchestration\production_operation_reconciliation.py:22: YoutubeUploadReconciler,
+C:\Users\hp\jarvis.ai\backend\services\orchestration\production_operation_reconciliation.py:48: else YoutubeUploadReconciler(
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:270: # LITERAL FOLEY MECHANISMS
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:277: "footsteps",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:286: "Foley artist recording footsteps "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:290: "film Foley footsteps shoes "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:294: "Foley performer footsteps "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:316: "Foley artist using props "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:320: "hands Foley props film "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:324: "Foley stage objects props "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:331: "adr",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:342: "actor ADR dialogue recording "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:346: "film ADR booth actor "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:358: "editing",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:374: "movie sound design editing "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:394: "Foley artist recording movie "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:398: "film Foley recording stage "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:402: "professional Foley performer "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:419: "film field recording ambience "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:423: "sound recordist field recording "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:436: + " film Foley sound effects"
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:442: + " film Foley"
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:457: "Foley artist performing "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:462: "film Foley stage professional "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:574: "foley",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:583: "editing",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:585: "footsteps",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:686: "foley",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:695: "editing",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:697: "footsteps",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:701: "adr",
+C:\Users\hp\jarvis.ai\backend\services\providers\youtube_upload_reconciler.py:18: class YoutubeUploadReconciler:
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py:37: "Foley (filmmaking)",
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py:43: "Foley (filmmaking)",
+C:\Users\hp\jarvis.ai\backend\services\research\evergreen_research_service.py:49: "Foley (filmmaking)",
+C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:64: "editing",
+C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:14: One visual editing beat inside a movie-commentary Short.
+C:\Users\hp\jarvis.ai\backend\services\video\movie_commentary_planner.py:62: "editing, VFX, or storytelling detail."
+C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:3: These profiles encode the editing grammar of the six benchmark
+C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2172: "Downstream editing may split each stage "
+C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2256: "editing",
+C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2483: 6. Line 3 explains the strongest concrete filmmaking, VFX, editing, character, production, or storytelling detail supported by the research.
+C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2489: 12. Do not open by defining filmmaking, cinema, editing, visual effects, sound design, acting, or another broad category.
+C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2492: 15. Put the strongest supported filmmaking, production, character, editing, VFX, sound, or storytelling detail in line 3.
+
+=== VISUAL BEAT PLANNER ===
+"""Visual beat planning for reference-quality Rich V1 Shorts."""
+
+from __future__ import annotations
+
+import re
+
+from dataclasses import dataclass, asdict
+
+from backend.models.generated_content import GeneratedContent
+from backend.services.video.media_query_builder import (
+    MediaQueryBuilder,
+)
+
+
+@dataclass(slots=True)
+class VisualBeat:
+    beat_id: str
+    narration_index: int
+    purpose: str
+    search_query: str
+    preferred_media: list[str]
+    target_duration: float
+    emphasis: str
+
+
+class VisualBeatPlanner:
+    """Convert narration sections into distinct visual beats."""
+
+    MIN_BEATS = 9
+    MAX_BEATS = 16
+
+    def __init__(self) -> None:
+        self.query_builder = MediaQueryBuilder()
+
+    def plan(
+        self,
+        *,
+        content: GeneratedContent,
+        topic: str,
+        genre: str,
+        format_name: str,
+    ) -> list[VisualBeat]:
+
+        lines = list(
+            content.script_lines
+        )
+
+        if not lines:
+            raise RuntimeError(
+                "Cannot build visual beats from empty script."
+            )
+
+        beats: list[VisualBeat] = []
+        used_queries: set[str] = set()
+
+        for narration_index, line in enumerate(
+            lines,
+            start=1,
+        ):
+
+            queries = self._queries_for_line(
+                topic=topic,
+                genre=genre,
+                line=line,
+            )
+
+            # Reference-style story stages:
+            # hook receives the densest visual treatment,
+            # followed by context, escalation, and payoff.
+            beat_allocation = {
+                1: 4,
+                2: 3,
+                3: 3,
+                4: 2,
+            }
+
+            per_line = beat_allocation.get(
+                narration_index,
+                2,
+            )
+
+            selected_queries = []
+
+            for query in queries:
+
+                key = query.lower().strip()
+
+                if (
+                    not key
+                    or key in used_queries
+                ):
+                    continue
+
+                used_queries.add(key)
+                selected_queries.append(
+                    query
+                )
+
+                if len(
+                    selected_queries
+                ) >= per_line:
+                    break
+
+            for local_index, query in enumerate(
+                selected_queries,
+                start=1,
+            ):
+
+                beats.append(
+                    VisualBeat(
+                        beat_id=(
+                            f"n{narration_index}"
+                            f"_b{local_index}"
+                        ),
+                        narration_index=narration_index,
+                        purpose=self._purpose(
+                            narration_index=narration_index,
+                            local_index=local_index,
+                        ),
+                        search_query=query,
+                        preferred_media=(
+                            self._preferred_media(
+                                format_name
+                            )
+                        ),
+                        target_duration=(
+                            self._target_duration(
+                                format_name
+                            )
+                        ),
+                        emphasis=(
+                            "high"
+                            if narration_index == 1
+                            else "normal"
+                        ),
+                    )
+                )
+
+        beats = beats[
+            :self.MAX_BEATS
+        ]
+
+        if len(beats) < self.MIN_BEATS:
+            beats = self._pad_beats(
+                beats=beats,
+                topic=topic,
+                genre=genre,
+                format_name=format_name,
+                used_queries=used_queries,
+            )
+
+        return beats
+
+    def _queries_for_line(
+        self,
+        *,
+        topic: str,
+        genre: str,
+        line: str,
+    ) -> list[str]:
+
+        queries = (
+            self.query_builder.build(
+                topic=topic,
+                genre=genre,
+                narration=line,
+            )
+        )
+
+        ####################################################
+        # Add narration-specific concrete noun phrases.
+        ####################################################
+
+        words = re.findall(
+            r"[A-Za-z0-9]+",
+            line.lower(),
+        )
+
+        stopwords = {
+            "this",
+            "that",
+            "with",
+            "from",
+            "their",
+            "they",
+            "have",
+            "more",
+            "into",
+            "because",
+            "about",
+            "which",
+            "while",
+            "were",
+            "used",
+            "using",
+            "designed",
+            "helps",
+            "help",
+            "proper",
+            "ensure",
+            "extremely",
+        }
+
+        useful = [
+            word
+            for word in words
+            if (
+                len(word) >= 4
+                and word not in stopwords
+            )
+        ]
+
+        phrase_candidates = []
+
+        if len(useful) >= 2:
+            phrase_candidates.append(
+                " ".join(
+                    useful[:2]
+                )
+            )
+
+        if len(useful) >= 3:
+            phrase_candidates.append(
+                " ".join(
+                    useful[:3]
+                )
+            )
+
+        if len(useful) >= 4:
+            phrase_candidates.append(
+                " ".join(
+                    useful[-3:]
+                )
+            )
+
+        output = []
+
+        ####################################################
+        # Prefer concrete alias/media queries over full topic.
+        ####################################################
+
+        for query in [
+            *queries,
+            *phrase_candidates,
+        ]:
+
+            clean = " ".join(
+                str(query).split()
+            ).strip()
+
+            if not clean:
+                continue
+
+            if clean.lower() == topic.lower():
+                continue
+
+            if clean not in output:
+                output.append(clean)
+
+        return output
+
+    @staticmethod
+    def to_dicts(
+        beats: list[VisualBeat],
+    ) -> list[dict]:
+
+        return [
+            asdict(beat)
+            for beat in beats
+        ]
+
+    @staticmethod
+    def _purpose(
+        *,
+        narration_index: int,
+        local_index: int,
+    ) -> str:
+
+        if narration_index == 1:
+            return (
+                "hook_subject"
+                if local_index == 1
+                else "hook_detail"
+            )
+
+        if narration_index in {
+            2,
+            3,
+        }:
+            return (
+                "explanation"
+                if local_index == 1
+                else "supporting_detail"
+            )
+
+        return (
+            "payoff"
+            if local_index == 1
+            else "closing_visual"
+        )
+
+    @staticmethod
+    def _preferred_media(
+        format_name: str,
+    ) -> list[str]:
+
+        if format_name == "movie_clip":
+            return [
+                "authorized_movie_video",
+            ]
+
+        if format_name == "documentary_story":
+            return [
+                "licensed_video",
+                "archive_media",
+                "licensed_image",
+            ]
+
+        return [
+            "licensed_video",
+            "licensed_image",
+            "diagram",
+        ]
+
+    @staticmethod
+    def _target_duration(
+        format_name: str,
+    ) -> float:
+        """
+        Reference-derived editorial cadence.
+
+        These are weighting targets rather than hard final
+        durations. The renderer normalizes them to narration
+        length.
+
+        Faster formats receive shorter visual beats.
+        """
+
+        name = str(
+            format_name or ""
+        ).lower()
+
+        if name in {
+            "cinematic_movie_edit",
+            "movie_clip",
+        }:
+            return 1.55
+
+        if name in {
+            "famous_movie_commentary",
+            "movie_facts",
+        }:
+            return 1.85
+
+        if name in {
+            "luxury_product",
+        }:
+            return 1.90
+
+        if name in {
+            "science_explainer",
+            "technical_explainer",
+        }:
+            return 2.10
+
+        if name in {
+            "business_wealth",
+        }:
+            return 2.05
+
+        if name in {
+            "curiosity_story",
+            "documentary_story",
+        }:
+            return 1.95
+
+        return 2.00
+
+    def _pad_beats(
+        self,
+        *,
+        beats: list[VisualBeat],
+        topic: str,
+        genre: str,
+        format_name: str,
+        used_queries: set[str],
+    ) -> list[VisualBeat]:
+
+        result = list(beats)
+
+        fallback_queries = (
+            self.query_builder.build(
+                topic=topic,
+                genre=genre,
+                narration=topic,
+            )
+        )
+
+        for query in fallback_queries:
+
+            if len(result) >= self.MIN_BEATS:
+                break
+
+            clean = query.strip()
+
+            if (
+                not clean
+                or clean.lower()
+                in used_queries
+                or clean.lower()
+                == topic.lower()
+            ):
+                continue
+
+            used_queries.add(
+                clean.lower()
+            )
+
+            result.append(
+                VisualBeat(
+                    beat_id=(
+                        f"extra_b"
+                        f"{len(result)+1}"
+                    ),
+                    narration_index=(
+                        (len(result) % 4) + 1
+                    ),
+                    purpose="supporting_detail",
+                    search_query=clean,
+                    preferred_media=(
+                        self._preferred_media(
+                            format_name
+                        )
+                    ),
+                    target_duration=(
+                        self._target_duration(
+                            format_name
+                        )
+                    ),
+                    emphasis="normal",
+                )
+            )
+
+        return result
+
+=== VISUAL BEAT SOURCE PLANNER ===
+"""Visual-source planning for Jarvis Rich V1."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, asdict
+
+from backend.services.llm_service import LLMService
+
+
+@dataclass(slots=True)
+class SourceVisualBeat:
+    beat_id: str
+    purpose: str
+    visual_goal: str
+    search_queries: list[str]
+    negative_visuals: list[str]
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+
+class VisualBeatSourcePlanner:
+    """
+    Convert a topic + Rich V1 format into exact visual requirements.
+
+    Unlike the old media resolver, this planner does not search one
+    broad topic repeatedly. It produces specific visual beats first.
+    """
+
+    FORMAT_RULES = {
+        "movie_facts": (
+            "Use recognizable movie-specific moments, production "
+            "footage, VFX breakdown material, actor/director context, "
+            "and exact scene-relevant visuals."
+        ),
+        "cinematic_movie_edit": (
+            "Use visually strong character, action, emotional, wide, "
+            "detail, and payoff shots from the same movie/source."
+        ),
+        "curiosity_story": (
+            "Use real subject/location/event footage. Avoid generic "
+            "stock people or unrelated cinematic filler."
+        ),
+        "luxury_product": (
+            "Use the actual product/model where possible: dial, case, "
+            "movement, materials, craftsmanship, wrist/product shots."
+        ),
+        "science_explainer": (
+            "Use real mechanism-specific visuals: exterior, internal "
+            "parts, process stages, operation, demonstration, diagrams."
+        ),
+        "business_wealth": (
+            "Use real company/founder/product/factory/headquarters/"
+            "historical footage matching the exact claim."
+        ),
+    }
+
+    def __init__(
+        self,
+        *,
+        llm: LLMService | None = None,
+    ) -> None:
+
+        self.llm = (
+            llm
+            if llm is not None
+            else LLMService()
+        )
+
+    async def plan(
+        self,
+        *,
+        topic: str,
+        format_name: str,
+        beat_count: int = 8,
+    ) -> list[SourceVisualBeat]:
+
+        clean_topic = " ".join(
+            str(topic).split()
+        ).strip()
+
+        if not clean_topic:
+            raise ValueError(
+                "Visual beat planning requires a topic."
+            )
+
+        rule = self.FORMAT_RULES.get(
+            format_name,
+            (
+                "Use specific real visuals that directly represent "
+                "the topic. Avoid generic filler."
+            ),
+        )
+
+        prompt = f"""
+You are the visual-source planner for a high-retention vertical Short.
+
+TOPIC:
+{clean_topic}
+
+FORMAT:
+{format_name}
+
+FORMAT VISUAL RULE:
+{rule}
+
+Create exactly {beat_count} distinct visual beats.
+
+Each beat must be visually concrete and searchable.
+
+For every beat return:
+- beat_id
+- purpose
+- visual_goal
+- search_queries: 3 highly specific search queries
+- negative_visuals: 3 descriptions of footage that may look vaguely
+  related but must be rejected
+
+Important:
+- Do not use generic phrases like "cinematic footage".
+- Search queries should identify the actual object, mechanism, person,
+  product, location, scene, or process needed.
+- Beats should progress logically through the topic.
+- For science, show actual mechanism stages.
+- For luxury, show the actual product/details.
+- For movies, show movie-specific or production-specific footage.
+- Avoid generic stock replacements.
+
+Return JSON only:
+
+{{
+  "beats": [
+    {{
+      "beat_id": "b1",
+      "purpose": "hook",
+      "visual_goal": "...",
+      "search_queries": ["...", "...", "..."],
+      "negative_visuals": ["...", "...", "..."]
+    }}
+  ]
+}}
+"""
+
+        raw = await self.llm.chat(
+            [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            json_mode=True,
+        )
+
+        try:
+
+            data = json.loads(
+                raw
+            )
+
+        except json.JSONDecodeError as exc:
+
+            raise RuntimeError(
+                "VisualBeatSourcePlanner returned invalid JSON."
+            ) from exc
+
+        rows = data.get(
+            "beats",
+            []
+        )
+
+        if not isinstance(
+            rows,
+            list,
+        ):
+            raise RuntimeError(
+                "Visual beat planner produced invalid beat list."
+            )
+
+        beats: list[
+            SourceVisualBeat
+        ] = []
+
+        for index, row in enumerate(
+            rows,
+            start=1,
+        ):
+
+            if not isinstance(
+                row,
+                dict,
+            ):
+                continue
+
+            goal = " ".join(
+                str(
+                    row.get(
+                        "visual_goal",
+                        "",
+                    )
+                ).split()
+            ).strip()
+
+            if not goal:
+                continue
+
+            queries = [
+                " ".join(
+                    str(item).split()
+                ).strip()
+                for item in row.get(
+                    "search_queries",
+                    [],
+                )
+                if str(item).strip()
+            ]
+
+            negatives = [
+                " ".join(
+                    str(item).split()
+                ).strip()
+                for item in row.get(
+                    "negative_visuals",
+                    [],
+                )
+                if str(item).strip()
+            ]
+
+            if not queries:
+                queries = [
+                    goal
+                ]
+
+            beats.append(
+                SourceVisualBeat(
+                    beat_id=str(
+                        row.get(
+                            "beat_id",
+                            f"b{index}",
+                        )
+                    ),
+                    purpose=str(
+                        row.get(
+                            "purpose",
+                            "supporting_visual",
+                        )
+                    ),
+                    visual_goal=goal,
+                    search_queries=(
+                        queries[:3]
+                    ),
+                    negative_visuals=(
+                        negatives[:3]
+                    ),
+                )
+            )
+
+        if len(beats) < 4:
+            raise RuntimeError(
+                "Visual beat planner produced too few valid beats."
+            )
+
+        return beats[:beat_count]
+
+=== TEST / VERIFIER MATCHES ===
+
+--- C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:270 ---
+        # LITERAL FOLEY MECHANISMS
+
+--- C:\Users\hp\jarvis.ai\generated\backups\reference_visual_v5_20260919_145734\video_pipeline.py:264 ---
+        # LITERAL FOLEY MECHANISMS
+
+--- C:\Users\hp\jarvis.ai\generated\backups\reference_visual_v5_20260919_145853\video_pipeline.py:264 ---
+        # LITERAL FOLEY MECHANISMS
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_20260919_134056\verify_master_visual_patch.py:249 ---
+        "[PASS] Block 5 preserved."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v2_20260919_134332\jarvis_master_visual_verify_v2.py:229 ---
+        "[PASS] Block 5 preserved."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:164 ---
+        # LITERAL FOLEY MECHANISMS
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:959 ---
+        "[PASS] Reference Visual V5 installed."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:962 ---
+        "[PASS] Literal Foley mechanism queries installed."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:992 ---
+        "[PASS] Block 5 preserved."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\verify_reference_visual_v5.py:163 ---
+        "Editing visual routing failed."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:164 ---
+        # LITERAL FOLEY MECHANISMS
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:959 ---
+        "[PASS] Reference Visual V5 installed."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:962 ---
+        "[PASS] Literal Foley mechanism queries installed."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:992 ---
+        "[PASS] Block 5 preserved."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py:163 ---
+        "Editing visual routing failed."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\benchmark_reference_visual_v5.py:27 ---
+print("JARVIS REFERENCE VISUAL V5 REAL BENCHMARK")
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:170 ---
+        # LITERAL FOLEY MECHANISMS
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:965 ---
+        "[PASS] Reference Visual V5 installed."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:968 ---
+        "[PASS] Literal Foley mechanism queries installed."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:998 ---
+        "[PASS] Block 5 preserved."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:163 ---
+        "Editing visual routing failed."
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\apply_semantic_visual_v4.py:738 ---
+    print("[PASS] Block 5 preserved.")
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\verify_semantic_visual_v4.py:161 ---
+    print("[PASS] Block 5 preserved.")
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141901\apply_semantic_visual_v4.py:738 ---
+    print("[PASS] Block 5 preserved.")
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141901\verify_semantic_visual_v4.py:161 ---
+    print("[PASS] Block 5 preserved.")
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\v4_classmethod_fix_20260919_142748\fix_v4_classmethod.py:159 ---
+    print("[PASS] Block 5 preserved.")
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\repair_v4_decorators.py:174 ---
+    print("[PASS] Block 5 preserved.")
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\repair_decorators.py:150 ---
+    print("[PASS] Block 5 preserved.")
+
+--- C:\Users\hp\jarvis.ai\generated\diagnostics\v4_recovery_20260919_142032\verify_actual_v4.py:138 ---
+print("[PASS] Block 5 preserved.")
+
+=== PYTHON COMPILE CHECK ===
+COMPILE: PASS
+
+=== END ===

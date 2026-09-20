@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Why_Movie_Sound_Effects_Are_Often_Recorded_Separately\\Why_Movie_Sound_Effects_Are_Often_Recorded_Separately.wav",
+    "duration": 36.211519274376414,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_Movie_Sound_Effects_Are_Often_Recorded_Separately_scene_001.wav",
+            "duration": 7.163356009070295,
+            "start_time": 0.0,
+            "end_time": 7.163356009070295,
+            "narration": "Hollywood records sound effects separately to match visuals, enhancing realism and clarity during post-production."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_Movie_Sound_Effects_Are_Often_Recorded_Separately_scene_002.wav",
+            "duration": 9.833650793650794,
+            "start_time": 7.163356009070295,
+            "end_time": 16.99700680272109,
+            "narration": "Sound designers use specialized equipment to capture everything from footsteps to explosions, ensuring precise timing. Sound design is the art and practice of creating auditory elements of media."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_Movie_Sound_Effects_Are_Often_Recorded_Separately_scene_003.wav",
+            "duration": 13.421133786848072,
+            "start_time": 16.99700680272109,
+            "end_time": 30.418140589569163,
+            "narration": "For example, a gunshot is recorded in a soundproof booth, then synced with the scene, adding authenticity. It involves specifying, acquiring and creating audio using production techniques and equipment or software."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_Movie_Sound_Effects_Are_Often_Recorded_Separately_scene_004.wav",
+            "duration": 5.793378684807256,
+            "start_time": 30.418140589569163,
+            "end_time": 36.21151927437642,
+            "narration": "This technique allows editors to adjust each element independently, creating a seamless audio experience."
+        }
+    ],
+    "script": "Hollywood records sound effects separately to match visuals, enhancing realism and clarity during post-production.\nSound designers use specialized equipment to capture everything from footsteps to explosions, ensuring precise timing. Sound design is the art and practice of creating auditory elements of media.\nFor example, a gunshot is recorded in a soundproof booth, then synced with the scene, adding authenticity. It involves specifying, acquiring and creating audio using production techniques and equipment or software.\nThis technique allows editors to adjust each element independently, creating a seamless audio experience."
+}

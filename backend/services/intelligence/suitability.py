@@ -1,4 +1,4 @@
-﻿"""Topic suitability scoring for short-form faceless content."""
+"""Topic suitability scoring for short-form faceless content."""
 
 import re
 

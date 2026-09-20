@@ -1,4 +1,4 @@
-﻿"""Autonomous production scheduler."""
+"""Autonomous production scheduler."""
 
 import asyncio
 import logging
@@ -112,7 +112,13 @@ class ProductionScheduler:
         return True
 
     def enable(self) -> bool:
-        """Enable production only when runtime readiness allows it."""
+        """
+        Enable autonomous production authorization.
+
+        DailyProductionBatch is the sole autonomous scheduling
+        owner. Do not start the legacy interval loop here because
+        that loop does not enforce the four-success daily quota.
+        """
 
         if not self.production_allowed:
             self.enabled = False
@@ -121,12 +127,7 @@ class ProductionScheduler:
         was_enabled = self.enabled
         self.enabled = True
 
-        started = self.start()
-
-        return (
-            not was_enabled
-            or started
-        )
+        return not was_enabled
 
     async def disable(self) -> bool:
         """Disable autonomous production and stop scheduling."""

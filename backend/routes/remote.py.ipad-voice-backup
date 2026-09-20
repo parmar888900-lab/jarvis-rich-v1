@@ -1,0 +1,73 @@
+﻿"""Authenticated natural-language remote control for Jarvis."""
+
+from __future__ import annotations
+
+from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends
+
+from backend.services.commander import Commander
+from backend.services.remote_auth import require_remote_token
+from backend.services.voice.command_executor import VoiceCommandExecutor
+from backend.services.voice.command_router import VoiceCommandRouter
+
+
+router = APIRouter(
+    prefix="/remote",
+    tags=["remote"],
+    dependencies=[Depends(require_remote_token)],
+)
+
+commander = Commander()
+command_router = VoiceCommandRouter()
+command_executor = VoiceCommandExecutor(commander)
+
+
+class RemoteCommandRequest(BaseModel):
+    """Natural-language command submitted by a remote client."""
+
+    command: str = Field(
+        ...,
+        min_length=1,
+        max_length=500,
+    )
+
+
+@router.post("/command")
+async def remote_command(
+    payload: RemoteCommandRequest,
+):
+    """Parse and safely execute one natural-language command."""
+
+    parsed = command_router.parse(
+        payload.command
+    )
+
+    if parsed.status != "ready":
+        return {
+            "status": parsed.status,
+            "command": parsed.transcript,
+            "agent": parsed.agent,
+            "task": parsed.task,
+            "requires_confirmation": (
+                parsed.requires_confirmation
+            ),
+            "reason": parsed.reason,
+        }
+
+    execution = await command_executor.execute(
+        parsed,
+        confirmed=False,
+    )
+
+    return {
+        "status": execution.status,
+        "command": parsed.transcript,
+        "command_id": execution.command_id,
+        "agent": execution.agent,
+        "task": execution.task,
+        "requires_confirmation": (
+            parsed.requires_confirmation
+        ),
+        "result": execution.result,
+        "reason": execution.reason,
+    }

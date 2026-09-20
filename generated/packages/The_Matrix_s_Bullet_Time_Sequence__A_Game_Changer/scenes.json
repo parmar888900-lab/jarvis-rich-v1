@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "In 1999, The Matrix introduced 'bullet time', a technique that allowed the action to slow down while the camera moved at normal speed.",
+        "image_prompt": "In 1999, The Matrix introduced 'bullet time', a technique that allowed the action to slow down while the camera moved at normal speed.",
+        "duration": 7.685804988662132,
+        "start_time": 0.0,
+        "end_time": 7.685804988662132
+    },
+    {
+        "narration": "This sequence was designed to illustrate characters' ability to manipulate time and space, a core theme of the film.",
+        "image_prompt": "This sequence was designed to illustrate characters' ability to manipulate time and space, a core theme of the film.",
+        "duration": 5.758548752834467,
+        "start_time": 7.685804988662132,
+        "end_time": 13.444353741496599
+    },
+    {
+        "narration": "The Wachowskis proposed the effect in their screenplay, and it became a defining visual element of the movie, influencing future action sequences.",
+        "image_prompt": "The Wachowskis proposed the effect in their screenplay, and it became a defining visual element of the movie, influencing future action sequences.",
+        "duration": 8.417233560090702,
+        "start_time": 13.444353741496599,
+        "end_time": 21.8615873015873
+    },
+    {
+        "narration": "The bullet time technique showcased innovative use of still images and algorithms, creating a revolutionary visual effect that transformed action scenes.",
+        "image_prompt": "The bullet time technique showcased innovative use of still images and algorithms, creating a revolutionary visual effect that transformed action scenes.",
+        "duration": 8.231473922902495,
+        "start_time": 21.8615873015873,
+        "end_time": 30.093061224489794
+    }
+]

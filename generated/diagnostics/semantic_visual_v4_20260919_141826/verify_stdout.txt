@@ -1,0 +1,10 @@
+[PASS] V4 AST verification.
+[PASS] V3 acquisition constants preserved.
+[PASS] V4 semantic helpers verified.
+[PASS] Foley-specific query logic verified.
+[PASS] Generic-media penalties verified.
+[PASS] Semantic threshold verified.
+[PASS] Duplicate controls preserved.
+[PASS] Rights gate preserved.
+[PASS] Block 5 preserved.
+[PASS] Research grounding preserved.

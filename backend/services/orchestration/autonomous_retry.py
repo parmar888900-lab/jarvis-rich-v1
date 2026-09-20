@@ -1,4 +1,4 @@
-﻿"""Retry policy for autonomous production."""
+"""Retry policy for autonomous production."""
 
 from dataclasses import dataclass
 

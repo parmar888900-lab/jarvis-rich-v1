@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_the_Sce\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_the_Sce.wav",
+    "duration": 28.53732426303855,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_the_Sce_scene_001.wav",
+            "duration": 7.058866213151927,
+            "start_time": 0.0,
+            "end_time": 7.058866213151927,
+            "narration": "Imagine stepping into a world of endless possibilities\u2014actors perform in front of a green screen, bringing stories to life."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_the_Sce_scene_002.wav",
+            "duration": 6.292607709750567,
+            "start_time": 7.058866213151927,
+            "end_time": 13.351473922902494,
+            "narration": "Behind the scenes, chroma keying technology seamlessly replaces the green background with any desired image or video."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_the_Sce_scene_003.wav",
+            "duration": 7.9412244897959186,
+            "start_time": 13.351473922902494,
+            "end_time": 21.292698412698414,
+            "narration": "This technique, widely used in films and broadcasts, allows for versatile and cost-effective visual effects without the need for complex set designs."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_the_Sce_scene_004.wav",
+            "duration": 7.244625850340136,
+            "start_time": 21.292698412698414,
+            "end_time": 28.53732426303855,
+            "narration": "From weather forecasts to fantasy scenes, green screens transform imagination into reality, making movie magic happen one frame at a time."
+        }
+    ],
+    "script": "Imagine stepping into a world of endless possibilities\u2014actors perform in front of a green screen, bringing stories to life.\nBehind the scenes, chroma keying technology seamlessly replaces the green background with any desired image or video.\nThis technique, widely used in films and broadcasts, allows for versatile and cost-effective visual effects without the need for complex set designs.\nFrom weather forecasts to fantasy scenes, green screens transform imagination into reality, making movie magic happen one frame at a time."
+}

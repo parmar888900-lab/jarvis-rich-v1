@@ -1,4 +1,4 @@
-﻿"""Central trend intelligence engine."""
+"""Central trend intelligence engine."""
 
 from collections import defaultdict
 

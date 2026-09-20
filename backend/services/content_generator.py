@@ -4,6 +4,12 @@ import re
 
 from backend.models.generated_content import GeneratedContent
 from backend.services.llm_service import LLMService
+from backend.services.intelligence.claim_evidence_validator import (
+    ClaimEvidenceValidator,
+)
+from backend.services.intelligence.semantic_claim_evidence_validator import (
+    SemanticClaimEvidenceValidator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -11,10 +17,30 @@ logger = logging.getLogger(__name__)
 class ContentGenerator:
 
     MIN_WORDS = 75
-    MAX_WORDS = 105
+    MAX_WORDS = 110
 
     def __init__(self):
         self.llm = LLMService()
+        self.claim_evidence_validator = ClaimEvidenceValidator()
+        self.semantic_claim_evidence_validator = (
+            SemanticClaimEvidenceValidator(
+                llm=self.llm
+            )
+        )
+
+
+    @staticmethod
+    def _is_movie_fact_generation(
+        *,
+        format_name: str,
+        reference_format: str,
+    ) -> bool:
+        return (
+            str(format_name).strip()
+            == "famous_movie_commentary"
+            or str(reference_format).strip()
+            == "movie_facts"
+        )
 
     async def generate(
         self,
@@ -31,6 +57,48 @@ class ContentGenerator:
             "research",
             "",
         )
+
+        content_format = trend.get(
+            "content_format",
+            {},
+        )
+
+        if not isinstance(
+            content_format,
+            dict,
+        ):
+            content_format = {}
+
+        reference_profile = (
+            content_format.get(
+                "reference_profile"
+            )
+            or {}
+        )
+
+        reference_format = str(
+            reference_profile.get(
+                "format_name",
+                content_format.get(
+                    "format_name",
+                    "",
+                ),
+            )
+        ).strip()
+
+        format_name = str(
+            content_format.get(
+                "format_name",
+                "visual_explainer",
+            )
+        ).strip()
+
+        movie_title = str(
+            trend.get(
+                "movie_title",
+                "",
+            )
+        ).strip()
 
         if isinstance(research, list):
             research = "\n".join(
@@ -52,11 +120,15 @@ class ContentGenerator:
             self._build_messages(
                 topic=topic,
                 research=research,
+                format_name=format_name,
+                movie_title=movie_title,
+                reference_profile=reference_profile,
             ),
             json_mode=True,
         )
 
         data = self._extract_json(raw)
+
 
         ####################################################
         # Attempt 2 - controlled regeneration
@@ -80,13 +152,17 @@ class ContentGenerator:
                     research=research,
                     previous_words=previous_words,
                     retry=True,
-                ),
+                    format_name=format_name,
+                    movie_title=movie_title,
+                    reference_profile=reference_profile,
+            ),
                 json_mode=True,
             )
 
             retry_data = self._extract_json(
                 retry_raw
             )
+
 
             if self._is_valid_content(
                 retry_data
@@ -98,15 +174,51 @@ class ContentGenerator:
                 )
 
             else:
-                logger.warning(
-                    "Content regeneration failed "
-                    "(%s words).",
-                    self._word_count(
-                        retry_data
-                    ),
+                retry_words = self._word_count(
+                    retry_data
                 )
 
-                data = {}
+                logger.warning(
+                    "Content regeneration failed "
+                    "(%s words). Attempting grounded "
+                    "length recovery.",
+                    retry_words,
+                )
+
+                if self._is_movie_fact_generation(
+                    format_name=format_name,
+                    reference_format=reference_format,
+                ):
+
+                    recovered = (
+                        await self._recover_movie_generation_length(
+                            data=retry_data,
+                            topic=topic,
+                            movie_title=movie_title,
+                            research=research,
+                        )
+                    )
+
+                else:
+
+                    recovered = (
+                        self._recover_generation_length(
+                            data=retry_data,
+                            research=research,
+                        )
+                    )
+
+                if recovered is not None:
+                    data = recovered
+
+                    logger.info(
+                        "Grounded generation length "
+                        "recovery succeeded (%s words).",
+                        self._word_count(data),
+                    )
+
+                else:
+                    data = {}
 
         ####################################################
         # Emergency fallback
@@ -152,13 +264,253 @@ class ContentGenerator:
             if str(line).strip()
         ]
 
-        while len(lines) < 4:
-            lines.append(
-                "Follow for more updates "
-                "as this story develops."
+        if len(lines) != 4:
+            raise RuntimeError(
+                "Generated content normalization produced "
+                f"{len(lines)} script lines; expected exactly 4."
             )
 
         lines = lines[:4]
+
+        if format_name == "famous_movie_commentary":
+
+            # RICH_V1_LEXICAL_REPAIR_BRIDGE_V6_3_5
+            #
+            # Lexical evidence failure is repairable evidence,
+            # not an automatic production-fatal condition.
+            #
+            # Convert lexical line results into the same narrow
+            # failure shape consumed by the existing targeted
+            # semantic repair engine. The repair engine itself
+            # re-runs BOTH lexical and semantic validators before
+            # accepting any replacement.
+            evidence_ids = data.get(
+                "evidence_ids",
+                [],
+            )
+
+            evidence_validation = (
+                self.claim_evidence_validator.validate(
+                    script_lines=lines,
+                    evidence_ids=evidence_ids,
+                    research=research,
+                )
+            )
+
+            if not evidence_validation.valid:
+
+                lexical_line_results = []
+
+                for item in evidence_validation.line_results:
+                    line_number = int(
+                        item.get("line", 0) or 0
+                    )
+
+                    line_valid = (
+                        item.get("valid") is True
+                    )
+
+                    lexical_line_results.append(
+                        {
+                            "line": line_number,
+                            "supported": line_valid,
+                            "unsupported_claims": (
+                                []
+                                if line_valid
+                                else [
+                                    "Rewrite this line so its "
+                                    "factual wording directly "
+                                    "matches the cited evidence. "
+                                    "Preserve the intended role "
+                                    "of the line without adding "
+                                    "new facts."
+                                ]
+                            ),
+                            "evidence_ids": item.get(
+                                "evidence_ids",
+                                [],
+                            ),
+                            "shared_terms": item.get(
+                                "shared_terms",
+                                [],
+                            ),
+                        }
+                    )
+
+                class _LexicalRepairValidation:
+                    def __init__(
+                        self,
+                        *,
+                        line_results,
+                        issues,
+                    ):
+                        self.valid = False
+                        self.line_results = line_results
+                        self.issues = list(issues)
+
+                    def to_dict(self):
+                        return {
+                            "valid": self.valid,
+                            "issues": self.issues,
+                            "line_results": self.line_results,
+                        }
+
+                lexical_repair_validation = (
+                    _LexicalRepairValidation(
+                        line_results=lexical_line_results,
+                        issues=evidence_validation.issues,
+                    )
+                )
+
+                logger.warning(
+                    "Movie lexical evidence validation failed: %s. "
+                    "Attempting targeted grounded repair.",
+                    evidence_validation.issues,
+                )
+
+                repaired_lines = (
+                    await self._repair_movie_semantic_failures(
+                        script_lines=lines,
+                        evidence_ids=evidence_ids,
+                        research=research,
+                        semantic_validation=(
+                            lexical_repair_validation
+                        ),
+                        topic=topic,
+                        movie_title=movie_title,
+                    )
+                )
+
+                if repaired_lines is None:
+                    raise RuntimeError(
+                        "Movie script failed lexical evidence "
+                        "validation and targeted grounded repair "
+                        "failed: "
+                        f"{evidence_validation.to_dict()}"
+                    )
+
+                lines = repaired_lines
+
+                data["script_lines"] = list(
+                    repaired_lines
+                )
+
+                # Re-run lexical validation explicitly at the
+                # main-pipeline boundary. The repair function
+                # already does this internally; this second check
+                # keeps the outer contract fail-closed.
+                evidence_validation = (
+                    self.claim_evidence_validator.validate(
+                        script_lines=lines,
+                        evidence_ids=evidence_ids,
+                        research=research,
+                    )
+                )
+
+                if not evidence_validation.valid:
+                    raise RuntimeError(
+                        "Movie lexical evidence repair returned "
+                        "content that still failed validation: "
+                        f"{evidence_validation.issues}"
+                    )
+
+                logger.info(
+                    "Targeted lexical movie repair succeeded."
+                )
+
+            semantic_validation = (
+                await self.semantic_claim_evidence_validator.validate(
+                    script_lines=lines,
+                    evidence_ids=evidence_ids,
+                    research=research,
+                )
+            )
+
+            if not semantic_validation.valid:
+
+                repaired_lines = (
+                    await self._repair_movie_semantic_failures(
+                        script_lines=lines,
+                        evidence_ids=evidence_ids,
+                        research=research,
+                        semantic_validation=semantic_validation,
+                        topic=topic,
+                        movie_title=movie_title,
+                    )
+                )
+
+                if repaired_lines is None:
+                    raise RuntimeError(
+                        "Movie script failed semantic evidence "
+                        "validation and targeted repair failed: "
+                        f"{semantic_validation.to_dict()}"
+                    )
+
+                lines = repaired_lines
+
+                data["script_lines"] = list(
+                    repaired_lines
+                )
+
+                # Fail closed at outer boundary after semantic
+                # repair as well.
+                final_lexical_validation = (
+                    self.claim_evidence_validator.validate(
+                        script_lines=lines,
+                        evidence_ids=evidence_ids,
+                        research=research,
+                    )
+                )
+
+                if not final_lexical_validation.valid:
+                    raise RuntimeError(
+                        "Movie semantic repair regressed lexical "
+                        "evidence validation: "
+                        f"{final_lexical_validation.issues}"
+                    )
+
+                final_semantic_validation = (
+                    await self.semantic_claim_evidence_validator.validate(
+                        script_lines=lines,
+                        evidence_ids=evidence_ids,
+                        research=research,
+                    )
+                )
+
+                if not final_semantic_validation.valid:
+                    raise RuntimeError(
+                        "Movie semantic repair returned content "
+                        "that still failed semantic validation: "
+                        f"{final_semantic_validation.to_dict()}"
+                    )
+
+                logger.info(
+                    "Targeted semantic movie repair succeeded."
+                )
+
+
+        ####################################################
+        # Final fail-closed script-length guarantee
+        ####################################################
+
+        final_word_count = sum(
+            len(line.split())
+            for line in lines
+        )
+
+        if not (
+            self.MIN_WORDS
+            <= final_word_count
+            <= self.MAX_WORDS
+        ):
+            raise RuntimeError(
+                "Final generated script failed length "
+                "validation after all generation and "
+                "repair stages: "
+                f"{final_word_count} words "
+                f"(required {self.MIN_WORDS}-"
+                f"{self.MAX_WORDS})."
+            )
 
         return GeneratedContent(
             title=title,
@@ -167,6 +519,14 @@ class ContentGenerator:
             metadata={
                 "source": topic,
                 "generator": "Jarvis Rich V1",
+                "premise_audit": self.evaluate_premise_strength(topic, reference_format),
+                "content_format": format_name,
+                "movie_title": movie_title,
+                "evidence_ids": (
+                    data.get("evidence_ids", [])
+                    if format_name == "famous_movie_commentary"
+                    else []
+                ),
                 "word_count": sum(
                     len(line.split())
                     for line in lines
@@ -177,6 +537,1369 @@ class ContentGenerator:
     ########################################################
     # Content repair
     ########################################################
+
+    async def _recover_movie_generation_length(
+        self,
+        *,
+        data: dict,
+        topic: str,
+        movie_title: str,
+        research: str,
+    ) -> dict | None:
+        """
+        Recover short grounded movie-facts scripts.
+
+        The research string may contain grounded facts without
+        explicit evidence labels. Recovery therefore creates a
+        deterministic local evidence contract from those facts.
+
+        Validation remains fail-closed.
+        """
+
+        if not self._is_structurally_valid_content(
+            data
+        ):
+            return None
+
+        current_words = self._word_count(
+            data
+        )
+
+        if (
+            self.MIN_WORDS
+            <= current_words
+            <= self.MAX_WORDS
+        ):
+            return data
+
+        if current_words > self.MAX_WORDS:
+            return None
+
+        # -------------------------------------------------
+        # Build deterministic evidence units.
+        #
+        # Existing labelled evidence is preserved when
+        # available. Otherwise grounded research sentences
+        # become E1, E2, ... locally for this recovery.
+        # -------------------------------------------------
+
+        labelled_matches = re.findall(
+            r"\[(E\d+)\]\s*([^\n]+)",
+            research,
+            flags=re.IGNORECASE,
+        )
+
+        evidence_map = {}
+
+        for evidence_id, text in labelled_matches:
+
+            normalized = (
+                str(evidence_id)
+                .strip()
+                .upper()
+            )
+
+            cleaned = " ".join(
+                str(text).split()
+            ).strip()
+
+            if normalized and cleaned:
+                evidence_map[
+                    normalized
+                ] = cleaned
+
+        if not evidence_map:
+
+            # Research supplied by EvergreenResearch currently
+            # arrives as grounded prose rather than E-labelled
+            # evidence. Split it conservatively into factual
+            # sentence-sized evidence units.
+
+            raw_sentences = re.split(
+                r"(?<=[.!?])\s+",
+                str(research),
+            )
+
+            evidence_units = []
+
+            banned_fragments = (
+                '"topic"',
+                '"summary"',
+                '"facts"',
+                '"keywords"',
+                '"sources"',
+                '"score"',
+                '"category"',
+                '"url"',
+                '"confidence"',
+            )
+
+            for sentence in raw_sentences:
+
+                cleaned = " ".join(
+                    sentence.split()
+                ).strip()
+
+                if not cleaned:
+                    continue
+
+                lower = cleaned.lower()
+
+                if any(
+                    fragment in lower
+                    for fragment in banned_fragments
+                ):
+                    # JSON/key scaffolding is not evidence.
+                    # Content following a key can still appear
+                    # in later sentence units.
+                    continue
+
+                words = cleaned.split()
+
+                if len(words) < 5:
+                    continue
+
+                if cleaned in evidence_units:
+                    continue
+
+                evidence_units.append(
+                    cleaned
+                )
+
+                if len(evidence_units) >= 12:
+                    break
+
+            # If the serialized research format caused the
+            # conservative pass to reject everything, perform
+            # one bounded textual extraction rather than
+            # inventing evidence.
+            if not evidence_units:
+
+                candidate_text = re.sub(
+                    r'https?://\S+',
+                    ' ',
+                    str(research),
+                )
+
+                candidate_text = re.sub(
+                    r'["{}\[\],:]',
+                    ' ',
+                    candidate_text,
+                )
+
+                candidate_text = " ".join(
+                    candidate_text.split()
+                )
+
+                raw_sentences = re.split(
+                    r"(?<=[.!?])\s+",
+                    candidate_text,
+                )
+
+                for sentence in raw_sentences:
+
+                    cleaned = " ".join(
+                        sentence.split()
+                    ).strip()
+
+                    if len(
+                        cleaned.split()
+                    ) < 5:
+                        continue
+
+                    if cleaned in evidence_units:
+                        continue
+
+                    evidence_units.append(
+                        cleaned
+                    )
+
+                    if len(evidence_units) >= 12:
+                        break
+
+            for index, text in enumerate(
+                evidence_units,
+                start=1,
+            ):
+                evidence_map[
+                    f"E{index}"
+                ] = text
+
+        if not evidence_map:
+            logger.warning(
+                "Movie length recovery blocked: "
+                "no grounded evidence units could be derived."
+            )
+            return None
+
+        allowed_evidence_ids = list(
+            evidence_map.keys()
+        )
+
+        allowed_evidence_set = set(
+            allowed_evidence_ids
+        )
+
+        allowed_evidence_text = ", ".join(
+            allowed_evidence_ids
+        )
+
+        evidence_packet = "\n".join(
+            f"[{evidence_id}] {text}"
+            for evidence_id, text
+            in evidence_map.items()
+        )
+
+        current_candidate = data
+
+        # Rich V1 sprint: one decisive grounded recovery attempt.
+        # The normal generation + regeneration have already run.
+        # Keep every existing structural, length, evidence, and
+        # claim-evidence validation gate below unchanged.
+        for attempt in range(1, 2):
+
+            candidate_words = self._word_count(
+                current_candidate
+            )
+
+            current_json = json.dumps(
+                current_candidate,
+                indent=2,
+            )
+
+            missing_words = max(
+                0,
+                85 - candidate_words,
+            )
+
+            if attempt == 1:
+                correction = f"""
+The current narration has {candidate_words} words and
+is too short.
+
+Rewrite the ENTIRE narration, not just the ending.
+
+HARD LENGTH CONTRACT:
+- exactly four narration lines
+- line 1: 22-24 words
+- line 2: 22-24 words
+- line 3: 22-24 words
+- line 4: 22-24 words
+- target 88-96 narration words total
+- absolute accepted range remains 85-100 words
+- no line may exceed 29 words
+
+The current script needs approximately
+{missing_words} additional useful words.
+
+Distribute added information across all four lines.
+Do not simply append filler to the final line.
+
+Before responding:
+1. Count each narration line separately.
+2. Ensure every line contains 22-24 words.
+3. Count all four narration lines together.
+4. Ensure the total is 88-96 words.
+5. If any count is wrong, rewrite before returning.
+
+Every added claim must be directly supported by the
+evidence packet below.
+
+Do not invent facts.
+Do not add generic praise.
+Do not add a CTA.
+Do not repeat the same fact in different wording.
+"""
+            else:
+                correction = f"""
+THIS IS RECOVERY ATTEMPT {attempt} OF 3.
+
+The previous candidate failed validation.
+
+It contains {candidate_words} narration words.
+
+Return 85-100 narration words.
+Use exactly four narration lines.
+Aim for 21-25 words per line.
+
+Count the words before responding.
+Do not add filler.
+Do not invent facts.
+Use only the allowed evidence IDs.
+"""
+
+            messages = [
+                {
+                    "role": "system",
+                    "content": f"""
+You are repairing a grounded movie-facts
+YouTube Short.
+
+Return ONLY one JSON object.
+
+Required keys:
+"title"
+"hashtags"
+"script_lines"
+"evidence_ids"
+
+MANDATORY:
+
+- exactly four script_lines
+- exactly four evidence_ids lists
+- target 22-24 words in EACH narration line
+- target 88-96 narration words total
+- absolute accepted range: 85-100 narration words
+- no narration line over 29 words
+- count each line and the total before responding
+- natural spoken vertical-video narration
+- line 1 creates the information gap
+- line 2 gives only necessary context
+- line 3 gives the strongest supported mechanism,
+  example, action, contrast, number, or consequence
+- line 4 resolves the opening gap
+- every line adds new information
+- no generic CTA
+- no filler
+- no invented facts
+- evidence labels never appear inside narration
+
+The ONLY legal evidence IDs are:
+
+{allowed_evidence_text}
+
+Every narration line must cite at least one legal
+evidence ID.
+
+Never create another ID.
+
+{correction}
+""",
+                },
+                {
+                    "role": "user",
+                    "content": f"""
+MOVIE:
+{movie_title}
+
+TOPIC:
+{topic}
+
+CURRENT SCRIPT:
+{current_json}
+
+GROUNDED EVIDENCE PACKET:
+{evidence_packet}
+
+Produce the corrected script.
+
+Return JSON only.
+""",
+                },
+            ]
+
+            raw = await self.llm.chat(
+                messages,
+                json_mode=True,
+            )
+
+            recovered = self._extract_json(
+                raw
+            )
+
+            if not isinstance(
+                recovered,
+                dict,
+            ):
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "returned invalid JSON.",
+                    attempt,
+                )
+                continue
+
+            if not self._is_structurally_valid_content(
+                recovered
+            ):
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "failed structural validation.",
+                    attempt,
+                )
+
+                current_candidate = recovered
+                continue
+
+            recovered_words = self._word_count(
+                recovered
+            )
+
+            # RICH_V1_MOVIE_STRUCTURAL_CONVERGENCE_V6_3_6
+            #
+            # Word-count compliance is treated as a measured
+            # convergence problem, not a one-shot prompt problem.
+            #
+            # Up to four bounded normalization passes are allowed.
+            # Each pass measures the ACTUAL returned word count and
+            # chooses EXPAND or COMPACT for the next pass.
+            #
+            # No candidate bypasses the unchanged structural,
+            # evidence-ID, claim-evidence, or leakage validators
+            # below.
+            if not (
+                self.MIN_WORDS
+                <= recovered_words
+                <= self.MAX_WORDS
+            ):
+                normalization_candidate = recovered
+
+                for normalization_attempt in range(1, 5):
+                    normalization_words = self._word_count(
+                        normalization_candidate
+                    )
+
+                    normalization_lines = [
+                        str(line).strip()
+                        for line in normalization_candidate.get(
+                            "script_lines",
+                            [],
+                        )
+                        if str(line).strip()
+                    ]
+
+                    line_word_counts = [
+                        len(line.split())
+                        for line in normalization_lines
+                    ]
+
+                    structure_valid = (
+                        len(normalization_lines) == 4
+                        and all(
+                            count <= 29
+                            for count in line_word_counts
+                        )
+                    )
+
+                    if (
+                        self.MIN_WORDS
+                        <= normalization_words
+                        <= self.MAX_WORDS
+                        and structure_valid
+                    ):
+                        recovered = normalization_candidate
+                        recovered_words = normalization_words
+                        break
+
+                    if (
+                        self.MIN_WORDS
+                        <= normalization_words
+                        <= self.MAX_WORDS
+                        and not structure_valid
+                    ):
+                        normalization_mode = "REBALANCE"
+
+                        mode_instruction = f"""
+The TOTAL narration length is acceptable, but
+the four-line structure is not.
+
+ACTUAL TOTAL WORD COUNT:
+{normalization_words}
+
+ACTUAL LINE WORD COUNTS:
+{line_word_counts}
+
+REBALANCE the SAME grounded information across
+exactly four narration lines.
+
+HARD REQUIREMENTS:
+- exactly four lines
+- NO line may exceed 29 words
+- target roughly 21-24 words per line
+- preserve approximately the same total length
+- preserve each line's cited evidence
+- do not add any factual claim
+- do not remove the core explanation
+"""
+
+                    elif normalization_words < self.MIN_WORDS:
+                        normalization_mode = "EXPAND"
+                        word_delta = (
+                            90 - normalization_words
+                        )
+
+                        mode_instruction = f"""
+The current narration is TOO SHORT.
+
+ACTUAL CURRENT WORD COUNT:
+{normalization_words}
+
+TARGET:
+90 narration words.
+
+You need approximately {word_delta} MORE words.
+
+Expand the EXISTING supported explanation.
+Add concrete detail only when supported by the
+evidence packet.
+
+Do not merely append a long ending.
+Distribute useful additions across the four lines.
+"""
+
+                    else:
+                        normalization_mode = "COMPACT"
+                        word_delta = (
+                            normalization_words - 90
+                        )
+
+                        mode_instruction = f"""
+The current narration is TOO LONG.
+
+ACTUAL CURRENT WORD COUNT:
+{normalization_words}
+
+TARGET:
+90 narration words.
+
+Remove approximately {word_delta} words.
+
+Delete repetition, weak modifiers, redundant
+phrasing, and unnecessary setup.
+
+Preserve the supported factual meaning.
+"""
+
+                    logger.warning(
+                        "Movie length convergence pass %s/4: "
+                        "%s words -> %s toward 90.",
+                        normalization_attempt,
+                        normalization_words,
+                        normalization_mode.lower(),
+                    )
+
+                    candidate_json = json.dumps(
+                        normalization_candidate,
+                        indent=2,
+                    )
+
+                    normalization_messages = [
+                        {
+                            "role": "system",
+                            "content": f"""
+You are a precision length editor for a grounded
+movie YouTube Short.
+
+Your ONLY job is to move an existing grounded
+script toward the required narration length.
+
+MODE:
+{normalization_mode}
+
+{mode_instruction}
+
+RETURN ONLY ONE JSON OBJECT.
+
+Required keys:
+"title"
+"hashtags"
+"script_lines"
+"evidence_ids"
+
+NON-NEGOTIABLE STRUCTURE:
+- exactly four script_lines
+- exactly four evidence_ids lists
+- keep the same four-part story progression:
+  1. hook
+  2. context
+  3. mechanism / strongest explanation
+  4. payoff
+
+LENGTH:
+- TARGET TOTAL: 90 narration words
+- ACCEPTABLE TOTAL: 85-100 narration words
+- ideal line length: 21-24 words
+- absolute maximum per line: 29 words
+
+GROUNDING:
+- use ONLY facts supported by the evidence packet
+- use ONLY these legal evidence IDs:
+  {allowed_evidence_text}
+- every line must retain at least one legal
+  evidence ID
+- never invent an evidence ID
+- never invent a factual claim
+- never put evidence labels inside narration
+
+STYLE:
+- natural spoken narration
+- no CTA
+- no filler
+- no repeated fact
+- no generic praise
+- no meta commentary
+
+IMPORTANT:
+The ACTUAL measured word count from Python is
+{normalization_words}.
+
+Do not trust the previous prompt's estimate.
+Edit specifically from {normalization_words}
+toward 90 words.
+
+Return JSON only.
+""",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"""
+MOVIE:
+{movie_title}
+
+TOPIC:
+{topic}
+
+CURRENT GROUNDED SCRIPT:
+{candidate_json}
+
+GROUNDED EVIDENCE PACKET:
+{evidence_packet}
+
+Perform the requested {normalization_mode}
+operation.
+
+Return JSON only.
+""",
+                        },
+                    ]
+
+                    normalization_raw = await self.llm.chat(
+                        normalization_messages,
+                        json_mode=True,
+                    )
+
+                    normalized = self._extract_json(
+                        normalization_raw
+                    )
+
+                    if not isinstance(normalized, dict):
+                        logger.warning(
+                            "Movie length convergence pass %s "
+                            "returned invalid JSON.",
+                            normalization_attempt,
+                        )
+                        continue
+
+                    if not self._is_structurally_valid_content(
+                        normalized
+                    ):
+                        logger.warning(
+                            "Movie length convergence pass %s "
+                            "returned structurally invalid content.",
+                            normalization_attempt,
+                        )
+                        continue
+
+                    new_words = self._word_count(
+                        normalized
+                    )
+
+                    logger.warning(
+                        "Movie length convergence pass %s "
+                        "result: %s -> %s words.",
+                        normalization_attempt,
+                        normalization_words,
+                        new_words,
+                    )
+
+                    normalization_candidate = normalized
+
+                    new_lines = [
+                        str(line).strip()
+                        for line in normalized.get(
+                            "script_lines",
+                            [],
+                        )
+                        if str(line).strip()
+                    ]
+
+                    new_line_word_counts = [
+                        len(line.split())
+                        for line in new_lines
+                    ]
+
+                    new_structure_valid = (
+                        len(new_lines) == 4
+                        and all(
+                            count <= 29
+                            for count in new_line_word_counts
+                        )
+                    )
+
+                    if (
+                        self.MIN_WORDS
+                        <= new_words
+                        <= self.MAX_WORDS
+                        and new_structure_valid
+                    ):
+                        recovered = normalized
+                        recovered_words = new_words
+
+                        logger.info(
+                            "Movie structural convergence reached "
+                            "valid range on pass %s: %s words; "
+                            "lines=%s.",
+                            normalization_attempt,
+                            new_words,
+                            new_line_word_counts,
+                        )
+                        break
+
+                    if (
+                        self.MIN_WORDS
+                        <= new_words
+                        <= self.MAX_WORDS
+                        and not new_structure_valid
+                    ):
+                        logger.warning(
+                            "Movie convergence pass %s has valid "
+                            "total length but invalid line structure: "
+                            "%s words; lines=%s. Rebalancing.",
+                            normalization_attempt,
+                            new_words,
+                            new_line_word_counts,
+                        )
+
+                else:
+                    # Preserve final candidate for diagnostics,
+                    # but the unchanged hard gate below will reject
+                    # it if it remains outside 85-100.
+                    recovered = normalization_candidate
+                    recovered_words = self._word_count(
+                        normalization_candidate
+                    )
+
+            if not (
+                self.MIN_WORDS
+                <= recovered_words
+                <= self.MAX_WORDS
+            ):
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "failed length validation: %s words.",
+                    attempt,
+                    recovered_words,
+                )
+
+                current_candidate = recovered
+                continue
+
+            recovered_lines = [
+                str(line).strip()
+                for line in recovered.get(
+                    "script_lines",
+                    []
+                )
+            ]
+
+            if len(recovered_lines) != 4:
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "did not return four lines.",
+                    attempt,
+                )
+
+                current_candidate = recovered
+                continue
+
+            if any(
+                len(line.split()) > 29
+                for line in recovered_lines
+            ):
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "contains a line over 29 words.",
+                    attempt,
+                )
+
+                current_candidate = recovered
+                continue
+
+            raw_ids = recovered.get(
+                "evidence_ids",
+                [],
+            )
+
+            if (
+                not isinstance(raw_ids, list)
+                or len(raw_ids) != 4
+            ):
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "returned invalid evidence structure.",
+                    attempt,
+                )
+
+                current_candidate = recovered
+                continue
+
+            sanitized = []
+            unknown = []
+
+            for line_ids in raw_ids:
+
+                if not isinstance(
+                    line_ids,
+                    list,
+                ):
+                    unknown.append(
+                        "<invalid-list>"
+                    )
+                    sanitized.append([])
+                    continue
+
+                clean_line = []
+
+                for evidence_id in line_ids:
+
+                    normalized = (
+                        str(evidence_id)
+                        .strip()
+                        .upper()
+                    )
+
+                    if (
+                        normalized
+                        in allowed_evidence_set
+                    ):
+                        if (
+                            normalized
+                            not in clean_line
+                        ):
+                            clean_line.append(
+                                normalized
+                            )
+                    else:
+                        unknown.append(
+                            normalized
+                        )
+
+                sanitized.append(
+                    clean_line
+                )
+
+            if unknown:
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "rejected unknown evidence IDs: %s",
+                    attempt,
+                    sorted(set(unknown)),
+                )
+
+                recovered[
+                    "evidence_ids"
+                ] = sanitized
+
+                current_candidate = recovered
+                continue
+
+            if any(
+                not ids
+                for ids in sanitized
+            ):
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "left a line without evidence.",
+                    attempt,
+                )
+
+                recovered[
+                    "evidence_ids"
+                ] = sanitized
+
+                current_candidate = recovered
+                continue
+
+            recovered[
+                "evidence_ids"
+            ] = sanitized
+
+            # IMPORTANT:
+            # Validate against the SAME deterministic labelled
+            # evidence packet supplied to the recovery model.
+            validation = (
+                self.claim_evidence_validator.validate(
+                    script_lines=recovered_lines,
+                    evidence_ids=sanitized,
+                    research=evidence_packet,
+                )
+            )
+
+            if not validation.valid:
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "failed claim-evidence validation: %s",
+                    attempt,
+                    validation.issues,
+                )
+
+                current_candidate = recovered
+                continue
+
+            if any(
+                re.search(
+                    r"\[E\d+\]",
+                    line,
+                    flags=re.IGNORECASE,
+                )
+                for line in recovered_lines
+            ):
+                logger.warning(
+                    "Movie recovery attempt %s "
+                    "rejected evidence-label leakage.",
+                    attempt,
+                )
+
+                current_candidate = recovered
+                continue
+
+            logger.info(
+                "Movie evidence-aware length recovery "
+                "succeeded on attempt %s: %s words.",
+                attempt,
+                recovered_words,
+            )
+
+            return recovered
+
+        logger.warning(
+            "Movie evidence-aware length recovery "
+            "exhausted configured bounded attempts."
+        )
+
+        return None
+
+
+    async def _repair_movie_semantic_failures(
+        self,
+        *,
+        script_lines: list[str],
+        evidence_ids: list[list[str]],
+        research: str,
+        semantic_validation,
+        topic: str,
+        movie_title: str,
+    ) -> list[str] | None:
+        """
+        Repair only semantic evidence failures.
+
+        Up to three controlled repair rounds are allowed.
+        Every round is revalidated lexically and semantically.
+        """
+
+        evidence_map = {}
+
+        for match in re.finditer(
+            r"\[E(\d+)\]\s*(.*?)(?=\n\s*\[E\d+\]|\Z)",
+            str(research),
+            flags=re.DOTALL,
+        ):
+            evidence_id = f"E{match.group(1)}"
+
+            evidence_map[evidence_id] = " ".join(
+                match.group(2).split()
+            )
+
+        working_lines = list(
+            script_lines
+        )
+
+        current_validation = (
+            semantic_validation
+        )
+
+        max_attempts = 3
+
+        for attempt in range(
+            1,
+            max_attempts + 1,
+        ):
+
+            failed_lines = [
+                item
+                for item in current_validation.line_results
+                if item.get("supported") is not True
+            ]
+
+            if not failed_lines:
+                return working_lines
+
+            repair_payload = []
+
+            for failure in failed_lines:
+
+                line_number = int(
+                    failure.get(
+                        "line",
+                        0,
+                    )
+                    or 0
+                )
+
+                if (
+                    line_number < 1
+                    or line_number > len(working_lines)
+                ):
+                    return None
+
+                cited_ids = [
+                    str(item).strip().upper()
+                    for item in evidence_ids[
+                        line_number - 1
+                    ]
+                    if str(item).strip()
+                ]
+
+                cited_evidence = {
+                    evidence_id: evidence_map.get(
+                        evidence_id,
+                        "",
+                    )
+                    for evidence_id in cited_ids
+                }
+
+                repair_payload.append(
+                    {
+                        "line": line_number,
+                        "current_text": (
+                            working_lines[
+                                line_number - 1
+                            ]
+                        ),
+                        "unsupported_claims": (
+                            failure.get(
+                                "unsupported_claims",
+                                [],
+                            )
+                        ),
+                        "evidence_ids": cited_ids,
+                        "evidence": cited_evidence,
+                    }
+                )
+
+            messages = [
+                {
+                    "role": "system",
+                    "content": """
+You repair unsupported factual claims in movie commentary.
+
+Return ONLY valid JSON:
+
+{
+  "repairs": [
+    {
+      "line": 3,
+      "text": "replacement narration"
+    }
+  ]
+}
+
+STRICT RULES:
+
+1. Rewrite only the requested failed lines.
+2. Use only the evidence supplied for that exact line.
+3. Remove every unsupported claim identified by the validator.
+4. Do not replace one unsupported claim with another unsupported claim.
+5. Prefer wording that closely follows the evidence.
+6. Do not strengthen the evidence.
+7. Do not simplify attribution incorrectly.
+8. If multiple studios contributed, do not attribute all work to one studio.
+9. If evidence says a filmmaker tried to take another film's effects further, do not change that into "inspired by" unless explicitly supported.
+10. Do not invent audience reactions, symbolism, rankings, historical importance, motivations, or production methods.
+11. Do not include evidence labels in narration.
+12. Keep the narration natural and cinematic.
+13. Keep the full script within 75-110 words.
+""",
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"REPAIR ATTEMPT: {attempt}\n\n"
+                        f"MOVIE:\n{movie_title}\n\n"
+                        f"TOPIC:\n{topic}\n\n"
+                        "FAILED LINES AND EVIDENCE:\n"
+                        + json.dumps(
+                            repair_payload,
+                            indent=2,
+                            ensure_ascii=False,
+                        )
+                    ),
+                },
+            ]
+
+            raw = await self.llm.chat(
+                messages,
+                json_mode=True,
+            )
+
+            repair_data = self._extract_json(
+                raw
+            )
+
+            repairs = repair_data.get(
+                "repairs",
+                [],
+            )
+
+            if not isinstance(
+                repairs,
+                list,
+            ):
+                return None
+
+            expected_lines = {
+                int(item["line"])
+                for item in repair_payload
+            }
+
+            repaired_line_numbers = set()
+
+            candidate_lines = list(
+                working_lines
+            )
+
+            for repair in repairs:
+
+                if not isinstance(
+                    repair,
+                    dict,
+                ):
+                    return None
+
+                try:
+                    line_number = int(
+                        repair.get(
+                            "line",
+                            0,
+                        )
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    return None
+
+                text = str(
+                    repair.get(
+                        "text",
+                        "",
+                    )
+                ).strip()
+
+                if (
+                    line_number not in expected_lines
+                    or not text
+                ):
+                    return None
+
+                if re.search(
+                    r"\[E\d+\]",
+                    text,
+                    flags=re.IGNORECASE,
+                ):
+                    return None
+
+                candidate_lines[
+                    line_number - 1
+                ] = text
+
+                repaired_line_numbers.add(
+                    line_number
+                )
+
+            if repaired_line_numbers != expected_lines:
+                return None
+
+            word_count = sum(
+                len(line.split())
+                for line in candidate_lines
+            )
+
+            if not (
+                self.MIN_WORDS
+                <= word_count
+                <= self.MAX_WORDS
+            ):
+                logger.warning(
+                    "Semantic repair attempt %s "
+                    "produced invalid length: %s.",
+                    attempt,
+                    word_count,
+                )
+                continue
+
+            lexical_validation = (
+                self.claim_evidence_validator.validate(
+                    script_lines=candidate_lines,
+                    evidence_ids=evidence_ids,
+                    research=research,
+                )
+            )
+
+            if not lexical_validation.valid:
+                logger.warning(
+                    "Semantic repair attempt %s "
+                    "failed lexical validation: %s",
+                    attempt,
+                    lexical_validation.issues,
+                )
+                continue
+
+            next_validation = (
+                await self.semantic_claim_evidence_validator.validate(
+                    script_lines=candidate_lines,
+                    evidence_ids=evidence_ids,
+                    research=research,
+                )
+            )
+
+            if next_validation.valid:
+                logger.info(
+                    "Semantic repair succeeded "
+                    "on attempt %s.",
+                    attempt,
+                )
+                return candidate_lines
+
+            logger.warning(
+                "Semantic repair attempt %s "
+                "still failed: %s",
+                attempt,
+                next_validation.to_dict(),
+            )
+
+            working_lines = candidate_lines
+            current_validation = next_validation
+
+        return None
+
+
+    def _recover_generation_length(
+        self,
+        data: dict,
+        research: str,
+    ) -> dict | None:
+        """
+        Expand a structurally valid but short script using only
+        complete sentences already present in supplied research.
+        """
+
+        if not self._is_structurally_valid_content(data):
+            return None
+
+        current_words = self._word_count(data)
+
+        if self.MIN_WORDS <= current_words <= self.MAX_WORDS:
+            return data
+
+        if current_words > self.MAX_WORDS:
+            return None
+
+        research_text = " ".join(
+            str(research).split()
+        ).strip()
+
+        if not research_text:
+            return None
+
+        sentences = [
+            sentence.strip()
+            for sentence in re.split(
+                r"(?<=[.!?])\s+",
+                research_text,
+            )
+            if sentence.strip()
+        ]
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+        ]
+
+        if len(lines) != 4:
+            return None
+
+        existing_text = " ".join(lines).lower()
+
+        safe_sentences = []
+
+        for sentence in sentences:
+
+            if len(sentence.split()) < 5:
+                continue
+
+            if sentence.lower() in existing_text:
+                continue
+
+            safe_sentences.append(sentence)
+
+        candidate_lines = list(lines)
+        total_words = current_words
+        line_index = 1
+
+        for sentence in safe_sentences:
+
+            sentence_words = len(
+                sentence.split()
+            )
+
+            if (
+                total_words + sentence_words
+                > self.MAX_WORDS
+            ):
+                continue
+
+            base = candidate_lines[
+                line_index
+            ].rstrip()
+
+            if (
+                base
+                and base[-1] not in ".!?"
+            ):
+                base += "."
+
+            candidate_lines[
+                line_index
+            ] = (
+                base
+                + " "
+                + sentence
+            ).strip()
+
+            total_words += sentence_words
+
+            line_index += 1
+
+            if line_index > 3:
+                line_index = 1
+
+            if total_words >= self.MIN_WORDS:
+                break
+
+        candidate = {
+            **data,
+            "script_lines": candidate_lines,
+        }
+
+        if not self._is_valid_content(
+            candidate
+        ):
+            return None
+
+        return candidate
 
     async def repair(
         self,
@@ -196,6 +1919,31 @@ class ContentGenerator:
             "research",
             "",
         )
+
+        content_format = trend.get(
+            "content_format",
+            {},
+        )
+
+        if not isinstance(
+            content_format,
+            dict,
+        ):
+            content_format = {}
+
+        format_name = str(
+            content_format.get(
+                "format_name",
+                "visual_explainer",
+            )
+        ).strip()
+
+        movie_title = str(
+            trend.get(
+                "movie_title",
+                "",
+            )
+        ).strip()
 
         if isinstance(research, list):
             research = "\n".join(
@@ -421,142 +2169,163 @@ class ContentGenerator:
 
     def _recover_repair_length(
         self,
+        *,
         data: dict,
         research: str,
         banned_terms: list[str],
     ) -> dict | None:
+        """
+        Deterministically recover an undersized repair
+        using only grounded research.
 
-        if not self._is_structurally_valid_content(
-            data
-        ):
+        Fail closed if structure, length, line limits,
+        or banned-term validation cannot be satisfied.
+        """
+
+        if not self._is_structurally_valid_content(data):
             return None
 
-        current_words = self._word_count(
-            data
+        current_words = self._word_count(data)
+
+        remaining_terms = self._remaining_flagged_terms(
+            data=data,
+            banned_terms=banned_terms,
         )
 
         if (
             self.MIN_WORDS
             <= current_words
             <= self.MAX_WORDS
+            and not remaining_terms
         ):
             return data
 
         if current_words > self.MAX_WORDS:
             return None
 
-        lines = [
+        candidate = dict(data)
+
+        candidate["script_lines"] = [
             str(line).strip()
             for line in data.get(
                 "script_lines",
-                []
+                [],
             )
         ]
 
-        research_text = " ".join(
-            str(research).split()
-        ).strip()
-
-        if not research_text:
+        if len(candidate["script_lines"]) != 4:
             return None
 
-        # Preserve complete research sentences.
-        research_sentences = [
-            sentence.strip()
-            for sentence in re.split(
-                r"(?<=[.!?])\s+",
-                research_text,
-            )
-            if sentence.strip()
-        ]
+        import re
 
-        safe_sentences = []
+        raw_sentences = re.split(
+            r"(?<=[.!?])\s+",
+            str(research or "").strip(),
+        )
 
-        for sentence in research_sentences:
+        additions = []
 
-            blocked = False
+        existing_text = " ".join(
+            candidate["script_lines"]
+        ).lower()
+
+        for raw_sentence in raw_sentences:
+
+            sentence = " ".join(
+                str(raw_sentence).split()
+            ).strip()
+
+            words = sentence.split()
+
+            if len(words) < 5:
+                continue
+
+            if len(words) > 18:
+                continue
+
+            lowered = sentence.lower()
+
+            if lowered in existing_text:
+                continue
+
+            flagged = False
 
             for term in banned_terms:
 
-                pattern = (
-                    r"(?<!\w)"
-                    + re.escape(term)
-                    + r"(?!\w)"
-                )
+                clean_term = str(term).strip().lower()
 
-                if re.search(
-                    pattern,
-                    sentence,
-                    flags=re.IGNORECASE,
-                ):
-                    blocked = True
+                if clean_term and clean_term in lowered:
+                    flagged = True
                     break
 
-            if not blocked:
-                safe_sentences.append(
-                    sentence
-                )
-
-        if not safe_sentences:
-            return None
-
-        candidate_lines = list(
-            lines
-        )
-
-        total_words = current_words
-        line_index = 0
-
-        for sentence in safe_sentences:
-
-            sentence_words = len(
-                sentence.split()
-            )
-
-            if (
-                total_words
-                + sentence_words
-                > self.MAX_WORDS
-            ):
+            if flagged:
                 continue
 
-            base = candidate_lines[
-                line_index
-            ].rstrip()
+            additions.append(sentence)
 
-            if (
-                base
-                and base[-1]
-                not in ".!?"
-            ):
-                base += "."
+        target_lines = [1, 2, 3]
 
-            candidate_lines[
-                line_index
-            ] = (
-                base
-                + " "
-                + sentence
-            ).strip()
+        for addition in additions:
 
-            total_words += (
-                sentence_words
-            )
-
-            line_index = (
-                line_index + 1
-            ) % 4
-
-            if total_words >= self.MIN_WORDS:
+            if self._word_count(candidate) >= 85:
                 break
 
-        candidate = {
-            **data,
-            "script_lines": candidate_lines,
-        }
+            placed = False
 
-        if not self._is_valid_content(
-            candidate
+            for line_index in target_lines:
+
+                current_line = candidate[
+                    "script_lines"
+                ][line_index]
+
+                combined = (
+                    current_line.rstrip(" .")
+                    + ". "
+                    + addition
+                ).strip()
+
+                if len(combined.split()) > 29:
+                    continue
+
+                trial = dict(candidate)
+
+                trial["script_lines"] = list(
+                    candidate["script_lines"]
+                )
+
+                trial["script_lines"][
+                    line_index
+                ] = combined
+
+                trial_words = self._word_count(
+                    trial
+                )
+
+                if trial_words > self.MAX_WORDS:
+                    continue
+
+                candidate = trial
+                placed = True
+                break
+
+            if not placed:
+                continue
+
+        if not self._is_valid_content(candidate):
+            return None
+
+        final_words = self._word_count(candidate)
+
+        if not (
+            self.MIN_WORDS
+            <= final_words
+            <= self.MAX_WORDS
+        ):
+            return None
+
+        if any(
+            len(str(line).split()) > 29
+            for line in candidate["script_lines"]
         ):
             return None
 
@@ -751,7 +2520,7 @@ information supported by the research.
 None of the banned terms may appear.
 """
 
-        system_prompt = """
+        system_prompt = f"""
 You are Jarvis, a factual YouTube Shorts script editor.
 
 Return ONLY one valid JSON object.
@@ -760,7 +2529,7 @@ Do not include text outside the JSON.
 
 Use exactly this schema:
 
-{
+{{
   "title": "string",
   "hashtags": [
     "#hashtag1",
@@ -773,7 +2542,7 @@ Use exactly this schema:
     "line 3",
     "line 4"
   ]
-}
+}}
 
 MANDATORY RULES:
 
@@ -846,16 +2615,429 @@ Return only JSON.
     # Prompt construction
     ########################################################
 
+    @staticmethod
+    def _reference_script_instruction(
+        reference_profile: dict | None,
+    ) -> str:
+        profile = (
+            reference_profile
+            if isinstance(
+                reference_profile,
+                dict,
+            )
+            else {}
+        )
+
+        name = str(
+            profile.get(
+                "format_name",
+                "",
+            )
+        ).strip()
+
+        objective = str(
+            profile.get(
+                "story_objective",
+                profile.get(
+                    "viewer_objective",
+                    "",
+                ),
+            )
+        ).strip()
+
+        hook = str(
+            profile.get(
+                "hook_strategy",
+                "",
+            )
+        ).strip()
+
+        progression = str(
+            profile.get(
+                "progression",
+                "",
+            )
+        ).strip()
+
+        payoff = str(
+            profile.get(
+                "payoff_strategy",
+                "",
+            )
+        ).strip()
+
+        details = [
+            (
+                f"REFERENCE FORMAT: {name}"
+                if name
+                else ""
+            ),
+            (
+                f"VIEWER OBJECTIVE: {objective}"
+                if objective
+                else ""
+            ),
+            (
+                f"HOOK STRATEGY: {hook}"
+                if hook
+                else ""
+            ),
+            (
+                f"PROGRESSION: {progression}"
+                if progression
+                else ""
+            ),
+            (
+                f"PAYOFF: {payoff}"
+                if payoff
+                else ""
+            ),
+            (
+                "The four narration lines are four "
+                "STORY STAGES, not four visual shots. "
+                "Downstream editing may split each stage "
+                "into multiple visual micro-beats."
+            ),
+            (
+                "Open with the strongest concrete fact, "
+                "contrast, consequence, recognizable entity, "
+                "number, or information gap available in the "
+                "research. Do not begin like a school report."
+            ),
+            (
+                "Maintain forward pressure: hook, context, "
+                "specific evidence or mechanism, escalation, "
+                "then a satisfying payoff."
+            ),
+            (
+                "Avoid filler, generic introductions, "
+                "repetition, vague adjectives, engagement "
+                "bait, and unsupported claims."
+            ),
+        ]
+
+        return "\n".join(
+            item
+            for item in details
+            if item
+        )
+
+
+    @staticmethod
+    def evaluate_premise_strength(
+        topic: str,
+        reference_format: str = "",
+    ) -> dict:
+        clean = " ".join(
+            str(topic).split()
+        ).strip()
+
+        lower = clean.lower()
+
+        score = 50
+        reasons: list[str] = []
+
+        if not clean:
+            return {
+                "score": 0,
+                "strong": False,
+                "reasons": ["empty_topic"],
+                "reference_format": reference_format,
+                "advisory_only": True,
+            }
+
+        generic_patterns = (
+            "how filmmakers use",
+            "the importance of",
+            "ways to",
+            "how technology is changing",
+            "camera movement to",
+            "introduction to",
+            "history of",
+            "basics of",
+            "role of",
+            "benefits of",
+            "types of",
+            "what is filmmaking",
+            "how movies are made",
+        )
+
+        if any(
+            phrase in lower
+            for phrase in generic_patterns
+        ):
+            score -= 24
+            reasons.append(
+                "generic_instructional_wording"
+            )
+
+        broad_subjects = {
+            "filmmaking",
+            "cinema",
+            "technology",
+            "science",
+            "engineering",
+            "business",
+            "movies",
+            "editing",
+        }
+
+        words = [
+            token.strip(
+                ".,:;!?()[]{}\"'"
+            ).lower()
+            for token in clean.split()
+        ]
+
+        meaningful = [
+            word
+            for word in words
+            if len(word) >= 4
+        ]
+
+        if (
+            len(meaningful) <= 3
+            and any(
+                word in broad_subjects
+                for word in meaningful
+            )
+        ):
+            score -= 20
+            reasons.append(
+                "premise_too_broad"
+            )
+
+        curiosity_markers = (
+            "why ",
+            "how ",
+            "secret",
+            "hidden",
+            "inside",
+            "actually",
+            "never",
+            "only",
+            "million",
+            "billion",
+            "most expensive",
+            "largest",
+            "fastest",
+            "smallest",
+            "deepest",
+            "highest",
+            "rare",
+            "impossible",
+            "unexpected",
+            "without",
+            "instead of",
+        )
+
+        if any(
+            marker in lower
+            for marker in curiosity_markers
+        ):
+            score += 10
+            reasons.append(
+                "curiosity_gap"
+            )
+
+        mechanism_markers = (
+            "because",
+            "works",
+            "uses",
+            "made",
+            "built",
+            "creates",
+            "causes",
+            "prevents",
+            "survives",
+            "costs",
+            "worth",
+            "failed",
+            "changed",
+            "became",
+            "happens",
+            "recorded",
+            "designed",
+        )
+
+        if any(
+            marker in lower
+            for marker in mechanism_markers
+        ):
+            score += 8
+            reasons.append(
+                "mechanism_or_consequence"
+            )
+
+        specificity_markers = (
+            "$",
+            "%",
+            "km",
+            "mph",
+            "kg",
+            "million",
+            "billion",
+            "seconds",
+            "minutes",
+            "years",
+            "degrees",
+        )
+
+        has_number = any(
+            char.isdigit()
+            for char in clean
+        )
+
+        if has_number:
+            score += 10
+            reasons.append(
+                "numeric_specificity"
+            )
+
+        if any(
+            marker in lower
+            for marker in specificity_markers
+        ):
+            score += 5
+            reasons.append(
+                "measurable_detail"
+            )
+
+        # Titles with enough concrete language generally provide
+        # better visual and narrative handles than broad labels.
+        if 5 <= len(meaningful) <= 14:
+            score += 8
+            reasons.append(
+                "specific_premise_length"
+            )
+
+        # Question-shaped premises receive only a small bonus.
+        # "Why" or "how" alone must not make a weak topic strong.
+        if lower.startswith(
+            ("why ", "how ", "what ")
+        ):
+            score += 4
+            reasons.append(
+                "question_structure"
+            )
+
+        score = max(
+            0,
+            min(
+                100,
+                score,
+            ),
+        )
+
+        return {
+            "score": score,
+            "strong": score >= 65,
+            "reasons": reasons,
+            "reference_format": reference_format,
+            "advisory_only": True,
+        }
+
     def _build_messages(
         self,
         topic: str,
         research: str,
         previous_words: int = 0,
         retry: bool = False,
+        format_name: str = "visual_explainer",
+        movie_title: str = "",
+        reference_profile: dict | None = None,
     ) -> list[dict]:
 
-        system_prompt = """
-You are Jarvis, a YouTube Shorts script writer.
+        reference_instruction = (
+            self._reference_script_instruction(
+                reference_profile
+            )
+        )
+
+
+        if format_name == "famous_movie_commentary":
+
+            system_prompt = """
+You are Jarvis, writing an original high-retention YouTube Short commentary about a famous movie.
+
+Return ONLY one valid JSON object.
+Never use markdown or code fences.
+Never add text outside the JSON.
+
+Use exactly this schema:
+
+{
+  "title": "string",
+  "hashtags": [
+    "#hashtag1",
+    "#hashtag2",
+    "#hashtag3"
+  ],
+  "script_lines": [
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4"
+  ],
+  "evidence_ids": [
+    ["E1"],
+    ["E2"],
+    ["E3"],
+    ["E4"]
+  ]
+}
+
+MOVIE COMMENTARY RULES:
+
+EVIDENCE RULES:
+
+- Research facts are labelled [E1], [E2], [E3], and so on.
+- evidence_ids must contain exactly four lists, one for each script line.
+- Every script line must cite at least one real evidence ID.
+- Cite only IDs that actually exist in the supplied research.
+- The factual meaning of each line must be supported by its cited evidence.
+- A line may cite multiple evidence IDs when needed.
+- Do not cite evidence merely because it mentions the same movie.
+- Interpretation is allowed only when its factual premise is supported by cited evidence.
+
+
+1. Write exactly four narration lines.
+2. Total narration must be 75-105 words.
+3. Line 1 must immediately hook the viewer with the specific movie angle.
+4. Never begin with generic phrases such as "Did you know" or "You won't believe".
+5. Line 2 gives only the context needed to understand the point.
+6. Line 3 explains the strongest concrete filmmaking, VFX, editing, character, production, or storytelling detail supported by the research.
+7. Line 4 gives the payoff: explain why the scene, technique, or decision is effective or important.
+8. Write like fast cinematic commentary, not a school report.
+9. Add original explanation instead of merely retelling the scene.
+10. Every line must introduce a new concrete detail, mechanism, or consequence.
+11. No narration line may exceed 29 words.
+12. Do not open by defining filmmaking, cinema, editing, visual effects, sound design, acting, or another broad category.
+13. Keep the specific movie angle active in every narration line.
+14. Preserve an information gap through the middle of the Short.
+15. Put the strongest supported filmmaking, production, character, editing, VFX, sound, or storytelling detail in line 3.
+16. Make line 4 resolve the opening angle instead of ending with a generic summary.
+17. Do not include generic calls to action.
+11. Every factual claim must be supported by the supplied research.
+12. Do not invent behind-the-scenes details.
+13. Never claim a specific visual-effects technique was used unless the research explicitly supports it.
+14. If the evidence only supports a broader conclusion, state only that broader conclusion.
+15. Do not confuse information about the comic-book character with information about the film.
+16. Do not compare the movie to another movie unless the supplied research explicitly makes that comparison.
+17. Avoid unsupported adjectives such as revolutionary, groundbreaking, extreme, iconic, or unprecedented.
+18. Prefer a concrete researched detail over promotional-sounding language.
+19. Aim for 85-100 words so the result remains safely above the minimum.
+20. Do not claim that a scene makes viewers feel awe, fear, terror, excitement, immersion, tension, or any other audience reaction unless the cited research explicitly supports that reaction.
+21. Prefer concrete statements about the filmmaking, visual effects, action design, dimensions, production choices, or documented critical response.
+22. Do not turn your own interpretation into a factual statement.
+23. Aim for 85-100 narration words.
+24. Count the narration words before returning JSON.
+"""
+
+        else:
+
+            system_prompt = """
+You are Jarvis, a YouTube Shorts script writer.\n\nREFERENCE STORY GRAMMAR:\n{reference_instruction}
 
 Return ONLY one valid JSON object.
 Never use markdown or code fences.
@@ -883,39 +3065,75 @@ SCRIPT RULES:
 1. Exactly four narration lines.
 2. Total narration MUST be 75-105 words.
 3. Aim for 19-26 words per narration line.
-4. Line 1 must immediately hook the viewer.
-5. Lines 2 and 3 explain the important information.
-6. Line 4 concludes and ends with natural engagement.
-7. Use only information supported by the research.
-8. Do not exaggerate certainty.
-9. Do not invent facts.
-10. Count the narration words before responding.
+4. No narration line may exceed 29 words.
+5. Line 1 must immediately open on the exact curiosity-driving premise, recognizable subject, surprising fact, unusual mechanism, dramatic consequence, or price/value question.
+6. Never begin by defining the broad subject or category.
+7. Never begin with generic bait such as "Did you know" or "You won't believe".
+8. Line 1 must create a clear information gap.
+9. Line 2 gives only the context required to deepen that information gap.
+10. Line 3 delivers the strongest concrete supported detail, mechanism, example, number, action, contrast, or consequence.
+11. Line 4 resolves the opening information gap with a specific payoff.
+12. Every narration line must add genuinely new information.
+13. Keep the exact topic active throughout the script.
+14. Prefer concrete nouns, actions, mechanisms, numbers, names, objects, locations, and visible cause-and-effect.
+15. Remove broad history, definitions, and encyclopedia background unless essential to the exact premise.
+16. Avoid school-report narration.
+17. Avoid vague filler when concrete supported information is available.
+18. Use compact spoken sentences designed for fast vertical video.
+19. Maintain forward pressure from one line to the next.
+20. Use only information supported by the research.
+21. Never invent specificity for drama.
+22. Do not exaggerate certainty.
+23. Do not invent facts.
+24. Do not add generic calls to action.
+25. Count the narration words before responding.
+26. Verify every line is 29 words or fewer before responding.
 """
 
         retry_instruction = ""
 
         if retry:
+
             retry_instruction = f"""
 IMPORTANT RETRY:
 
 Your previous attempt contained approximately
 {previous_words} narration words and FAILED validation.
 
-You MUST rewrite the script.
+Rewrite the entire script.
 
 The new script must contain 75-105 total narration words.
 
-Each of the four lines should contain approximately
-19-26 words.
+Keep exactly four script_lines.
 
 Do not shorten the previous script.
-Expand it using only the supplied research.
+
+Expand only with information supported by the supplied research.
+
+For movie commentary, remove unsupported comparison or promotional language.
+
+Do NOT use:
+- groundbreaking
+- cutting-edge
+- Inception comparisons
+- practical effects
+- Eastern mysticism
+
+unless those exact ideas are explicitly supported by the research.
 """
 
         user_prompt = f"""
 TOPIC:
 
 {topic}
+
+CONTENT FORMAT:
+
+{format_name}
+
+MOVIE:
+
+{movie_title if movie_title else "N/A"}
 
 RESEARCH:
 
@@ -930,7 +3148,16 @@ Before returning JSON:
 - verify there are exactly 4 script_lines
 - count the words across those 4 lines
 - verify the total is between 75 and 105
+- verify no script line exceeds 29 words
+- verify line 1 begins with the exact premise rather than a broad definition
+- verify every line adds new information
+- verify line 3 contains the strongest concrete supported detail
+- verify line 4 resolves the opening information gap
 - verify every factual claim is supported by the research
+- remove unsupported production or behind-the-scenes claims
+- remove encyclopedia-style background that does not advance the exact premise
+- remove repeated ideas
+- remove vague filler
 
 Return only the JSON object.
 """
@@ -946,9 +3173,77 @@ Return only the JSON object.
             },
         ]
 
-    ########################################################
     # Validation
     ########################################################
+
+    def _movie_script_has_unsupported_language(
+        self,
+        data: dict,
+        research: str,
+    ) -> bool:
+        """
+        Reject movie-commentary embellishments unless
+        the supplied research contains supporting evidence.
+        """
+
+        if not isinstance(data, dict):
+            return False
+
+        lines = data.get(
+            "script_lines",
+            [],
+        )
+
+        if not isinstance(lines, list):
+            return False
+
+        script = " ".join(
+            str(line)
+            for line in lines
+        ).lower()
+
+        evidence = str(
+            research
+        ).lower()
+
+        guarded_terms = {
+            "inception": (
+                "inception",
+            ),
+            "practical effects": (
+                "practical effect",
+                "practical effects",
+            ),
+            "eastern mysticism": (
+                "eastern mysticism",
+            ),
+            "groundbreaking": (
+                "groundbreaking",
+            ),
+            "cutting-edge": (
+                "cutting-edge",
+                "cutting edge",
+            ),
+        }
+
+        for phrase, evidence_terms in guarded_terms.items():
+
+            if phrase not in script:
+                continue
+
+            if not any(
+                term in evidence
+                for term in evidence_terms
+            ):
+                logger.warning(
+                    "Movie script rejected unsupported "
+                    "language: %s",
+                    phrase,
+                )
+                return True
+
+        return False
+
 
     def _is_structurally_valid_content(
         self,
@@ -1060,45 +3355,21 @@ Return only the JSON object.
         topic: str,
         research: str,
     ) -> dict:
+        """
+        Rich V1 does not fabricate generic fallback content.
 
-        return {
-            "title": topic,
-            "hashtags": [
-                "#shorts",
-                "#technology",
-                "#trending",
-            ],
-            "script_lines": [
-                (
-                    f"{topic} is getting attention, "
-                    "and the technology behind it is "
-                    "developing quickly as creators "
-                    "experiment with increasingly "
-                    "automated production tools."
-                ),
-                (
-                    "Current AI video systems are "
-                    "improving image quality and motion "
-                    "consistency while helping creators "
-                    "turn ideas and scripts into visual "
-                    "content more efficiently."
-                ),
-                (
-                    "AI tools can also assist with "
-                    "narration, captions, editing, and "
-                    "other production steps, bringing "
-                    "more of the video workflow into "
-                    "a connected automated process."
-                ),
-                (
-                    "These improvements show how quickly "
-                    "AI-assisted video production is "
-                    "changing, although results still "
-                    "depend on the tools and material "
-                    "being used. What do you think?"
-                ),
-            ],
-        }
+        If grounded content generation fails, the production cycle must
+        stop rather than publishing an unrelated or generic script.
+        """
+
+        logger.error(
+            "Content generation fallback blocked for topic: %s",
+            topic,
+        )
+
+        raise RuntimeError(
+            f"Grounded content generation failed for topic: {topic}"
+        )
 
     ########################################################
     # JSON extraction
@@ -1169,5 +3440,25 @@ Return only the JSON object.
             )
 
         return {}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

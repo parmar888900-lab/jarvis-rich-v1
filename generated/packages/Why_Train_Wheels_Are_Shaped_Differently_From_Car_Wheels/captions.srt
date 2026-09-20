@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:08,882
+Train wheels are specially designed for smooth track adherence, reducing wear and tear. A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks.
+
+2
+00:00:08,882 --> 00:00:24,694
+Standardized to 920mm, they fit with rail systems, maintaining safety and performance. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE).
+
+3
+00:00:24,694 --> 00:00:29,780
+These wheels ensure efficient energy use and prevent derailments, critical for train operations.
+
+4
+00:00:29,780 --> 00:00:35,596
+Check out real trains where you can see these wheels in action, promoting smoother rides and better efficiency.

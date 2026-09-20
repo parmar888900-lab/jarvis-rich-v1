@@ -1,0 +1,1260 @@
+﻿======================================================================
+RICH V1 - V6.3 RECOGNIZABLE SUBJECT / TOPIC SELECTOR CONTEXT
+======================================================================
+
+======================================================================
+FILE: evergreen_content_selector.py
+======================================================================
+"""Evergreen content selection for Jarvis Rich V1.
+
+Replaces trend-first topic selection while preserving the existing
+production orchestration contract.
+"""
+
+from __future__ import annotations
+
+from collections import deque
+import json
+from pathlib import Path
+from typing import Any
+
+
+class EvergreenContentSelector:
+    """Select high-curiosity evergreen short-form topics."""
+
+    GENRES = {
+        "famous_movie_commentary": [
+            "Why Doctor Strange's mirror dimension scenes work so well",
+            "How Avengers Endgame builds tension before the final battle",
+            "Why Interstellar's docking scene feels so intense",
+            "How The Dark Knight makes the Joker feel unpredictable",
+            "Why Spider-Man No Way Home's portal scene was so effective",
+            "How Inception makes complicated ideas visually understandable",
+            "Why Iron Man's first suit-building scene became iconic",
+            "How Jurassic Park made its dinosaurs feel believable",
+            "Why The Matrix bullet-time sequence changed action movies",
+            "How Pirates of the Caribbean introduced Jack Sparrow",
+        ],
+        "movie_facts": [
+            "How filmmakers created Doctor Strange's reality-bending visuals",
+            "Why practical effects still matter in modern blockbusters",
+            "How movie sound designers create sounds that do not exist",
+            "Why blockbuster movies use previsualization before filming",
+            "How actors perform scenes surrounded by green screens",
+        ],
+        "scene_breakdowns": [
+            "Why great movie openings reveal character without explaining everything",
+            "How filmmakers use camera movement to increase tension",
+            "Why silence can make a movie scene more intense",
+            "How editing changes the emotional impact of a scene",
+            "Why certain movie reveals feel satisfying",
+        ],
+        "business_stories": [
+            "Why Costco keeps its hot dog price unusually low",
+            "How LEGO survived one of the worst periods in its history",
+            "Why IKEA designs products around flat-pack shipping",
+            "How Nintendo survived long before video games",
+            "Why some companies deliberately sell products at a loss",
+        ],
+        "luxury_money": [
+            "What actually makes a luxury mechanical watch expensive",
+            "Why private jets cost so much to operate",
+            "How supercar manufacturers justify extreme prices",
+            "Why some hotel suites cost thousands per night",
+            "What makes handmade luxury products so expensive",
+        ],
+        "science_engineering": [
+            "Why airplane windows are rounded instead of square",
+            "How suspension bridges handle enormous loads",
+            "Why skyscrapers are designed to move in strong winds",
+            "How aircraft black boxes survive extreme crashes",
+            "Why train wheels are shaped differently from car wheels",
+        ],
+        "human_performance": [
+            "How elite runners train their bodies for endurance",
+            "Why professional cyclists train at high altitude",
+            "How reaction-time training works for elite athletes",
+            "Why marathon pacing matters more than starting speed",
+            "How athletes recover between intense competitions",
+        ],
+        "technology": [
+            "How modern phone cameras stabilize moving video",
+            "Why data centers use enormous cooling systems",
+            "How noise-cancelling headphones cancel sound",
+            "Why modern processors contain billions of transistors",
+            "How GPS determines where you are",
+        ],
+        "movies_filmmaking": [
+            "How filmmakers create realistic miniature worlds",
+            "Why movie sound effects are often recorded separately",
+            "How practical effects can make scenes look more realistic",
+            "Why filmmakers use green screens",
+            "How animated movies simulate realistic lighting",
+        ],
+        "history_inventions": [
+            "Why shipping containers changed world trade",
+            "How the barcode transformed modern stores",
+            "Why the invention of the elevator changed cities",
+            "How refrigeration changed the way humans eat",
+            "Why standardized time zones became necessary",
+        ],
+        "machines_manufacturing": [
+            "How CNC machines cut metal with extreme precision",
+            "Why industrial robots dominate modern car factories",
+            "How glass bottles are manufactured at high speed",
+            "How factories produce thousands of cans every hour",
+            "Why precision bearings matter inside machines",
+        ],
+        "space_aviation": [
+            "Why rockets launch vertically",
+            "How spacecraft survive the heat of reentry",
+            "Why commercial airplanes cruise so high",
+            "How satellites stay in orbit without falling straight down",
+            "Why aircraft wings bend during flight",
+        ],
+        "interesting_products": [
+            "Why pencils are usually hexagonal",
+            "How vacuum-insulated bottles keep drinks hot or cold",
+            "Why running shoes use different types of foam",
+            "How mechanical keyboards register a key press",
+            "Why safety glass breaks differently from ordinary glass",
+        ],
+    }
+
+    WEIGHTS = {
+        "curiosity": 0.25,
+        "story_strength": 0.20,
+        "visual_supply": 0.20,
+        "evergreen_value": 0.15,
+        "credibility": 0.10,
+        "channel_fit": 0.10,
+    }
+
+    STATE_PATH = Path("data/evergreen_selector_state.json")
+
+    FORMAT_GENRES = {
+        "movie_facts": (
+            "famous_movie_commentary",
+            "movie_facts",
+            "scene_breakdowns",
+            "movies_filmmaking",
+        ),
+        "cinematic_movie_edit": (
+            "famous_movie_commentary",
+            "scene_breakdowns",
+            "movies_filmmaking",
+        ),
+        "curiosity_story": (
+            "history_inventions",
+            "technology",
+            "interesting_products",
+            "human_performance",
+        ),
+        "luxury_product": (
+            "luxury_money",
+            "interesting_products",
+        ),
+        "science_explainer": (
+            "science_engineering",
+            "machines_manufacturing",
+            "space_aviation",
+            "technology",
+        ),
+        "business_wealth": (
+            "business_stories",
+            "luxury_money",
+        ),
+    }
+
+    def __init__(self) -> None:
+        self._recent: deque[str] = deque(maxlen=40)
+        self._cursor = 0
+        self._format_cursor = 0
+        self._load_state()
+
+    def _load_state(self) -> None:
+        try:
+            if not self.STATE_PATH.exists():
+                return
+
+            data = json.loads(
+                self.STATE_PATH.read_text(encoding="utf-8")
+            )
+
+            recent = data.get("recent_topics", [])
+            if isinstance(recent, list):
+                self._recent.extend(
+                    str(item)
+                    for item in recent[-40:]
+                    if item
+                )
+
+            self._cursor = int(data.get("cursor", 0))
+            self._format_cursor = int(
+                data.get("format_cursor", 0)
+            )
+
+        except Exception:
+            # State corruption must never stop production.
+            self._recent.clear()
+            self._cursor = 0
+            self._format_cursor = 0
+
+    def _save_state(self) -> None:
+        self.STATE_PATH.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        payload = {
+            "recent_topics": list(self._recent),
+            "cursor": self._cursor,
+            "format_cursor": self._format_cursor,
+        }
+
+        temp_path = self.STATE_PATH.with_suffix(".tmp")
+
+        temp_path.write_text(
+            json.dumps(payload, indent=2),
+            encoding="utf-8",
+        )
+
+        temp_path.replace(self.STATE_PATH)
+
+    def select(
+        self,
+        *,
+        content_id: str,
+        performance: dict[str, Any] | None = None,
+        goal_strategy: dict[str, Any] | None = None,
+        format_name: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Return one production-authorized evergreen candidate."""
+
+        candidates: list[dict[str, Any]] = []
+
+        allowed_genres = (
+            self.FORMAT_GENRES.get(format_name)
+            if format_name
+            else None
+        )
+
+        for genre, topics in self.GENRES.items():
+            if (
+                allowed_genres is not None
+                and genre not in allowed_genres
+            ):
+                continue
+
+            for topic in topics:
+                if topic in self._recent:
+                    continue
+
+                candidates.append(
+                    self._build_candidate(
+                        title=topic,
+                        genre=genre,
+                        content_id=content_id,
+                    )
+                )
+
+        if not candidates:
+            self._recent.clear()
+
+            return self.select(
+                content_id=content_id,
+                performance=performance,
+                goal_strategy=goal_strategy,
+                format_name=format_name,
+            )
+
+        candidates.sort(
+            key=lambda item: (
+                item["production_selection"][
+                    "production_score"
+                ],
+                item["title"],
+            ),
+            reverse=True,
+        )
+
+        # Rotate across equally strong candidates instead of repeatedly
+        # choosing the same alphabetically-highest topic.
+        index = self._cursor % len(candidates)
+        winner = candidates[index]
+        self._cursor += 1
+
+        self._recent.append(
+            winner["title"]
+        )
+
+        winner["production_selection"][
+            "selected"
+        ] = True
+
+        if format_name:
+            winner["locked_format"] = format_name
+
+        self._save_state()
+
+        return winner
+
+    def _build_candidate(
+        self,
+        *,
+        title: str,
+        genre: str,
+        content_id: str,
+    ) -> dict[str, Any]:
+
+        scores = self._score(
+            title=title,
+            genre=genre,
+        )
+
+        production_score = sum(
+            scores[name] * weight
+            for name, weight in self.WEIGHTS.items()
+        )
+
+        return {
+            "title": title,
+            "topic": title,
+            "genre": genre,
+            "content_id": content_id,
+            "content_strategy": "evergreen_storytelling",
+            "requires_trend": False,
+            "production_selection": {
+                "eligible": True,
+                "selected": False,
+                "production_score": round(
+                    production_score,
+                    2,
+                ),
+                "curiosity_score": scores[
+                    "curiosity"
+                ],
+                "story_strength": scores[
+                    "story_strength"
+                ],
+                "visual_supply": scores[
+                    "visual_supply"
+                ],
+                "evergreen_value": scores[
+                    "evergreen_value"
+                ],
+                "credibility": scores[
+                    "credibility"
+                ],
+                "channel_fit": scores[
+                    "channel_fit"
+                ],
+                "reason": (
+                    "Evergreen topic passed Rich V1 "
+                    "story and production criteria."
+                ),
+                "rejection_reasons": [],
+            },
+        }
+
+
+    @staticmethod
+    def _score(
+        *,
+        title: str,
+        genre: str,
+    ) -> dict[str, float]:
+        clean = " ".join(
+            str(title).split()
+        ).strip()
+
+        lower = clean.lower()
+
+        curiosity = 58.0
+        story_strength = 58.0
+        visual_supply = 62.0
+        evergreen_value = 86.0
+        credibility = 82.0
+        channel_fit = 68.0
+
+        generic_patterns = (
+            "how filmmakers use",
+            "the importance of",
+            "ways to",
+            "introduction to",
+            "history of",
+            "basics of",
+            "role of",
+            "benefits of",
+            "types of",
+            "how technology is changing",
+            "camera movement to",
+        )
+
+        if any(
+            phrase in lower
+            for phrase in generic_patterns
+        ):
+            curiosity -= 24.0
+            story_strength -= 20.0
+            channel_fit -= 16.0
+
+        if lower.startswith(
+            ("why ", "how ", "what ")
+        ):
+            curiosity += 6.0
+
+        high_curiosity = (
+            "secret",
+            "hidden",
+            "inside",
+            "actually",
+            "never",
+            "only",
+            "most expensive",
+            "largest",
+            "fastest",
+            "smallest",
+            "deepest",
+            "highest",
+            "rare",
+            "impossible",
+            "unexpected",
+            "without",
+        )
+
+        if any(
+            marker in lower
+            for marker in high_curiosity
+        ):
+            curiosity += 14.0
+            story_strength += 8.0
+            channel_fit += 8.0
+
+        mechanism = (
+            "because",
+            "works",
+            "made",
+            "built",
+            "creates",
+            "causes",
+            "prevents",
+            "survives",
+            "costs",
+            "worth",
+            "failed",
+            "changed",
+            "recorded",
+            "designed",
+            "inside",
+        )
+
+        if any(
+            marker in lower
+            for marker in mechanism
+        ):
+            story_strength += 12.0
+            visual_supply += 7.0
+            channel_fit += 6.0
+
+        if any(
+            char.isdigit()
+            for char in clean
+        ):
+            curiosity += 10.0
+            story_strength += 6.0
+            channel_fit += 6.0
+
+        measurable = (
+            "$",
+            "%",
+            "million",
+            "billion",
+            "seconds",
+            "minutes",
+            "years",
+            "mph",
+            "km",
+            "kg",
+            "degrees",
+        )
+
+        if any(
+            marker in lower
+            for marker in measurable
+        ):
+            curiosity += 7.0
+            story_strength += 5.0
+
+        word_count = len(clean.split())
+
+        if 6 <= word_count <= 14:
+            story_strength += 7.0
+            channel_fit += 5.0
+
+        if word_count <= 3:
+            story_strength -= 12.0
+            curiosity -= 8.0
+
+        visual_genres = {
+            "science_engineering",
+            "machines_manufacturing",
+            "space_aviation",
+        }
+
+        if genre in visual_genres:
+            visual_supply += 10.0
+            evergreen_value += 3.0
+
+        if genre in {
+            "luxury",
+            "luxury_products",
+            "business",
+            "business_wealth",
+        }:
+            if any(
+                marker in lower
+                for marker in (
+                    "cost",
+                    "worth",
+                    "million",
+                    "billion",
+                    "expensive",
+                    "inside",
+                    "built",
+                    "made",
+                )
+            ):
+                curiosity += 8.0
+                story_strength += 8.0
+                visual_supply += 5.0
+
+        def clamp(value):
+            return round(
+                max(
+                    0.0,
+                    min(
+                        100.0,
+                        float(value),
+                    ),
+                ),
+                2,
+            )
+
+        return {
+            "curiosity": clamp(curiosity),
+            "story_strength": clamp(
+                story_strength
+            ),
+            "visual_supply": clamp(
+                visual_supply
+            ),
+            "evergreen_value": clamp(
+                evergreen_value
+            ),
+            "credibility": clamp(
+                credibility
+            ),
+            "channel_fit": clamp(
+                channel_fit
+            ),
+        }
+
+
+
+======================================================================
+REFERENCES TO EvergreenContentSelector
+======================================================================
+C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:16: from backend.services.intelligence.evergreen_content_selector import EvergreenContentSelector C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:73:         self.selector = EvergreenContentSelector() C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:15: class EvergreenContentSelector:
+
+======================================================================
+REFERENCES TO format_name / movie_facts / luxury_product / business_wealth
+======================================================================
+C:\Users\hp\jarvis.ai\backend\services\content_generator.py:42:             == "movie_facts" C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:30:         "movie_facts", C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:81:         # to movie_facts. C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:117:             "movie_facts", C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:162:         if genre == "cinematic_movie_edit": C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:165:                 format_name="cinematic_movie_edit", C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:180:         if genre == "curiosity_story": C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:197:         if genre == "luxury_product": C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:214:         if genre == "science_explainer": C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:232:         if genre == "business_wealth": C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:31:         "movie_facts": [ C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:129:         "movie_facts": ( C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:131:             "movie_facts", C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:135:         "cinematic_movie_edit": ( C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:140:         "curiosity_story": ( C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:146:         "luxury_product": ( C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:150:         "science_explainer": ( C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:156:         "business_wealth": ( C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:504:             "luxury_products", C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:506:             "business_wealth", C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:66:         "movie_facts": [ C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:77:         "cinematic_movie_edit": [ C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:88:         "curiosity_story": [ C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:99:         "luxury_product": [ C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:110:         "science_explainer": [ C:\Users\hp\jarvis.ai\backend\services\intelligence\genre_topic_selector.py:121:         "business_wealth": [ C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:74:     "movie_facts": ReferenceFormatProfile( C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:75:         format_name="movie_facts", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:154:     "cinematic_movie_edit": ReferenceFormatProfile( C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:155:         format_name="cinematic_movie_edit", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:231:     "curiosity_story": ReferenceFormatProfile( C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:232:         format_name="curiosity_story", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:307:     "luxury_product": ReferenceFormatProfile( C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:308:         format_name="luxury_product", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:384:     "science_explainer": ReferenceFormatProfile( C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:385:         format_name="science_explainer", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:459:     "business_wealth": ReferenceFormatProfile( C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:460:         format_name="business_wealth", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:533:     "movie_facts": "movie_facts", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:534:     "scene_breakdowns": "movie_facts", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:535:     "movies_filmmaking": "movie_facts", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:536:     "famous_movie_commentary": "movie_facts", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:538:     "cinematic_movie_edit": "cinematic_movie_edit", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:540:     "curiosity_story": "curiosity_story", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:541:     "history_inventions": "curiosity_story", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:542:     "human_performance": "curiosity_story", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:544:     "luxury_product": "luxury_product", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:545:     "interesting_products": "luxury_product", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:546:     "luxury_money": "luxury_product", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:548:     "science_explainer": "science_explainer", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:549:     "science_engineering": "science_explainer", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:550:     "technology": "science_explainer", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:551:     "machines_manufacturing": "science_explainer", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:552:     "space_aviation": "science_explainer", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:554:     "business_wealth": "business_wealth", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:555:     "business_stories": "business_wealth", C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:26:         "movie_facts", C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:27:         "cinematic_movie_edit", C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:28:         "curiosity_story", C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:29:         "luxury_product", C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:30:         "science_explainer", C:\Users\hp\jarvis.ai\backend\services\orchestration\daily_format_rotator.py:31:         "business_wealth", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:64:     "movie_facts": RichFormatProfile( C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:65:         format_name="movie_facts", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:114:     "cinematic_movie_edit": RichFormatProfile( C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:115:         format_name="cinematic_movie_edit", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:164:     "curiosity_story": RichFormatProfile( C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:165:         format_name="curiosity_story", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:214:     "luxury_product": RichFormatProfile( C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:215:         format_name="luxury_product", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:264:     "science_explainer": RichFormatProfile( C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:265:         format_name="science_explainer", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:314:     "business_wealth": RichFormatProfile( C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:315:         format_name="business_wealth", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:363:     "famous_movie_commentary": "movie_facts", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:364:     "movie_commentary": "movie_facts", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:365:     "movie_edit": "cinematic_movie_edit", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:366:     "cinematic_edit": "cinematic_movie_edit", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:367:     "curiosity": "curiosity_story", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:368:     "extreme_story": "curiosity_story", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:369:     "luxury": "luxury_product", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:370:     "product": "luxury_product", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:371:     "science": "science_explainer", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:372:     "engineering": "science_explainer", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:373:     "business": "business_wealth", C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:374:     "wealth": "business_wealth", C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:284:             "movie_facts": [ C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:292:             "cinematic_movie_edit": [ C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:300:             "curiosity_story": [ C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:308:             "luxury_product": [ C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:317:             "science_explainer": [ C:\Users\hp\jarvis.ai\backend\services\video\source_footage_resolver.py:326:             "business_wealth": [ C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py:344:             "cinematic_movie_edit", C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py:351:             "movie_facts", C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py:356:             "luxury_product", C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py:361:             "science_explainer", C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py:367:             "business_wealth", C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py:372:             "curiosity_story", C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:32:         "movie_facts": ( C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:37:         "cinematic_movie_edit": ( C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:41:         "curiosity_story": ( C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:45:         "luxury_product": ( C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:49:         "science_explainer": ( C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_source_planner.py:53:         "business_wealth": (
+
+======================================================================
+VIDEO PIPELINE - TREND / TOPIC / FORMAT REFERENCES
+======================================================================
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:19:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:20:from backend.services.content_generator import ContentGenerator
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:21:from backend.services.content_validator import ContentValidator
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:22:from backend.services.intelligence.content_format_classifier import ContentFormatClassifier > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:23:from backend.services.intelligence.movie_topic_parser import MovieTopicParser
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:24:from backend.services.research.evergreen_research_service import EvergreenResearchService
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:25:from backend.services.research.movie_research_service import MovieResearchService
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:26:from backend.services.storyboard.generator import StoryboardGenerator
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:27:from backend.services.video.asset_collector import AssetCollector
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:28:from backend.services.video.media_query_builder import MediaQueryBuilder   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:73:        self.content_validator = ContentValidator()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:74:        self.research_service = EvergreenResearchService()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:75:        self.movie_research_service = MovieResearchService()
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:76:        self.format_classifier = ContentFormatClassifier()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:77:        self.storyboard = StoryboardGenerator()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:78:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:79:        self.media_provider = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:80:            WikimediaCommonsProvider()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:81:        )   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:206:    def _master_query_variants(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:207:        cls,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:208:        *,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:209:        topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:210:        beat,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:211:    ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:212:        """
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:213:        REFERENCE_VISUAL_V5
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:214:   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:215:        Translate a narration beat into concrete visual actions
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:216:        rather than generic topic searches.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:217:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:218:        Provider requests stay bounded. The highest-value literal
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:219:        visual requirements are always attempted first.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:220:        """
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:221:   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:497:        *,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:498:        asset,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:499:        query,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:500:        topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:501:    ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:502:        """
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:503:        REFERENCE_VISUAL_V5
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:504:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:505:        Score literal metadata correspondence.   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:506:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:507:        Query/beat correspondence dominates topic-level overlap.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:508:        """
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:509:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:510:        def normalize(value):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:511:            return " ".join(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:512:                str(value or "").lower().split()   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:528:        metadata_parts = []
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:529:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:530:        for attr in (
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:531:            "title",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:532:            "description",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:533:            "source_url",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:534:            "asset_id",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:535:            "file_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:536:            "local_path",   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:555:            return 0.0
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:556:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:557:        query_tokens = token_set(query)
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:558:        topic_tokens = token_set(topic)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:559:        metadata_tokens = token_set(metadata)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:560:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:561:        if not metadata_tokens:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:562:            return 0.0
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:563:   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:565:            query_tokens & metadata_tokens
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:566:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:567:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:568:        topic_overlap = len( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:569:            topic_tokens & metadata_tokens
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:570:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:571:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:572:        query_score = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:573:            query_overlap
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:574:            / max(   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:577:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:578:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:579:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:580:        topic_score = ( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:581:            topic_overlap
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:582:            / max(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:583:                1, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:584:                len(topic_tokens),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:585:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:586:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:587:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:588:        # Literal visual intent matters substantially more than > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:589:        # merely matching the broad topic.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:590:        score = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:591:            query_score * 0.86 > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:592:            + topic_score * 0.14
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:593:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:594:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:595:        # Domain evidence.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:596:        domain_tokens = {
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:597:            "foley",   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:671:        *,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:672:        candidates,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:673:        query,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:674:        topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:675:        used_identities,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:676:        previous_identity,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:677:    ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:678:        """
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:679:        REFERENCE_VISUAL_V5   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:767:                    or ""
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:768:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:769:                for attr in (
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:770:                    "title",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:771:                    "description",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:772:                    "source_url",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:773:                    "asset_id",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:774:                    "file_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:775:                    "local_path",   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:785:                cls._master_metadata_score(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:786:                    asset=asset,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:787:                    query=query,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:788:                    topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:789:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:790:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:791:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:792:            domain_overlap = len(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:793:                metadata_tokens   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:924:    async def _v62_acquire_source_footage(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:925:        self,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:926:        *,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:927:        format_name: str, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:928:        topic: str,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:929:        content_id: str,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:930:    ) -> dict:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:931:        """
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:932:        Existing SourceFootageResolver -> authorized video pool.
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:933:   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:938:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:939:        try:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:940:            result = await self.source_footage_resolver.resolve(
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:941:                format_name=str(format_name or "").strip(), > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:942:                topic=str(topic or "").strip(),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:943:                content_id=str(content_id),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:944:                minimum_assets=4,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:945:                target_assets=8,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:946:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:947:        except Exception as exc:   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1523:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1524:    async def run(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1525:        self,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1526:        trend: dict,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1527:    ) -> dict:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1528:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1529:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1530:        # 1. Content identity
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1531:        ####################################################   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1532:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1533:        content_id = str(
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1534:            trend.get(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1535:                "content_id",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1536:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1537:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1538:        ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1539:   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1540:        if not content_id:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1541:            raise RuntimeError(
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1542:                "Production topic has no content_id."
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1543:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1544:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1545:        #################################################### > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1546:        # 2. Choose production format
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1547:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1548: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1549:        topic_title = str( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1550:            trend.get( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1551:                "title",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1552:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1553:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1554:        ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1555:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1556:        genre = str( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1557:            trend.get(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1558:                "genre",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1559:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1560:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1561:        ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1562: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1563:        format_decision = ( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1564:            self.format_classifier.classify( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1565:                topic=topic_title,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1566:                genre=genre,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1567:                authorized_movie_source=False,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1568:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1569:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1570: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1571:        trend["content_format"] = { > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1572:            "format_name": format_decision.format_name, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1573:            "target_duration_min": format_decision.target_duration_min, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1574:            "target_duration_max": format_decision.target_duration_max, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1575:            "preferred_media": format_decision.preferred_media, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1576:            "narration_mode": format_decision.narration_mode, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1577:            "pacing": format_decision.pacing, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1578:            "rights_gate_required": format_decision.rights_gate_required, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1579:            "reference_profile": format_decision.reference_profile,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1580:        }
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1581:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1582:        #################################################### > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1583:        # 3. Research topic
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1584:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1585:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1586:        if ( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1587:            format_decision.format_name
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1588:            == "famous_movie_commentary"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1589:        ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1590: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1591:            movie_title = ( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1592:                MovieTopicParser.extract_movie_title( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1593:                    topic_title
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1594:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1595:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1596: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1597:            if not movie_title:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1598:                raise RuntimeError( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1599:                    "Movie commentary topic has no recognized " > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1600:                    f"movie title: {topic_title}"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1601:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1602: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1603:            trend["movie_title"] = movie_title
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1604:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1605:            knowledge_pack = await asyncio.to_thread(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1606:                    self.movie_research_service.research, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1607:                    movie_title=movie_title, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1608:                    commentary_topic=topic_title,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1609:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1610:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1611:            research_text = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1612:                self.movie_research_service.build_research_text(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1613:                    knowledge_pack   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1618:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1619:            knowledge_pack = await asyncio.to_thread(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1620:                    self.research_service.research,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1621:                    topic_title,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1622:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1623:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1624:            research_text = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1625:                self.research_service.build_research_text(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1626:                    knowledge_pack   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1630:        if not research_text.strip():
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1631:            raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1632:                "Research returned no usable grounded "
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1633:                f"information for: {topic_title}"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1634:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1635: > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1636:        trend["research"] = research_text > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1637:        trend["knowledge"] = knowledge_pack.to_dict()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1638:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1639:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1640:        # 4. Generate content
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1641:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1642:        generated = await self.generator.generate( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1643:            trend
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1644:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1645:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1646:        if generated is None:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1647:            raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1648:                "ContentGenerator returned None."   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1666:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1667:            repaired = await self.generator.repair(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1668:                content=generated,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1669:                trend=trend,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1670:                issues=validation["issues"],
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1671:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1672:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1673:            if repaired is None:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1674:                raise RuntimeError(   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1711:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1712:        media_groups = []
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1713:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1714:        topic = str( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1715:            trend.get( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1716:                "title",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1717:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1718:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1719:        ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1720:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1721:        genre = str( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1722:            trend.get(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1723:                "genre",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1724:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1725:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1726:        ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1727:   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1734:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1735:        visual_beats = self.visual_beat_planner.plan(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1736:            content=generated,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1737:            topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1738:            genre=genre, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1739:            format_name=( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1740:                format_decision.format_name
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1741:            ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1742:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1743:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1744:        if not visual_beats:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1745:            raise RuntimeError(   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1759:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1760:            queries = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1761:                self.media_query_builder.build(
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1762:                    topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1763:                    genre=genre,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1764:                    narration=scene.narration,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1765:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1766:            )[:3]
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1767:   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1912:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1913:            query_variants = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1914:                self._master_query_variants(
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1915:                    topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1916:                    beat=beat,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1917:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1918:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1919:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1920:            primary_query = (   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1991:                    self._master_choose_asset(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1992:                        candidates=images,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1993:                        query=query,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1994:                        topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1995:                        used_identities=(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1996:                            used_identities
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1997:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1998:                        previous_identity=(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1999:                            previous_identity   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2039:                    self._master_choose_asset(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2040:                        candidates=fallback_pool,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2041:                        query=primary_query,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2042:                        topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2043:                        used_identities=(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2044:                            used_identities
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2045:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2046:                        previous_identity=(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2047:                            previous_identity   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2067:                                and self._master_metadata_score(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2068:                                    asset=asset,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2069:                                    query=primary_query,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2070:                                    topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2071:                                ) >= 0.12
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2072:                            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2073:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2074:                        None,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2075:                    )   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2239:        # RICH_V1_VIDEO_ACQUISITION_V6_2
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2240:        # ====================================================
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2241:
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2242:        v62_format_name = str(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2243:            getattr( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2244:                trend, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2245:                "content_format",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2246:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2247:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2248:            or getattr( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2249:                trend, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2250:                "format_name",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2251:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2252:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2253:            or getattr( > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2254:                trend, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2255:                "format",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2256:                "",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2257:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2258:            or ""
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2259:        ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2260:   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2261:        v62_source_result = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2262:            await self._v62_acquire_source_footage(
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2263:                format_name=v62_format_name, > C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2264:                topic=str(topic),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2265:                content_id=str(content_id),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2266:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2267:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2268:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2269:        v62_source_assets = list(   C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2349:            content=generated,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2350:            scenes=storyboard,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2351:            images=render_assets,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2352:            trend=trend,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2353:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2354:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2355:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2356:        # 9. Render
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:2357:        ####################################################
+
+======================================================================
+SOURCE FOOTAGE RESOLVER - CURRENT QUERY GRAMMAR
+======================================================================
+"""Topic-specific source-footage resolution for Jarvis Rich V1."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from backend.services.video.asset_collector import (
+    AssetCollector,
+)
+from backend.services.video.media_asset import (
+    MediaAsset,
+)
+from backend.services.video.media_sources.internet_archive import (
+    InternetArchiveProvider,
+)
+from backend.services.video.media_sources.pexels import (
+    PexelsProvider,
+)
+from backend.services.video.media_sources.wikimedia import (
+    WikimediaCommonsProvider,
+)
+
+
+@dataclass(slots=True)
+class SourceFootageResult:
+    format_name: str
+    topic: str
+    assets: list[MediaAsset] = field(
+        default_factory=list
+    )
+    primary_assets: list[MediaAsset] = field(
+        default_factory=list
+    )
+    fallback_assets: list[MediaAsset] = field(
+        default_factory=list
+    )
+    attempted_queries: list[str] = field(
+        default_factory=list
+    )
+    status: str = "unresolved"
+
+
+class SourceFootageResolver:
+    """
+    Resolve real/topic-specific reusable footage before generic B-roll.
+
+    Priority:
+        1. Wikimedia Commons
+        2. Internet Archive
+        3. Pexels contextual fallback
+
+    Unauthorized scraping/downloading is deliberately outside this
+    resolver.
+    """
+
+    PRIMARY_LIMIT_PER_QUERY = 2
+    FALLBACK_LIMIT_PER_QUERY = 2
+
+    def __init__(
+        self,
+        *,
+        primary_providers=None,
+        fallback_providers=None,
+        asset_collector=None,
+    ) -> None:
+
+        self.primary_providers = (
+            primary_providers
+            if primary_providers is not None
+            else [
+                WikimediaCommonsProvider(),
+                InternetArchiveProvider(),
+            ]
+        )
+
+        if fallback_providers is not None:
+
+            self.fallback_providers = (
+                fallback_providers
+            )
+
+        else:
+
+            self.fallback_providers = []
+
+            try:
+
+                self.fallback_providers.append(
+                    PexelsProvider()
+                )
+
+            except RuntimeError as exc:
+
+                print(
+                    "Pexels fallback unavailable: "
+                    f"{exc}"
+                )
+
+        self.asset_collector = (
+            asset_collector
+            if asset_collector is not None
+            else AssetCollector()
+        )
+
+    async def resolve(
+        self,
+        *,
+        format_name: str,
+        topic: str,
+        content_id: str,
+        minimum_assets: int = 6,
+        target_assets: int = 12,
+    ) -> SourceFootageResult:
+
+        queries = self._queries(
+            format_name=format_name,
+            topic=topic,
+        )
+
+        primary: list[
+            MediaAsset
+        ] = []
+
+        fallback: list[
+            MediaAsset
+        ] = []
+
+        used_urls: set[str] = set()
+
+        ####################################################
+        # Primary topic-specific footage
+        ####################################################
+
+        for query in queries:
+
+            if len(primary) >= target_assets:
+                break
+
+            for provider in self.primary_providers:
+
+                try:
+
+                    found = await provider.search_and_download(
+                        query=query,
+                        content_id=content_id,
+                        limit=(
+                            self.PRIMARY_LIMIT_PER_QUERY
+                        ),
+                    )
+
+                except Exception:
+                    continue
+
+                for asset in found:
+
+                    if (
+                        asset.source_url
+                        in used_urls
+                    ):
+                        continue
+
+                    valid, _ = (
+                        self.asset_collector
+                        .validate_asset(
+                            asset,
+                            content_id=content_id,
+                        )
+                    )
+
+                    if not valid:
+                        continue
+
+                    if asset.asset_type != "video":
+                        continue
+
+                    used_urls.add(
+                        asset.source_url
+                    )
+
+                    primary.append(
+                        asset
+                    )
+
+        ####################################################
+        # Contextual fallback only when primary supply is
+        # insufficient.
+        ####################################################
+
+        if len(primary) < minimum_assets:
+
+            for query in queries:
+
+                if (
+                    len(primary)
+                    + len(fallback)
+                    >= target_assets
+                ):
+                    break
+
+                for provider in self.fallback_providers:
+
+                    try:
+
+                        found = await provider.search_and_download(
+                            query=query,
+                            content_id=content_id,
+                            limit=(
+                                self.FALLBACK_LIMIT_PER_QUERY
+                            ),
+                        )
+
+                    except Exception:
+                        continue
+
+                    for asset in found:
+
+                        if (
+                            asset.source_url
+                            in used_urls
+                        ):
+                            continue
+
+                        valid, _ = (
+                            self.asset_collector
+                            .validate_asset(
+                                asset,
+                                content_id=content_id,
+                            )
+                        )
+
+                        if not valid:
+                            continue
+
+                        if asset.asset_type != "video":
+                            continue
+
+                        used_urls.add(
+                            asset.source_url
+                        )
+
+                        fallback.append(
+                            asset
+                        )
+
+        assets = (
+            primary
+            + fallback
+        )[:target_assets]
+
+        if len(assets) >= minimum_assets:
+            status = "resolved"
+
+        elif assets:
+            status = "partial"
+
+        else:
+            status = (
+                "insufficient_source_footage"
+            )
+
+        return SourceFootageResult(
+            format_name=format_name,
+            topic=topic,
+            assets=assets,
+            primary_assets=primary,
+            fallback_assets=fallback,
+            attempted_queries=queries,
+            status=status,
+        )
+
+    @staticmethod
+    def _queries(
+        *,
+        format_name: str,
+        topic: str,
+    ) -> list[str]:
+
+        clean = " ".join(
+            str(topic).split()
+        ).strip()
+
+        format_queries = {
+
+            "movie_facts": [
+                clean,
+                f"{clean} behind the scenes",
+                f"{clean} production",
+                f"{clean} visual effects",
+                f"{clean} filmmaking",
+            ],
+
+            "cinematic_movie_edit": [
+                clean,
+                f"{clean} cinematic",
+                f"{clean} film",
+                f"{clean} scene",
+                f"{clean} production",
+            ],
+
+            "curiosity_story": [
+                clean,
+                f"{clean} documentary",
+                f"{clean} real footage",
+                f"{clean} location",
+                f"{clean} archive footage",
+            ],
+
+            "luxury_product": [
+                clean,
+                f"{clean} product",
+                f"{clean} close up",
+                f"{clean} manufacturing",
+                f"{clean} craftsmanship",
+                f"{clean} detail",
+            ],
+
+            "science_explainer": [
+                clean,
+                f"{clean} demonstration",
+                f"{clean} mechanism",
+                f"{clean} engineering",
+                f"{clean} experiment",
+                f"{clean} animation",
+            ],
+
+            "business_wealth": [
+                clean,
+                f"{clean} company",
+                f"{clean} founder",
+                f"{clean} headquarters",
+                f"{clean} products",
+                f"{clean} archive",
+            ],
+        }
+
+        raw = format_queries.get(
+            format_name,
+            [
+                clean,
+            ],
+        )
+
+        output = []
+        seen = set()
+
+        for query in raw:
+
+            normalized = " ".join(
+                str(query).split()
+            ).strip()
+
+            key = normalized.lower()
+
+            if (
+                not normalized
+                or key in seen
+            ):
+                continue
+
+            seen.add(key)
+            output.append(
+                normalized
+            )
+
+        return output
+
+
+
+======================================================================
+END
+======================================================================

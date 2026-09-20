@@ -1,0 +1,24 @@
+Traceback (most recent call last):
+  File "C:\Users\hp\jarvis.ai\install_v6_fixed.py", line 1010, in <module>
+    raise RuntimeError(
+    ...<2 lines>...
+    )
+RuntimeError: Could not identify semantic beat enumerate loop.
+================================================================
+ RICH V1 — V6 REAL VIDEO FIXED INSTALLER
+================================================================
+
+BASELINE COMPILE: PASS
+BACKUP: C:\Users\hp\jarvis.ai\generated\diagnostics\v6_fixed_20260919_182025\backup
+
+================================================================
+ V6 FIXED INSTALL FAILED
+ ROLLING BACK TO CLEAN V5
+================================================================
+
+
+Production files restored.
+ROLLBACK COMPILE: PASS
+
+Backup location:
+C:\Users\hp\jarvis.ai\generated\diagnostics\v6_fixed_20260919_182025\backup

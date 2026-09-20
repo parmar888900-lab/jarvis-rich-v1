@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Great movie openings grab you with visuals, hinting at who the characters are, not spelling it out.",
+        "image_prompt": "Great movie openings grab you with visuals, hinting at who the characters are, not spelling it out.",
+        "duration": 4.191201814058957,
+        "start_time": 0.0,
+        "end_time": 4.191201814058957
+    },
+    {
+        "narration": "In 'The Godfather,' a simple shot of Tom Hagen's back introduces his loyalty and the family's secrets. Filmmaking, or film production, is the process of creating a motion picture.",
+        "image_prompt": "In 'The Godfather,' a simple shot of Tom Hagen's back introduces his loyalty and the family's secrets. Filmmaking, or film production, is the process of creating a motion picture.",
+        "duration": 10.530249433106576,
+        "start_time": 4.191201814058957,
+        "end_time": 14.721451247165533
+    },
+    {
+        "narration": "Subtle camera angles and lighting in 'Pulp Fiction' reveal the dark and unpredictable nature of characters.",
+        "image_prompt": "Subtle camera angles and lighting in 'Pulp Fiction' reveal the dark and unpredictable nature of characters.",
+        "duration": 6.060408163265306,
+        "start_time": 14.721451247165533,
+        "end_time": 20.78185941043084
+    },
+    {
+        "narration": "These techniques engage viewers, making them piece together the story, deepening their connection to the film.",
+        "image_prompt": "These techniques engage viewers, making them piece together the story, deepening their connection to the film.",
+        "duration": 4.5859410430839,
+        "start_time": 20.78185941043084,
+        "end_time": 25.36780045351474
+    }
+]

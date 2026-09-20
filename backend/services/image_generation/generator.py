@@ -1,4 +1,4 @@
-﻿from backend.services.image_generation.base_provider import (
+from backend.services.image_generation.base_provider import (
     BaseImageProvider,
 )
 from backend.services.image_generation.cloudflare_flux_provider import (

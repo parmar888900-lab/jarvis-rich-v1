@@ -1,0 +1,986 @@
+﻿======================================================================
+MOVIE GENERATION / RECOVERY CALL SITES
+======================================================================
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:28:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:29:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:30:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:31:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:32:    @staticmethod
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:33:    def _is_movie_fact_generation(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:34:        *,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:35:        format_name: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:36:        reference_format: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:37:    ) -> bool:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:38:        return (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:39:            str(format_name).strip()
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:40:            == "famous_movie_commentary"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:41:            or str(reference_format).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:42:            == "movie_facts"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:43:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:44:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:45:    async def generate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:46:        self,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:47:        trend: dict,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:48:    ) -> GeneratedContent:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:49:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:50:        topic = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:51:            trend.get("title")
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:52:            or trend.get("topic")
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:53:            or "Trending Story"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:54:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:55:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:56:        research = trend.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:57:            "research",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:58:            "",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:59:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:60:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:61:        content_format = trend.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:62:            "content_format",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:63:            {},
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:64:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:65:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:66:        if not isinstance(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:67:            content_format,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:68:            dict,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:69:        ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:70:            content_format = {}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:71:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:72:        reference_profile = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:73:            content_format.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:74:                "reference_profile"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:75:            )   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:182:                    "Content regeneration failed "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:183:                    "(%s words). Attempting grounded "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:184:                    "length recovery.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:185:                    retry_words,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:186:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:187:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:188:                if self._is_movie_fact_generation(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:189:                    format_name=format_name,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:190:                    reference_format=reference_format,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:191:                ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:192:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:193:                    recovered = (
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:194:                        await self._recover_movie_generation_length(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:195:                            data=retry_data,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:196:                            topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:197:                            movie_title=movie_title,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:198:                            research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:199:                        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:200:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:201:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:202:                else:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:203:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:204:                    recovered = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:205:                        self._recover_generation_length(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:206:                            data=retry_data,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:207:                            research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:208:                        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:209:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:210:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:211:                if recovered is not None:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:212:                    data = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:213:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:214:                    logger.info(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:215:                        "Grounded generation length "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:216:                        "recovery succeeded (%s words).",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:217:                        self._word_count(data),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:218:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:219:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:220:                else:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:221:                    data = {}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:222:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:223:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:224:        # Emergency fallback
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:225:        ####################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:226:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:227:        if not data:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:228:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:229:            logger.warning(   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:263:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:264:            if str(line).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:265:        ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:266:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:267:        if len(lines) != 4:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:268:            raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:269:                "Generated content normalization produced "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:270:                f"{len(lines)} script lines; expected exactly 4."
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:271:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:272:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:273:        lines = lines[:4]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:274:
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:275:        if format_name == "famous_movie_commentary":
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:276:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:277:            evidence_ids = data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:278:                "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:279:                [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:280:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:281:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:282:            evidence_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:283:                self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:284:                    script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:285:                    evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:286:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:287:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:288:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:289:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:290:            if not evidence_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:291:                raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:292:                    "Movie script failed claim-evidence validation: "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:293:                    f"{evidence_validation.issues}"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:294:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:295: > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:296:        if format_name == "famous_movie_commentary":
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:297:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:298:            semantic_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:299:                await self.semantic_claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:300:                    script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:301:                    evidence_ids=data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:302:                        "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:303:                        [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:304:                    ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:305:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:306:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:307:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:308:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:309:            if not semantic_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:310:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:311:                repaired_lines = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:312:                    await self._repair_movie_semantic_failures(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:313:                        script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:314:                        evidence_ids=data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:315:                            "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:316:                            [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:317:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:318:                        research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:319:                        semantic_validation=semantic_validation,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:320:                        topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:321:                        movie_title=movie_title,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:322:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:323:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:324:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:325:                if repaired_lines is None:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:326:                    raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:327:                        "Movie script failed semantic evidence "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:328:                        "validation and targeted repair failed: "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:329:                        f"{semantic_validation.to_dict()}"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:330:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:331:   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:366:        return GeneratedContent(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:367:            title=title,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:368:            hashtags=hashtags,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:369:            script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:370:            metadata={
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:371:                "source": topic,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:372:                "generator": "Jarvis Rich V1",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:373:                "premise_audit": self.evaluate_premise_strength(topic, reference_format),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:374:                "content_format": format_name,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:375:                "movie_title": movie_title,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:376:                "evidence_ids": (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:377:                    data.get("evidence_ids", [])
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:378:                    if format_name == "famous_movie_commentary"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:379:                    else []
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:380:                ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:381:                "word_count": sum(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:382:                    len(line.split())
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:383:                    for line in lines
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:384:                ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:385:            },
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:386:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:387:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:388:    ########################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:389:    # Content repair
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:390:    ########################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:391: > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:392:    async def _recover_movie_generation_length(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:393:        self,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:394:        *,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:395:        data: dict,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:396:        topic: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:397:        movie_title: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:398:        research: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:399:    ) -> dict | None:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:400:        """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:401:        Recover short grounded movie-facts scripts.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:402:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:403:        The research string may contain grounded facts without
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:404:        explicit evidence labels. Recovery therefore creates a
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:405:        deterministic local evidence contract from those facts.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:406:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:407:        Validation remains fail-closed.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:408:        """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:409:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:410:        if not self._is_structurally_valid_content(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:411:            data
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:412:        ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:413:            return None
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:414:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:415:        current_words = self._word_count(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:416:            data
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:417:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:418:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:419:        if (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:420:            self.MIN_WORDS
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:421:            <= current_words
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:422:            <= self.MAX_WORDS
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:423:        ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:424:            return data
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:425:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:426:        if current_words > self.MAX_WORDS:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:427:            return None   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:611:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:612:            candidate_words = self._word_count(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:613:                current_candidate
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:614:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:615:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:616:            current_json = json.dumps(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:617:                current_candidate,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:618:                indent=2,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:619:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:620:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:621:            missing_words = max(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:622:                0,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:623:                85 - candidate_words,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:624:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:625:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:626:            if attempt == 1:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:627:                correction = f"""
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:628:The current narration has {candidate_words} words.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:629: > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:630:Rewrite it to 85-100 narration words total.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:631:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:632:Approximately {missing_words} additional useful words
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:633:are needed if the script is short.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:634:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:635:Add only explanation directly supported by the
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:636:evidence packet below.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:637:"""
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:638:            else:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:639:                correction = f"""
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:640:THIS IS RECOVERY ATTEMPT {attempt} OF 3.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:641:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:642:The previous candidate failed validation.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:643:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:644:It contains {candidate_words} narration words.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:645: > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:646:Return 85-100 narration words.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:647:Use exactly four narration lines.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:648:Aim for 21-25 words per line.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:649:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:650:Count the words before responding.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:651:Do not add filler.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:652:Do not invent facts.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:653:Use only the allowed evidence IDs.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:654:"""
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:655:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:656:            messages = [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:657:                {
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:658:                    "role": "system",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:659:                    "content": f"""
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:660:You are repairing a grounded movie-facts
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:661:YouTube Short.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:662:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:663:Return ONLY one JSON object.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:664:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:665:Required keys:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:666:"title"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:667:"hashtags"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:668:"script_lines"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:669:"evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:670:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:671:MANDATORY:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:672:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:673:- exactly four script_lines
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:674:- exactly four evidence_ids lists > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:675:- 85-100 narration words total
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:676:- no narration line over 29 words
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:677:- natural spoken vertical-video narration
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:678:- line 1 creates the information gap
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:679:- line 2 gives only necessary context
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:680:- line 3 gives the strongest supported mechanism,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:681:  example, action, contrast, number, or consequence
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:682:- line 4 resolves the opening gap
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:683:- every line adds new information
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:684:- no generic CTA
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:685:- no filler
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:686:- no invented facts
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:687:- evidence labels never appear inside narration
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:688:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:689:The ONLY legal evidence IDs are:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:690:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:691:{allowed_evidence_text}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:692:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:693:Every narration line must cite at least one legal
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:694:evidence ID.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:695:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:696:Never create another ID.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:697:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:698:{correction}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:699:""",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:700:                },
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:701:                {
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:702:                    "role": "user",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:703:                    "content": f"""
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:704:MOVIE:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:705:{movie_title}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:706:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:707:TOPIC:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:708:{topic}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:709:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:710:CURRENT SCRIPT:   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:725:                json_mode=True,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:726:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:727:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:728:            recovered = self._extract_json(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:729:                raw
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:730:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:731:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:732:            if not isinstance(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:733:                recovered,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:734:                dict,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:735:            ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:736:                logger.warning(
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:737:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:738:                    "returned invalid JSON.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:739:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:740:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:741:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:742:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:743:            if not self._is_structurally_valid_content(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:744:                recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:745:            ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:746:                logger.warning( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:747:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:748:                    "failed structural validation.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:749:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:750:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:751:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:752:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:753:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:754:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:755:            recovered_words = self._word_count(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:756:                recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:757:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:758:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:759:            if not (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:760:                self.MIN_WORDS
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:761:                <= recovered_words
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:762:                <= self.MAX_WORDS
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:763:            ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:764:                logger.warning( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:765:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:766:                    "failed length validation: %s words.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:767:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:768:                    recovered_words,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:769:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:770:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:771:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:772:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:773:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:774:            recovered_lines = [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:775:                str(line).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:776:                for line in recovered.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:777:                    "script_lines",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:778:                    []
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:779:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:780:            ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:781:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:782:            if len(recovered_lines) != 4:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:783:                logger.warning( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:784:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:785:                    "did not return four lines.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:786:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:787:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:788:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:789:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:790:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:791:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:792:            if any(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:793:                len(line.split()) > 29
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:794:                for line in recovered_lines
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:795:            ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:796:                logger.warning( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:797:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:798:                    "contains a line over 29 words.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:799:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:800:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:801:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:802:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:803:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:804:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:805:            raw_ids = recovered.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:806:                "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:807:                [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:808:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:809:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:810:            if (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:811:                not isinstance(raw_ids, list)
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:812:                or len(raw_ids) != 4
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:813:            ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:814:                logger.warning( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:815:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:816:                    "returned invalid evidence structure.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:817:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:818:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:819:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:820:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:821:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:822:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:823:            sanitized = []
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:824:            unknown = []
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:825:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:826:            for line_ids in raw_ids:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:827:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:828:                if not isinstance(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:829:                    line_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:830:                    list,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:831:                ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:832:                    unknown.append(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:833:                        "<invalid-list>"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:834:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:835:                    sanitized.append([])
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:836:                    continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:837:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:838:                clean_line = []
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:839:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:840:                for evidence_id in line_ids:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:841:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:842:                    normalized = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:843:                        str(evidence_id)
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:844:                        .strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:845:                        .upper()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:846:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:847:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:848:                    if (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:849:                        normalized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:850:                        in allowed_evidence_set   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:858:                            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:859:                    else:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:860:                        unknown.append(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:861:                            normalized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:862:                        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:863:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:864:                sanitized.append(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:865:                    clean_line
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:866:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:867:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:868:            if unknown:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:869:                logger.warning(
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:870:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:871:                    "rejected unknown evidence IDs: %s",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:872:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:873:                    sorted(set(unknown)),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:874:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:875:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:876:                recovered[
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:877:                    "evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:878:                ] = sanitized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:879:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:880:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:881:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:882:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:883:            if any(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:884:                not ids
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:885:                for ids in sanitized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:886:            ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:887:                logger.warning( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:888:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:889:                    "left a line without evidence.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:890:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:891:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:892:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:893:                recovered[
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:894:                    "evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:895:                ] = sanitized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:896:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:897:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:898:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:899:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:900:            recovered[
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:901:                "evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:902:            ] = sanitized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:903:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:904:            # IMPORTANT:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:905:            # Validate against the SAME deterministic labelled
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:906:            # evidence packet supplied to the recovery model.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:907:            validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:908:                self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:909:                    script_lines=recovered_lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:910:                    evidence_ids=sanitized,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:911:                    research=evidence_packet,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:912:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:913:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:914:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:915:            if not validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:916:                logger.warning( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:917:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:918:                    "failed claim-evidence validation: %s",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:919:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:920:                    validation.issues,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:921:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:922:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:923:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:924:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:925:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:926:            if any(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:927:                re.search(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:928:                    r"\[E\d+\]",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:929:                    line,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:930:                    flags=re.IGNORECASE,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:931:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:932:                for line in recovered_lines
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:933:            ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:934:                logger.warning( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:935:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:936:                    "rejected evidence-label leakage.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:937:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:938:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:939:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:940:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:941:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:942:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:943:            logger.info( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:944:                "Movie evidence-aware length recovery "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:945:                "succeeded on attempt %s: %s words.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:946:                attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:947:                recovered_words,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:948:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:949:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:950:            return recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:951:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:952:        logger.warning( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:953:            "Movie evidence-aware length recovery "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:954:            "exhausted 3 bounded attempts."
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:955:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:956:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:957:        return None
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:958:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:959:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:960:    async def _repair_movie_semantic_failures(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:961:        self,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:962:        *,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:963:        script_lines: list[str],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:964:        evidence_ids: list[list[str]],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:965:        research: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:966:        semantic_validation,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:967:        topic: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:968:        movie_title: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:969:    ) -> list[str] | None:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:970:        """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:971:        Repair only semantic evidence failures.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:972:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:973:        Up to three controlled repair rounds are allowed.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:974:        Every round is revalidated lexically and semantically.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:975:        """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:976:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:977:        evidence_map = {}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:978:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:979:        for match in re.finditer(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:980:            r"\[E(\d+)\]\s*(.*?)(?=\n\s*\[E\d+\]|\Z)",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:981:            str(research),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:982:            flags=re.DOTALL,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:983:        ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:984:            evidence_id = f"E{match.group(1)}"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:985:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:986:            evidence_map[evidence_id] = " ".join(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:987:                match.group(2).split()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:988:            )   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1736:                    flagged = True
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1737:                    break
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1738:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1739:            if flagged:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1740:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1741:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1742:            additions.append(sentence)
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1743:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1744:        target_lines = [1, 2, 3]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1745:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1746:        for addition in additions:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1747:
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1748:            if self._word_count(candidate) >= 85:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1749:                break
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1750:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1751:            placed = False
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1752:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1753:            for line_index in target_lines:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1754:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1755:                current_line = candidate[
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1756:                    "script_lines"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1757:                ][line_index]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1758:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1759:                combined = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1760:                    current_line.rstrip(" .")
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1761:                    + ". "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1762:                    + addition
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1763:                ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1764:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1765:                if len(combined.split()) > 29:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1766:                    continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1767:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1768:                trial = dict(candidate)
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1769:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1770:                trial["script_lines"] = list(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1771:                    candidate["script_lines"]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1772:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1773:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1774:                trial["script_lines"][
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1775:                    line_index
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1776:                ] = combined
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1777:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1778:                trial_words = self._word_count(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1779:                    trial
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1780:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1781:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1782:                if trial_words > self.MAX_WORDS:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1783:                    continue   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2393:        # "Why" or "how" alone must not make a weak topic strong.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2394:        if lower.startswith(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2395:            ("why ", "how ", "what ")
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2396:        ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2397:            score += 4
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2398:            reasons.append(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2399:                "question_structure"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2400:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2401:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2402:        score = max(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2403:            0,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2404:            min(
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2405:                100,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2406:                score,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2407:            ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2408:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2409:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2410:        return {
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2411:            "score": score,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2412:            "strong": score >= 65,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2413:            "reasons": reasons,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2414:            "reference_format": reference_format,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2415:            "advisory_only": True,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2416:        }
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2417:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2418:    def _build_messages(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2419:        self,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2420:        topic: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2421:        research: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2422:        previous_words: int = 0,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2423:        retry: bool = False,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2424:        format_name: str = "visual_explainer",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2425:        movie_title: str = "",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2426:        reference_profile: dict | None = None,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2427:    ) -> list[dict]:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2428:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2429:        reference_instruction = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2430:            self._reference_script_instruction(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2431:                reference_profile
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2432:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2433:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2434:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2435: > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2436:        if format_name == "famous_movie_commentary":
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2437:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2438:            system_prompt = """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2439:You are Jarvis, writing an original high-retention YouTube Short commentary about a famous movie.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2440:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2441:Return ONLY one valid JSON object.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2442:Never use markdown or code fences.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2443:Never add text outside the JSON.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2444:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2445:Use exactly this schema:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2446:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2447:{
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2448:  "title": "string",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2449:  "hashtags": [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2450:    "#hashtag1",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2451:    "#hashtag2",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2452:    "#hashtag3"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2453:  ],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2454:  "script_lines": [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2455:    "line 1",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2456:    "line 2",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2457:    "line 3",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2458:    "line 4"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2459:  ],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2460:  "evidence_ids": [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2461:    ["E1"],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2462:    ["E2"],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2463:    ["E3"],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2464:    ["E4"]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2465:  ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2466:}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2467:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2468:MOVIE COMMENTARY RULES:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2469:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2470:EVIDENCE RULES:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2471:   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2495:14. Preserve an information gap through the middle of the Short.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2496:15. Put the strongest supported filmmaking, production, character, editing, VFX, sound, or storytelling detail in line 3.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2497:16. Make line 4 resolve the opening angle instead of ending with a generic summary.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2498:17. Do not include generic calls to action.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2499:11. Every factual claim must be supported by the supplied research.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2500:12. Do not invent behind-the-scenes details.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2501:13. Never claim a specific visual-effects technique was used unless the research explicitly supports it.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2502:14. If the evidence only supports a broader conclusion, state only that broader conclusion.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2503:15. Do not confuse information about the comic-book character with information about the film.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2504:16. Do not compare the movie to another movie unless the supplied research explicitly makes that comparison.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2505:17. Avoid unsupported adjectives such as revolutionary, groundbreaking, extreme, iconic, or unprecedented.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2506:18. Prefer a concrete researched detail over promotional-sounding language.
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2507:19. Aim for 85-100 words so the result remains safely above the minimum.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2508:20. Do not claim that a scene makes viewers feel awe, fear, terror, excitement, immersion, tension, or any other audience reaction unless the cited research explicitly supports that reaction.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2509:21. Prefer concrete statements about the filmmaking, visual effects, action design, dimensions, production choices, or documented critical response.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2510:22. Do not turn your own interpretation into a factual statement. > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2511:23. Aim for 85-100 narration words.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2512:24. Count the narration words before returning JSON.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2513:"""
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2514:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2515:        else:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2516:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2517:            system_prompt = """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2518:You are Jarvis, a YouTube Shorts script writer.\n\nREFERENCE STORY GRAMMAR:\n{reference_instruction}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2519:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2520:Return ONLY one valid JSON object.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2521:Never use markdown or code fences.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2522:Never add text outside the JSON.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2523:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2524:Use exactly this schema:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2525:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2526:{
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2527:  "title": "string",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2528:  "hashtags": [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2529:    "#hashtag1",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2530:    "#hashtag2",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2531:    "#hashtag3"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2532:  ],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2533:  "script_lines": [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2534:    "line 1",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2535:    "line 2",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2536:    "line 3",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2537:    "line 4"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2538:  ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2539:}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2540:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2541:SCRIPT RULES:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2542:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2543:1. Exactly four narration lines.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2544:2. Total narration MUST be 75-105 words.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2545:3. Aim for 19-26 words per narration line.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2546:4. No narration line may exceed 29 words.   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2781:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2782:        word_count = self._word_count(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2783:            data
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2784:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2785:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2786:        if not (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2787:            self.MIN_WORDS
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2788:            <= word_count
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2789:            <= self.MAX_WORDS
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2790:        ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2791:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2792:            logger.warning(
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2793:                "Script length validation failed: "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2794:                "%s words.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2795:                word_count,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2796:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2797:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2798:            return False
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2799:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2800:        return True
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2801:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2802:    ########################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2803:    # Word counting
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2804:    ########################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2805:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2806:    @staticmethod
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2807:    def _word_count(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2808:        data: dict,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2809:    ) -> int:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2810:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2811:        if not isinstance(data, dict):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2812:            return 0
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2813:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2814:        lines = data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2815:            "script_lines",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2816:            [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2817:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2818:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2819:        if not isinstance(lines, list):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2820:            return 0
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2821:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2822:        return sum(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2823:            len(str(line).split())
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2824:            for line in lines
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2825:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2826:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2827:    ########################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2828:    # Emergency fallback
+
+======================================================================
+GENERATOR MAIN SECTION
+======================================================================
+                topic=topic,                 research=research,                 format_name=format_name,                 movie_title=movie_title,                 reference_profile=reference_profile,             ),             json_mode=True,         )          data = self._extract_json(raw)           ####################################################         # Attempt 2 - controlled regeneration         ####################################################          if not self._is_valid_content(data):              previous_words = (                 self._word_count(data)             )              logger.warning(                 "Initial content invalid "                 "(%s words). Regenerating.",                 previous_words,             )              retry_raw = await self.llm.chat(                 self._build_messages(                     topic=topic,                     research=research,                     previous_words=previous_words,                     retry=True,                     format_name=format_name,                     movie_title=movie_title,                     reference_profile=reference_profile,             ),                 json_mode=True,             )              retry_data = self._extract_json(                 retry_raw             )               if self._is_valid_content(                 retry_data             ):                 data = retry_data                  logger.info(                     "Content regeneration succeeded."                 )              else:                 retry_words = self._word_count(                     retry_data                 )                  logger.warning(                     "Content regeneration failed "                     "(%s words). Attempting grounded "                     "length recovery.",                     retry_words,                 )                  if self._is_movie_fact_generation(                     format_name=format_name,                     reference_format=reference_format,                 ):                      recovered = (                         await self._recover_movie_generation_length(                             data=retry_data,                             topic=topic,                             movie_title=movie_title,                             research=research,                         )                     )                  else:                      recovered = (                         self._recover_generation_length(                             data=retry_data,                             research=research,                         )                     )                  if recovered is not None:                     data = recovered                      logger.info(                         "Grounded generation length "                         "recovery succeeded (%s words).",                         self._word_count(data),                     )                  else:                     data = {}          ####################################################         # Emergency fallback         ####################################################          if not data:              logger.warning(                 "Using emergency content fallback."             )              data = self._fallback(                 topic=topic,                 research=research,             )          ####################################################         # Normalize         ####################################################          title = str(             data.get(                 "title",                 topic,             )         ).strip()          hashtags = [             str(tag).strip()             for tag in data.get(                 "hashtags",                 []             )             if str(tag).strip()         ]          lines = [             str(line).strip()             for line in data.get(                 "script_lines",                 []             )             if str(line).strip()         ]          if len(lines) != 4:             raise RuntimeError(                 "Generated content normalization produced "                 f"{len(lines)} script lines; expected exactly 4."             )          lines = lines[:4]          if format_name == "famous_movie_commentary":              evidence_ids = data.get(                 "evidence_ids",                 [],             )              evidence_validation = (                 self.claim_evidence_validator.validate(                     script_lines=lines,                     evidence_ids=evidence_ids,                     research=research,                 )             )              if not evidence_validation.valid:                 raise RuntimeError(                     "Movie script failed claim-evidence validation: "                     f"{evidence_validation.issues}"                 )          if format_name == "famous_movie_commentary":              semantic_validation = (                 await self.semantic_claim_evidence_validator.validate(                     script_lines=lines,
+
+======================================================================
+MOVIE RECOVERY FUNCTION AREA
+======================================================================
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:387:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:388:    ########################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:389:    # Content repair
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:390:    ########################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:391:
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:392:    async def _recover_movie_generation_length(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:393:        self,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:394:        *,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:395:        data: dict,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:396:        topic: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:397:        movie_title: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:398:        research: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:399:    ) -> dict | None:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:400:        """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:401:        Recover short grounded movie-facts scripts.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:402:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:403:        The research string may contain grounded facts without
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:404:        explicit evidence labels. Recovery therefore creates a
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:405:        deterministic local evidence contract from those facts.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:406:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:407:        Validation remains fail-closed.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:408:        """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:409:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:410:        if not self._is_structurally_valid_content(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:411:            data
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:412:        ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:413:            return None
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:414:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:415:        current_words = self._word_count(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:416:            data
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:417:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:418:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:419:        if (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:420:            self.MIN_WORDS
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:421:            <= current_words
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:422:            <= self.MAX_WORDS
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:423:        ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:424:            return data
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:425:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:426:        if current_words > self.MAX_WORDS:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:427:            return None
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:428:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:429:        # -------------------------------------------------
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:430:        # Build deterministic evidence units.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:431:        #
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:432:        # Existing labelled evidence is preserved when
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:433:        # available. Otherwise grounded research sentences
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:434:        # become E1, E2, ... locally for this recovery.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:435:        # -------------------------------------------------
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:436:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:437:        labelled_matches = re.findall(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:438:            r"\[(E\d+)\]\s*([^\n]+)",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:439:            research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:440:            flags=re.IGNORECASE,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:441:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:442:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:443:        evidence_map = {}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:444:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:445:        for evidence_id, text in labelled_matches:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:446:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:447:            normalized = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:448:                str(evidence_id)
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:449:                .strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:450:                .upper()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:451:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:452:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:453:            cleaned = " ".join(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:454:                str(text).split()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:455:            ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:456:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:457:            if normalized and cleaned:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:458:                evidence_map[
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:459:                    normalized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:460:                ] = cleaned
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:461:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:462:        if not evidence_map:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:463:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:464:            # Research supplied by EvergreenResearch currently
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:465:            # arrives as grounded prose rather than E-labelled
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:466:            # evidence. Split it conservatively into factual
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:467:            # sentence-sized evidence units.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:468:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:469:            raw_sentences = re.split(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:470:                r"(?<=[.!?])\s+",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:471:                str(research),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:472:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:473:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:474:            evidence_units = []
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:475:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:476:            banned_fragments = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:477:                '"topic"',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:478:                '"summary"',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:479:                '"facts"',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:480:                '"keywords"',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:481:                '"sources"',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:482:                '"score"',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:483:                '"category"',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:484:                '"url"',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:485:                '"confidence"',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:486:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:487:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:488:            for sentence in raw_sentences:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:489:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:490:                cleaned = " ".join(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:491:                    sentence.split()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:492:                ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:493:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:494:                if not cleaned:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:495:                    continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:496:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:497:                lower = cleaned.lower()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:498:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:499:                if any(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:500:                    fragment in lower
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:501:                    for fragment in banned_fragments
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:502:                ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:503:                    # JSON/key scaffolding is not evidence.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:504:                    # Content following a key can still appear
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:505:                    # in later sentence units.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:506:                    continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:507:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:508:                words = cleaned.split()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:509:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:510:                if len(words) < 5:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:511:                    continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:512:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:513:                if cleaned in evidence_units:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:514:                    continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:515:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:516:                evidence_units.append(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:517:                    cleaned
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:518:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:519:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:520:                if len(evidence_units) >= 12:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:521:                    break
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:522:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:523:            # If the serialized research format caused the
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:524:            # conservative pass to reject everything, perform
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:525:            # one bounded textual extraction rather than
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:526:            # inventing evidence.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:527:            if not evidence_units:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:528:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:529:                candidate_text = re.sub(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:530:                    r'https?://\S+',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:531:                    ' ',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:532:                    str(research),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:533:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:534:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:535:                candidate_text = re.sub(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:536:                    r'["{}\[\],:]',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:537:                    ' ',
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:538:                    candidate_text,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:539:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:540:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:541:                candidate_text = " ".join(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:542:                    candidate_text.split()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:543:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:544:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:545:                raw_sentences = re.split(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:546:                    r"(?<=[.!?])\s+",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:547:                    candidate_text,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:548:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:549:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:550:                for sentence in raw_sentences:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:551:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:552:                    cleaned = " ".join(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:553:                        sentence.split()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:554:                    ).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:555:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:556:                    if len(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:557:                        cleaned.split()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:558:                    ) < 5:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:559:                        continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:560:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:561:                    if cleaned in evidence_units:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:562:                        continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:563:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:564:                    evidence_units.append(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:565:                        cleaned
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:566:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:567:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:568:                    if len(evidence_units) >= 12:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:569:                        break
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:570:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:571:            for index, text in enumerate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:572:                evidence_units,
+
+======================================================================
+END
+======================================================================

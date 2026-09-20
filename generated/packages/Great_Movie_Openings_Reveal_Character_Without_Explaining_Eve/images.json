@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Sitting_(squatting)_for_a_Nadia_Strid_portrait.jpg",
+        "image_path": "generated\\packages\\Great_Movie_Openings_Reveal_Character_Without_Explaining_Eve\\images\\scene_001.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Opening_Night_Show_(27705998766).jpg",
+        "image_path": "generated\\packages\\Great_Movie_Openings_Reveal_Character_Without_Explaining_Eve\\images\\scene_002.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Mercury_in_color_-_Prockter07_centered.jpg",
+        "image_path": "generated\\packages\\Great_Movie_Openings_Reveal_Character_Without_Explaining_Eve\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Opening_Night_Show_(27705998766).jpg",
+        "image_path": "generated\\packages\\Great_Movie_Openings_Reveal_Character_Without_Explaining_Eve\\images\\scene_004.jpg",
+        "width": null,
+        "height": null
+    }
+]

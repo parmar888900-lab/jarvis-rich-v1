@@ -20,8 +20,7 @@ from backend.services.orchestration.uncertain_side_effect import (
 
 
 YOUTUBE_SCOPES = [
-    "https://www.googleapis.com/auth/youtube.upload",
-    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube",
 ]
 
 
@@ -1156,3 +1155,4 @@ class YoutubePublisher:
             category_id=category_id,
             operation_tag=operation_tag,
         )
+

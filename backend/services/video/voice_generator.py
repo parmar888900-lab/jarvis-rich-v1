@@ -1,4 +1,4 @@
-﻿"""
+"""
 Local voice generation for Jarvis using Piper TTS.
 """
 

@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Mary-Poppins-Musical.jpg",
+        "image_path": "generated\\packages\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist\\images\\scene_001.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Advanced_Computer_Techniques_logo.jpg",
+        "image_path": "generated\\packages\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist\\images\\scene_002.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Mary-Poppins-Musical.jpg",
+        "image_path": "generated\\packages\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:US_Navy_061101-N-7292N-036_Damage_Controlman_Fireman_John_Bukovinsky_relays_a_message_through_the_ship%27s_sound_powered_phone_system.jpg",
+        "image_path": "generated\\packages\\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist\\images\\scene_004.jpg",
+        "width": null,
+        "height": null
+    }
+]

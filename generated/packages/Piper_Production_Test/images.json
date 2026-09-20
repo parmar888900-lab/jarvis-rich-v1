@@ -1,0 +1,18 @@
+[
+    {
+        "scene": 1,
+        "provider": "flux-comfyui",
+        "prompt": "Futuristic artificial intelligence interface.",
+        "image_path": "generated\\packages\\Piper_Production_Test\\images\\scene_001.png",
+        "width": 720,
+        "height": 1280
+    },
+    {
+        "scene": 2,
+        "provider": "flux-comfyui",
+        "prompt": "Futuristic video production system.",
+        "image_path": "generated\\packages\\Piper_Production_Test\\images\\scene_002.png",
+        "width": 720,
+        "height": 1280
+    }
+]

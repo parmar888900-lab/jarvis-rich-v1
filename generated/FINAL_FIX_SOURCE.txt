@@ -1,0 +1,901 @@
+﻿===== DAILY BATCH =====
+"""Daily autonomous Rich V1 production batch."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+from datetime import date, datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from backend.services.orchestration.production_scheduler import (
+    ProductionScheduler,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class DailyProductionBatch:
+    """
+    Produce a fixed number of successful autonomous videos per day.
+
+    State persists across application restarts so restarting Jarvis
+    does not reset the daily successful-video count.
+    """
+
+    def __init__(
+        self,
+        scheduler: ProductionScheduler,
+        *,
+        daily_target: int = 4,
+        state_path: str | Path = (
+            "generated/state/daily_batch_state.json"
+        ),
+    ) -> None:
+
+        if daily_target < 1:
+            raise ValueError(
+                "daily_target must be at least 1."
+            )
+
+        self.scheduler = scheduler
+        self.daily_target = int(daily_target)
+        self.state_path = Path(state_path)
+
+        self.state_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        self._batch_lock = asyncio.Lock()
+
+    async def run_daily_batch(
+        self,
+    ) -> dict[str, Any]:
+
+        async with self._batch_lock:
+
+            if not self.scheduler.enabled:
+                return {
+                    "status": "autonomy_disabled",
+                    "successful": 0,
+                    "daily_target": self.daily_target,
+                }
+
+
+            today = date.today().isoformat()
+            state = self._load_state()
+
+            if state.get("date") != today:
+
+                state = {
+                    "date": today,
+                    "successful": 0,
+                    "attempted": 0,
+                    "results": [],
+                }
+
+                self._save_state(
+                    state
+                )
+
+            successful = int(
+                state.get(
+                    "successful",
+                    0,
+                )
+            )
+
+            if successful >= self.daily_target:
+
+                return {
+                    "status": "daily_quota_complete",
+                    "date": today,
+                    "successful": successful,
+                    "daily_target": self.daily_target,
+                }
+
+            results = list(
+                state.get(
+                    "results",
+                    [],
+                )
+            )
+
+            remaining = (
+                self.daily_target
+                - successful
+            )
+
+            # Allow failures, but never loop forever unattended.
+            max_batch_attempts = max(
+                remaining * 2,
+                remaining,
+            )
+
+            batch_attempts = 0
+
+            while (
+                successful < self.daily_target
+                and batch_attempts < max_batch_attempts
+            ):
+
+                batch_attempts += 1
+
+                logger.info(
+                    "Starting autonomous production attempt %s. "
+                    "Daily progress: %s/%s.",
+                    batch_attempts,
+                    successful,
+                    self.daily_target,
+                )
+
+                result = await self.scheduler.run_once()
+
+                status = str(
+                    result.get(
+                        "status",
+                        "unknown",
+                    )
+                )
+
+                record = {
+                    "timestamp": datetime.now(
+                        timezone.utc
+                    ).isoformat(),
+                    "status": status,
+                    "result": result,
+                }
+
+                results.append(
+                    record
+                )
+
+                state["attempted"] = (
+                    int(
+                        state.get(
+                            "attempted",
+                            0,
+                        )
+                    )
+                    + 1
+                )
+
+                if status == "success":
+
+                    successful += 1
+
+                    state["successful"] = (
+                        successful
+                    )
+
+                state["results"] = results
+
+                self._save_state(
+                    state
+                )
+
+                logger.info(
+                    "Jarvis daily production progress: %s/%s.",
+                    successful,
+                    self.daily_target,
+                )
+
+            completed = (
+                successful
+                >= self.daily_target
+            )
+
+            return {
+                "status": (
+                    "daily_quota_complete"
+                    if completed
+                    else "daily_quota_incomplete"
+                ),
+                "date": today,
+                "successful": successful,
+                "daily_target": self.daily_target,
+                "batch_attempts": batch_attempts,
+            }
+
+    def _load_state(
+        self,
+    ) -> dict[str, Any]:
+
+        if not self.state_path.exists():
+            return {}
+
+        try:
+
+            value = json.loads(
+                self.state_path.read_text(
+                    encoding="utf-8"
+                )
+            )
+
+            if isinstance(
+                value,
+                dict,
+            ):
+                return value
+
+        except Exception:
+
+            logger.exception(
+                "Could not read daily production state."
+            )
+
+        return {}
+
+    def _save_state(
+        self,
+        state: dict[str, Any],
+    ) -> None:
+
+        temporary = (
+            self.state_path.with_suffix(
+                ".tmp"
+            )
+        )
+
+        temporary.write_text(
+            json.dumps(
+                state,
+                indent=2,
+                default=str,
+            ),
+            encoding="utf-8",
+        )
+
+        temporary.replace(
+            self.state_path
+        )
+
+===== PRODUCTION SCHEDULER =====
+"""Autonomous production scheduler."""
+
+import asyncio
+import logging
+from typing import Any
+
+from backend.services.orchestration.autonomous_retry import (
+    AutonomousRetryPolicy,
+)
+from backend.services.orchestration.production_runner import (
+    ProductionCycleBusyError,
+    ProductionRunner,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class ProductionScheduler:
+    """Periodically launch production cycles."""
+
+    def __init__(
+        self,
+        orchestrator: Any,
+        *,
+        interval_seconds: float,
+        enabled: bool = False,
+        retry_policy: AutonomousRetryPolicy | None = None,
+        production_allowed: bool = True,
+    ) -> None:
+
+        if interval_seconds <= 0:
+            raise ValueError(
+                "interval_seconds must be greater than zero."
+            )
+
+        self.orchestrator = orchestrator
+        self.runner = ProductionRunner(
+            orchestrator
+        )
+
+        self.interval_seconds = float(
+            interval_seconds
+        )
+        self.production_allowed = bool(
+            production_allowed
+        )
+        self.enabled = (
+            bool(enabled)
+            and self.production_allowed
+        )
+        self.retry_policy = (
+            retry_policy
+            if retry_policy is not None
+            else AutonomousRetryPolicy()
+        )
+        self._task: asyncio.Task | None = None
+
+    @property
+    def running(self) -> bool:
+        return (
+            self._task is not None
+            and not self._task.done()
+        )
+
+    def start(self) -> bool:
+        """Start only when enabled and production-ready."""
+
+        if not self.production_allowed:
+            return False
+
+        if not self.enabled:
+            return False
+
+        if self.running:
+            return False
+
+        self._task = asyncio.create_task(
+            self._run_loop(),
+            name="production-scheduler",
+        )
+
+        return True
+
+    async def stop(self) -> bool:
+        """Stop the scheduler cleanly."""
+
+        if self._task is None:
+            return False
+
+        task = self._task
+        self._task = None
+
+        if task.done():
+            try:
+                task.result()
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                logger.exception(
+                    "Production scheduler task failed."
+                )
+
+            return True
+
+        task.cancel()
+
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+        return True
+
+    def enable(self) -> bool:
+        """
+        Enable autonomous production authorization.
+
+        DailyProductionBatch is the sole autonomous scheduling
+        owner. Do not start the legacy interval loop here because
+        that loop does not enforce the four-success daily quota.
+        """
+
+        if not self.production_allowed:
+            self.enabled = False
+            return False
+
+        was_enabled = self.enabled
+        self.enabled = True
+
+        return not was_enabled
+
+    async def disable(self) -> bool:
+        """Disable autonomous production and stop scheduling."""
+
+        changed = self.enabled or self.running
+
+        self.enabled = False
+
+        if self.running:
+            await self.stop()
+
+        return changed
+
+    async def run_once(self) -> dict:
+        """Attempt one autonomous production cycle with safe retries."""
+
+        attempt = 1
+
+        while True:
+            try:
+                result = await self.runner.run_cycle()
+
+                failure = result.get(
+                    "failure"
+                )
+
+                result_retryable = (
+                    isinstance(failure, dict)
+                    and failure.get("retryable") is True
+                )
+
+                if (
+                    result_retryable
+                    and attempt
+                    < self.retry_policy.max_attempts
+                ):
+                    delay = (
+                        self.retry_policy.delay_for_retry(
+                            attempt
+                        )
+                    )
+
+                    logger.warning(
+                        "Retryable production result on "
+                        "attempt %s/%s. Retrying in %.2fs. "
+                        "Category: %s",
+                        attempt,
+                        self.retry_policy.max_attempts,
+                        delay,
+                        failure.get(
+                            "category",
+                            "unknown",
+                        ),
+                    )
+
+                    await asyncio.sleep(
+                        delay
+                    )
+
+                    attempt += 1
+                    continue
+
+                return result
+
+            except ProductionCycleBusyError:
+                return {
+                    "status": "skipped",
+                    "reason": "production_busy",
+                    "attempts": attempt,
+                }
+
+            except asyncio.CancelledError:
+                raise
+
+            except Exception as exc:
+                should_retry = (
+                    self.retry_policy.is_retryable_exception(
+                        exc
+                    )
+                    and attempt
+                    < self.retry_policy.max_attempts
+                )
+
+                if not should_retry:
+                    logger.exception(
+                        "Scheduled production cycle failed."
+                    )
+
+                    return {
+                        "status": "scheduler_failed",
+                        "reason": "production_cycle_failed",
+                        "attempts": attempt,
+                        "error_type": type(exc).__name__,
+                    }
+
+                delay = (
+                    self.retry_policy.delay_for_retry(
+                        attempt
+                    )
+                )
+
+                logger.warning(
+                    "Transient production failure on "
+                    "attempt %s/%s. Retrying in %.2fs.",
+                    attempt,
+                    self.retry_policy.max_attempts,
+                    delay,
+                )
+
+                await asyncio.sleep(
+                    delay
+                )
+
+                attempt += 1
+
+    async def _run_loop(self) -> None:
+        """Run scheduled cycles until cancelled."""
+
+        while True:
+            await asyncio.sleep(
+                self.interval_seconds
+            )
+
+            try:
+                await self.run_once()
+
+            except asyncio.CancelledError:
+                raise
+
+            except Exception:
+                logger.exception(
+                    "Unexpected scheduler-loop failure."
+                )
+
+
+
+===== PRODUCTION RUNNER =====
+"""Shared execution service for production cycles."""
+
+import asyncio
+from collections.abc import Callable
+from typing import Any
+from uuid import uuid4
+
+from backend.services.orchestration.production_runtime import (
+    production_lock,
+)
+
+
+class ProductionCycleBusyError(RuntimeError):
+    """Raised when another production cycle is already running."""
+
+
+class ProductionRunner:
+    """Run production cycles through one shared concurrency gate."""
+
+    def __init__(
+        self,
+        orchestrator: Any,
+        *,
+        lock: asyncio.Lock | None = None,
+        cycle_id_factory: Callable[[], str] | None = None,
+    ) -> None:
+
+        self.orchestrator = orchestrator
+        self.lock = (
+            lock
+            if lock is not None
+            else production_lock
+        )
+        self.cycle_id_factory = (
+            cycle_id_factory
+            if cycle_id_factory is not None
+            else lambda: str(uuid4())
+        )
+
+    async def run_cycle(self) -> dict:
+        """Run one production cycle or reject if busy."""
+
+        if self.lock.locked():
+            raise ProductionCycleBusyError(
+                "Another production cycle is already running."
+            )
+
+        await self.lock.acquire()
+
+        cycle_id = self.cycle_id_factory()
+
+        try:
+            return await self.orchestrator.run_cycle(
+                cycle_id
+            )
+
+        finally:
+            self.lock.release()
+
+===== CONTENT GENERATOR — FIRST 300 LINES =====
+import json
+import logging
+import re
+
+from backend.models.generated_content import GeneratedContent
+from backend.services.llm_service import LLMService
+from backend.services.intelligence.claim_evidence_validator import (
+    ClaimEvidenceValidator,
+)
+from backend.services.intelligence.semantic_claim_evidence_validator import (
+    SemanticClaimEvidenceValidator,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class ContentGenerator:
+
+    MIN_WORDS = 75
+    MAX_WORDS = 110
+
+    def __init__(self):
+        self.llm = LLMService()
+        self.claim_evidence_validator = ClaimEvidenceValidator()
+        self.semantic_claim_evidence_validator = (
+            SemanticClaimEvidenceValidator(
+                llm=self.llm
+            )
+        )
+
+    async def generate(
+        self,
+        trend: dict,
+    ) -> GeneratedContent:
+
+        topic = (
+            trend.get("title")
+            or trend.get("topic")
+            or "Trending Story"
+        )
+
+        research = trend.get(
+            "research",
+            "",
+        )
+
+        content_format = trend.get(
+            "content_format",
+            {},
+        )
+
+        if not isinstance(
+            content_format,
+            dict,
+        ):
+            content_format = {}
+
+        format_name = str(
+            content_format.get(
+                "format_name",
+                "visual_explainer",
+            )
+        ).strip()
+
+        movie_title = str(
+            trend.get(
+                "movie_title",
+                "",
+            )
+        ).strip()
+
+        if isinstance(research, list):
+            research = "\n".join(
+                str(x)
+                for x in research
+            )
+
+        if not research:
+            research = json.dumps(
+                trend,
+                indent=2,
+            )
+
+        ####################################################
+        # Attempt 1
+        ####################################################
+
+        raw = await self.llm.chat(
+            self._build_messages(
+                topic=topic,
+                research=research,
+                format_name=format_name,
+                movie_title=movie_title,
+            ),
+            json_mode=True,
+        )
+
+        data = self._extract_json(raw)
+
+
+        ####################################################
+        # Attempt 2 - controlled regeneration
+        ####################################################
+
+        if not self._is_valid_content(data):
+
+            previous_words = (
+                self._word_count(data)
+            )
+
+            logger.warning(
+                "Initial content invalid "
+                "(%s words). Regenerating.",
+                previous_words,
+            )
+
+            retry_raw = await self.llm.chat(
+                self._build_messages(
+                    topic=topic,
+                    research=research,
+                    previous_words=previous_words,
+                    retry=True,
+                    format_name=format_name,
+                    movie_title=movie_title,
+            ),
+                json_mode=True,
+            )
+
+            retry_data = self._extract_json(
+                retry_raw
+            )
+
+
+            if self._is_valid_content(
+                retry_data
+            ):
+                data = retry_data
+
+                logger.info(
+                    "Content regeneration succeeded."
+                )
+
+            else:
+                retry_words = self._word_count(
+                    retry_data
+                )
+
+                logger.warning(
+                    "Content regeneration failed "
+                    "(%s words). Attempting grounded "
+                    "length recovery.",
+                    retry_words,
+                )
+
+                if format_name == "famous_movie_commentary":
+
+                    recovered = (
+                        await self._recover_movie_generation_length(
+                            data=retry_data,
+                            topic=topic,
+                            movie_title=movie_title,
+                            research=research,
+                        )
+                    )
+
+                else:
+
+                    recovered = (
+                        self._recover_generation_length(
+                            data=retry_data,
+                            research=research,
+                        )
+                    )
+
+                if recovered is not None:
+                    data = recovered
+
+                    logger.info(
+                        "Grounded generation length "
+                        "recovery succeeded (%s words).",
+                        self._word_count(data),
+                    )
+
+                else:
+                    data = {}
+
+        ####################################################
+        # Emergency fallback
+        ####################################################
+
+        if not data:
+
+            logger.warning(
+                "Using emergency content fallback."
+            )
+
+            data = self._fallback(
+                topic=topic,
+                research=research,
+            )
+
+        ####################################################
+        # Normalize
+        ####################################################
+
+        title = str(
+            data.get(
+                "title",
+                topic,
+            )
+        ).strip()
+
+        hashtags = [
+            str(tag).strip()
+            for tag in data.get(
+                "hashtags",
+                []
+            )
+            if str(tag).strip()
+        ]
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+            if str(line).strip()
+        ]
+
+        if len(lines) != 4:
+            raise RuntimeError(
+                "Generated content normalization produced "
+                f"{len(lines)} script lines; expected exactly 4."
+            )
+
+        lines = lines[:4]
+
+        if format_name == "famous_movie_commentary":
+
+            evidence_ids = data.get(
+                "evidence_ids",
+                [],
+            )
+
+            evidence_validation = (
+                self.claim_evidence_validator.validate(
+                    script_lines=lines,
+                    evidence_ids=evidence_ids,
+                    research=research,
+                )
+            )
+
+            if not evidence_validation.valid:
+                raise RuntimeError(
+                    "Movie script failed claim-evidence validation: "
+                    f"{evidence_validation.issues}"
+                )
+
+        if format_name == "famous_movie_commentary":
+
+            semantic_validation = (
+                await self.semantic_claim_evidence_validator.validate(
+                    script_lines=lines,
+                    evidence_ids=data.get(
+                        "evidence_ids",
+                        [],
+                    ),
+                    research=research,
+                )
+            )
+
+            if not semantic_validation.valid:
+
+                repaired_lines = (
+                    await self._repair_movie_semantic_failures(
+                        script_lines=lines,
+                        evidence_ids=data.get(
+                            "evidence_ids",
+                            [],
+                        ),
+                        research=research,
+                        semantic_validation=semantic_validation,
+                        topic=topic,
+                        movie_title=movie_title,
+                    )
+                )
+
+                if repaired_lines is None:
+                    raise RuntimeError(
+                        "Movie script failed semantic evidence "
+                        "validation and targeted repair failed: "
+                        f"{semantic_validation.to_dict()}"
+                    )
+
+                lines = repaired_lines
+
+                data["script_lines"] = list(
+                    repaired_lines
+                )
+
+===== WATCHDOG FILES =====
+
+FullName                                                         Length LastWriteTime      
+--------                                                         ------ -------------      
+C:\Users\hp\jarvis.ai\jarvis_watchdog.ps1                          4741 17-09-2026 21:47:41
+C:\Users\hp\jarvis.ai\start_jarvis_watchdog.cmd                     159 17-09-2026 21:33:36
+C:\Users\hp\jarvis.ai\test_production_autonomy_controls.py         3472 30-08-2026 15:42:07
+C:\Users\hp\jarvis.ai\test_production_autonomy_disable_safety.py   4870 30-08-2026 15:43:10
+
+
+
+
+===== STARTUP LAUNCHER =====
+@echo off
+cd /d C:\Users\hp\jarvis.ai
+start "" /min powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Users\hp\jarvis.ai\jarvis_watchdog_final.ps1"
+exit

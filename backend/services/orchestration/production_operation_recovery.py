@@ -1,4 +1,4 @@
-﻿"""Recovery logic for stale production operations."""
+"""Recovery logic for stale production operations."""
 
 from datetime import datetime, timedelta, timezone
 

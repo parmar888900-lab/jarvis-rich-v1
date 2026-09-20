@@ -1,4 +1,4 @@
-﻿"""Structured failure classification for production workflows."""
+"""Structured failure classification for production workflows."""
 
 from dataclasses import dataclass
 from enum import Enum

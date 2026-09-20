@@ -1,0 +1,2648 @@
+{
+  "date": "2026-09-18",
+  "successful": 0,
+  "attempted": 264,
+  "results": [
+    {
+      "timestamp": "2026-09-18T06:12:03.082192+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T06:13:27.269675+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T06:15:23.250558+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T06:18:01.529298+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T06:19:35.782573+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T06:21:59.238366+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T06:27:23.180650+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T06:30:39.724831+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T06:48:37.587201+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T06:54:22.436317+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:00:32.185271+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:01:50.035106+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:04:03.845341+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:05:58.227943+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:07:01.049214+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:08:34.369680+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:11:12.735696+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:12:34.024229+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:28:56.120714+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:29:57.416223+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:32:36.427132+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:35:22.191038+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:37:10.241669+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:43:53.206873+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:45:31.623567+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:50:29.788275+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:53:57.624053+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T07:55:06.516454+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:00:27.046755+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:07:28.075373+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:09:20.966483+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:12:01.700272+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:13:25.732806+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:15:55.407102+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:17:07.397039+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:22:10.695544+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:23:26.097276+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:41:42.907023+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:48:04.485993+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T08:57:54.215783+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:03:54.704628+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:04:58.570990+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:06:38.148874+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:09:25.103165+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:17:32.886434+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:18:53.861710+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:21:58.713548+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:28:30.235925+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:29:57.505584+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:31:58.363049+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:33:04.970052+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:36:29.281906+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:39:02.678465+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:40:54.631716+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:42:18.689090+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T09:59:26.754779+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:00:26.734816+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:03:46.485259+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:06:51.123527+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:07:52.629459+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:12:48.312567+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:14:09.705117+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:16:39.553422+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:20:23.143561+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:21:47.419201+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:26:44.925158+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:27:50.464508+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:34:14.007595+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:39:19.630376+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:40:48.545457+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:42:38.664020+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:47:57.792115+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T10:52:52.470694+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:00:22.610127+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:02:17.441363+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:05:16.846681+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:06:29.436581+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:08:12.106578+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:09:43.604078+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:11:59.750904+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:13:16.979930+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:30:44.857208+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:36:23.141652+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:37:25.126500+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:38:52.643474+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:40:12.633995+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:41:24.022178+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:42:53.622990+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:44:49.713573+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T11:45:59.792817+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:02:38.225878+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:03:47.572349+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:05:06.791702+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:06:57.498662+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:09:31.312735+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:14:38.962538+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:16:11.106138+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:18:50.942457+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:25:13.282875+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:26:40.460586+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:29:50.762029+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:35:57.276394+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:36:51.819619+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:44:59.122504+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:46:15.009303+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:47:53.454209+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:54:26.245878+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:55:55.841793+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T12:57:22.968006+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:02:11.955386+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:04:44.274573+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:06:15.531195+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:07:36.179612+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:12:22.328763+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:17:12.213082+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:19:59.668332+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:21:23.260486+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:26:21.673035+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:27:28.153210+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:28:24.493738+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:29:59.504869+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:31:12.272665+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T13:52:54.865557+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:01:31.482597+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:02:58.170538+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:05:53.075981+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:07:13.363644+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:09:06.936326+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:15:25.353114+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:16:56.176585+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:19:49.309181+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:20:57.063864+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:26:23.015847+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:28:16.177267+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:29:14.026621+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:30:43.584410+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:32:59.200132+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:38:25.514125+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:43:26.258406+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:46:26.092351+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:47:50.735854+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:48:52.355529+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:50:25.369714+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:53:37.918488+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T14:56:23.589679+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:01:08.898209+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:02:22.814256+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:08:44.614660+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:15:04.297467+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:16:54.185820+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:19:44.971563+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:23:35.432763+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:30:43.583051+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:37:07.606775+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:42:15.714436+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:43:20.863347+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:46:18.920692+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:47:26.163392+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:55:38.648305+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:56:48.109692+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:57:58.025026+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T15:59:10.174165+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:02:00.150884+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:03:18.794476+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:06:11.092351+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:08:57.475432+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:25:37.007722+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:27:57.145051+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:29:30.600132+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:30:52.082796+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:31:46.005739+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:33:23.678247+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:42:31.129895+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:48:40.830568+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:53:38.101718+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T16:54:56.415964+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:05:41.617773+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:06:50.553359+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:15:08.085506+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:18:51.184843+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:23:38.560163+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:24:41.576285+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:26:59.025145+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:29:38.488802+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:30:53.366546+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:31:59.672103+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:40:33.871351+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:41:38.487957+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:47:02.763317+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:48:02.498542+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:48:55.358699+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:50:28.511921+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:51:41.626060+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T17:53:27.931687+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:10:04.209776+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:14:58.867011+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:16:24.593373+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:26:34.247736+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:35:55.474391+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:37:11.046396+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:39:23.475874+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:41:35.431716+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:44:57.274768+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:46:31.191381+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:55:49.682234+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:56:58.436694+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T18:59:32.759696+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:01:23.278347+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:03:58.877200+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:05:46.817147+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:07:04.096604+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:11:40.342558+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:12:50.120957+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:17:26.303928+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:18:35.740773+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:23:19.733869+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:30:00.739301+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:35:32.917975+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:38:44.079884+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:41:47.632061+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:42:50.309715+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:43:58.763218+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:45:19.293950+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:46:28.161051+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T19:47:40.654223+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:10:55.674236+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:12:08.114734+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:13:08.760004+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:16:18.360984+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:18:07.776454+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:20:27.331754+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:23:44.523126+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:24:58.949044+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:41:59.428035+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:47:56.686937+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:49:19.676030+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:51:10.092128+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:52:38.602219+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:58:10.691130+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T20:59:30.503629+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:08:05.922040+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:09:34.438370+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:11:00.971208+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:12:12.476495+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:25:20.402603+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:29:20.162524+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:31:04.270300+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:32:18.317456+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:34:09.022901+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:35:12.215234+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:37:41.505313+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:40:24.531270+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:42:54.501096+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T21:59:36.435323+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T22:01:54.255753+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T22:07:47.532227+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T22:09:46.165444+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T22:11:09.941803+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T22:33:37.686272+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-18T22:35:23.599000+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-19T03:45:16.994767+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-19T03:47:40.186694+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-19T04:58:15.219898+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-19T05:00:20.522309+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    }
+  ],
+  "cooldown_until": "2026-09-19T06:00:20.530017+00:00"
+}

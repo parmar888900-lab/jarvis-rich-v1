@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:04,551
+Actors perform against a green screen for seamless post-production compositing.
+
+2
+00:00:04,551 --> 00:00:18,611
+Chroma keying replaces the green background with any desired scene or image. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).
+
+3
+00:00:18,611 --> 00:00:23,638
+Used in weather forecasts, films, and games, it allows for flexible and realistic visual effects.
+
+4
+00:00:23,638 --> 00:00:27,655
+This technique makes green screens a versatile tool in modern filmmaking and broadcasting.

@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu.wav",
+    "duration": 35.898049886621315,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu_scene_001.wav",
+            "duration": 6.931156462585034,
+            "start_time": 0.0,
+            "end_time": 6.931156462585034,
+            "narration": "Visualize a world where reality bends and time warps\u2014Doctor Strange's universe is a masterclass in filmmaking."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu_scene_002.wav",
+            "duration": 12.631655328798185,
+            "start_time": 6.931156462585034,
+            "end_time": 19.56281179138322,
+            "narration": "Using cutting-edge CGI and meticulous pre-production, they crafted every frame, ensuring seamless integration of magic and science. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu_scene_003.wav",
+            "duration": 7.383945578231293,
+            "start_time": 19.56281179138322,
+            "end_time": 26.94675736961451,
+            "narration": "From intricate set designs to groundbreaking visual effects, each shot was meticulously planned to deliver a mind-bending experience."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu_scene_004.wav",
+            "duration": 8.951292517006802,
+            "start_time": 26.94675736961451,
+            "end_time": 35.89804988662131,
+            "narration": "In post-production, they added the final touches\u2014sound, music, and visual effects\u2014to bring Doctor Strange's mystical world to life."
+        }
+    ],
+    "script": "Visualize a world where reality bends and time warps\u2014Doctor Strange's universe is a masterclass in filmmaking.\nUsing cutting-edge CGI and meticulous pre-production, they crafted every frame, ensuring seamless integration of magic and science. Filmmaking, or film production, is the process of creating a motion picture.\nFrom intricate set designs to groundbreaking visual effects, each shot was meticulously planned to deliver a mind-bending experience.\nIn post-production, they added the final touches\u2014sound, music, and visual effects\u2014to bring Doctor Strange's mystical world to life."
+}

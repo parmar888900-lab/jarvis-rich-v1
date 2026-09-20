@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "In filmmaking, green screens transform scenes, letting you blend any background seamlessly.",
+        "image_prompt": "In filmmaking, green screens transform scenes, letting you blend any background seamlessly.",
+        "duration": 4.806530612244898,
+        "start_time": 0.0,
+        "end_time": 4.806530612244898
+    },
+    {
+        "narration": "Chroma keying, or green screen, uses a specific color to make objects disappear, replacing them with other visuals. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).",
+        "image_prompt": "Chroma keying, or green screen, uses a specific color to make objects disappear, replacing them with other visuals. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).",
+        "duration": 16.834467120181404,
+        "start_time": 4.806530612244898,
+        "end_time": 21.640997732426303
+    },
+    {
+        "narration": "It's widely used in weather forecasts and video games, making it easier to add dynamic backgrounds and environments.",
+        "image_prompt": "It's widely used in weather forecasts and video games, making it easier to add dynamic backgrounds and environments.",
+        "duration": 5.607619047619048,
+        "start_time": 21.640997732426303,
+        "end_time": 27.248616780045353
+    },
+    {
+        "narration": "For example, a weather presenter stands in front of a green screen, while viewers see a colorful map behind them.",
+        "image_prompt": "For example, a weather presenter stands in front of a green screen, while viewers see a colorful map behind them.",
+        "duration": 5.758548752834467,
+        "start_time": 27.248616780045353,
+        "end_time": 33.00716553287982
+    }
+]

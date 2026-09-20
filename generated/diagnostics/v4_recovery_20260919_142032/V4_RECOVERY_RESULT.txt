@@ -1,0 +1,98 @@
+﻿========================================================
+ JARVIS V4 RECOVERY + REAL BENCHMARK
+========================================================
+
+===== STATE RECOVERY =====
+====================================================================
+V4 STATE RECOVERY
+====================================================================
+[INFO] V3 marker: True
+[INFO] V4 constant: True
+[INFO] V4 Foley queries: True
+[INFO] V4 generic-media filter: True
+[INFO] V4 semantic fallback: True
+[INFO] V4 weighted scoring: True
+
+[PASS] V4 is already fully installed.
+[PASS] No patch required.
+
+===== ACTUAL V4 VERIFICATION =====
+[PASS] V4 is fully installed.
+[PASS] V3 acquisition preserved.
+[PASS] Foley-specific searches installed.
+[PASS] Generic-media rejection installed.
+[PASS] Weighted semantic scoring installed.
+[PASS] Semantic fallback installed.
+[PASS] Duplicate controls preserved.
+[PASS] Rights authorization preserved.
+[PASS] Block 5 preserved.
+
+===== FULL BACKEND COMPILE =====
+[PASS] Full backend compile.
+
+===== REAL NO-UPLOAD BENCHMARK =====
+ContentId: semantic_v4_recovery_20260919_142032
+====================================================================
+JARVIS SEMANTIC VISUAL V4 REAL BENCHMARK
+====================================================================
+[INFO] Content ID: semantic_v4_recovery_20260919_142032
+[INFO] Topic: Why movie sound effects are often recorded separately
+[INFO] Upload: DISABLED
+[INFO] Publisher: DISABLED
+[INFO] Orchestrator: DISABLED
+
+[PASS] Real VideoPipeline constructed.
+
+===== REAL PIPELINE START =====
+
+[EvergreenResearch] MISS -> Why movie sound effects are often recorded separately
+
+===== REAL PIPELINE STOPPED =====
+[RESULT] ElapsedSeconds=214.25
+[RESULT] Type=TypeError
+[RESULT] Reason='classmethod' object is not callable
+
+===== TRACEBACK =====
+Traceback (most recent call last):
+  File "C:\Users\hp\jarvis.ai\generated\diagnostics\v4_recovery_20260919_142032\run_v4_benchmark.py", line 54, in <module>
+    output = asyncio.run(
+        pipeline.run(trend)
+    )
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 196, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py", line 1020, in run
+    self._master_query_variants(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        topic=topic,
+        ^^^^^^^^^^^^
+        beat=beat,
+        ^^^^^^^^^^
+    )
+    ^
+TypeError: 'classmethod' object is not callable
+
+[PASS] No upload requested.
+
+===== STDERR =====
+Script length validation failed: 69 words.
+Initial content invalid (69 words). Regenerating.
+Script length validation failed: 56 words.
+Repair attempt 1 failed. Words=56, remaining terms=['perfectly']
+Script length validation failed: 57 words.
+
+===== GENERATED MP4 =====
+[NONE] No new or modified MP4 detected.
+
+===== FINAL =====
+BenchmarkMinutes: 3.61
+[PASS] No Notepad.
+[PASS] No publisher.
+[PASS] No YouTube upload.
+[PASS] Daily state not reset.

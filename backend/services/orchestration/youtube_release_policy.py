@@ -1,4 +1,4 @@
-﻿"""Fail-closed policy for releasing autonomous YouTube videos."""
+"""Fail-closed policy for releasing autonomous YouTube videos."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ class YoutubeReleasePolicy:
     def __init__(
         self,
         *,
-        enabled: bool = False,
+        enabled: bool = True,
         min_production_score: float = DEFAULT_MIN_PRODUCTION_SCORE,
         require_manual_approval: bool = True,
     ) -> None:
@@ -206,3 +206,4 @@ class YoutubeReleasePolicy:
             return float(value)
 
         return None
+

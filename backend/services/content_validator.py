@@ -1,4 +1,4 @@
-﻿"""
+"""
 Deterministic content-quality validation.
 
 Rejects high-risk or overly absolute claims before

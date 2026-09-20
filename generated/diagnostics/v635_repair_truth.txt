@@ -1,0 +1,705 @@
+﻿========================================================================
+CONTENT GENERATOR: MAIN VALIDATION
+========================================================================
+  260:             for line in data.get(
+  261:                 "script_lines",
+  262:                 []
+  263:             )
+  264:             if str(line).strip()
+  265:         ]
+  266: 
+  267:         if len(lines) != 4:
+  268:             raise RuntimeError(
+  269:                 "Generated content normalization produced "
+  270:                 f"{len(lines)} script lines; expected exactly 4."
+  271:             )
+  272: 
+  273:         lines = lines[:4]
+  274: 
+  275:         if format_name == "famous_movie_commentary":
+  276: 
+  277:             evidence_ids = data.get(
+  278:                 "evidence_ids",
+  279:                 [],
+  280:             )
+  281: 
+  282:             evidence_validation = (
+  283:                 self.claim_evidence_validator.validate(
+  284:                     script_lines=lines,
+  285:                     evidence_ids=evidence_ids,
+  286:                     research=research,
+  287:                 )
+  288:             )
+  289: 
+  290:             if not evidence_validation.valid:
+  291:                 raise RuntimeError(
+  292:                     "Movie script failed claim-evidence validation: "
+  293:                     f"{evidence_validation.issues}"
+  294:                 )
+  295: 
+  296:         if format_name == "famous_movie_commentary":
+  297: 
+  298:             semantic_validation = (
+  299:                 await self.semantic_claim_evidence_validator.validate(
+  300:                     script_lines=lines,
+  301:                     evidence_ids=data.get(
+  302:                         "evidence_ids",
+  303:                         [],
+  304:                     ),
+  305:                     research=research,
+  306:                 )
+  307:             )
+  308: 
+  309:             if not semantic_validation.valid:
+  310: 
+  311:                 repaired_lines = (
+  312:                     await self._repair_movie_semantic_failures(
+  313:                         script_lines=lines,
+  314:                         evidence_ids=data.get(
+  315:                             "evidence_ids",
+  316:                             [],
+  317:                         ),
+  318:                         research=research,
+  319:                         semantic_validation=semantic_validation,
+  320:                         topic=topic,
+  321:                         movie_title=movie_title,
+  322:                     )
+  323:                 )
+  324: 
+  325:                 if repaired_lines is None:
+  326:                     raise RuntimeError(
+  327:                         "Movie script failed semantic evidence "
+  328:                         "validation and targeted repair failed: "
+  329:                         f"{semantic_validation.to_dict()}"
+  330:                     )
+  331: 
+  332:                 lines = repaired_lines
+  333: 
+  334:                 data["script_lines"] = list(
+  335:                     repaired_lines
+  336:                 )
+  337: 
+  338:                 logger.info(
+  339:                     "Targeted semantic movie repair succeeded."
+  340:                 )
+  341: 
+  342: 
+  343:         ####################################################
+  344:         # Final fail-closed script-length guarantee
+  345:         ####################################################
+  346: 
+  347:         final_word_count = sum(
+  348:             len(line.split())
+  349:             for line in lines
+  350:         )
+  351: 
+  352:         if not (
+  353:             self.MIN_WORDS
+  354:             <= final_word_count
+  355:             <= self.MAX_WORDS
+  356:         ):
+  357:             raise RuntimeError(
+  358:                 "Final generated script failed length "
+  359:                 "validation after all generation and "
+  360:                 "repair stages: "
+
+========================================================================
+SEMANTIC REPAIR FUNCTION - COMPLETE
+========================================================================
+ 1220:                 continue
+ 1221: 
+ 1222:             logger.info(
+ 1223:                 "Movie evidence-aware length recovery "
+ 1224:                 "succeeded on attempt %s: %s words.",
+ 1225:                 attempt,
+ 1226:                 recovered_words,
+ 1227:             )
+ 1228: 
+ 1229:             return recovered
+ 1230: 
+ 1231:         logger.warning(
+ 1232:             "Movie evidence-aware length recovery "
+ 1233:             "exhausted configured bounded attempts."
+ 1234:         )
+ 1235: 
+ 1236:         return None
+ 1237: 
+ 1238: 
+ 1239:     async def _repair_movie_semantic_failures(
+ 1240:         self,
+ 1241:         *,
+ 1242:         script_lines: list[str],
+ 1243:         evidence_ids: list[list[str]],
+ 1244:         research: str,
+ 1245:         semantic_validation,
+ 1246:         topic: str,
+ 1247:         movie_title: str,
+ 1248:     ) -> list[str] | None:
+ 1249:         """
+ 1250:         Repair only semantic evidence failures.
+ 1251: 
+ 1252:         Up to three controlled repair rounds are allowed.
+ 1253:         Every round is revalidated lexically and semantically.
+ 1254:         """
+ 1255: 
+ 1256:         evidence_map = {}
+ 1257: 
+ 1258:         for match in re.finditer(
+ 1259:             r"\[E(\d+)\]\s*(.*?)(?=\n\s*\[E\d+\]|\Z)",
+ 1260:             str(research),
+ 1261:             flags=re.DOTALL,
+ 1262:         ):
+ 1263:             evidence_id = f"E{match.group(1)}"
+ 1264: 
+ 1265:             evidence_map[evidence_id] = " ".join(
+ 1266:                 match.group(2).split()
+ 1267:             )
+ 1268: 
+ 1269:         working_lines = list(
+ 1270:             script_lines
+ 1271:         )
+ 1272: 
+ 1273:         current_validation = (
+ 1274:             semantic_validation
+ 1275:         )
+ 1276: 
+ 1277:         max_attempts = 3
+ 1278: 
+ 1279:         for attempt in range(
+ 1280:             1,
+ 1281:             max_attempts + 1,
+ 1282:         ):
+ 1283: 
+ 1284:             failed_lines = [
+ 1285:                 item
+ 1286:                 for item in current_validation.line_results
+ 1287:                 if item.get("supported") is not True
+ 1288:             ]
+ 1289: 
+ 1290:             if not failed_lines:
+ 1291:                 return working_lines
+ 1292: 
+ 1293:             repair_payload = []
+ 1294: 
+ 1295:             for failure in failed_lines:
+ 1296: 
+ 1297:                 line_number = int(
+ 1298:                     failure.get(
+ 1299:                         "line",
+ 1300:                         0,
+ 1301:                     )
+ 1302:                     or 0
+ 1303:                 )
+ 1304: 
+ 1305:                 if (
+ 1306:                     line_number < 1
+ 1307:                     or line_number > len(working_lines)
+ 1308:                 ):
+ 1309:                     return None
+ 1310: 
+ 1311:                 cited_ids = [
+ 1312:                     str(item).strip().upper()
+ 1313:                     for item in evidence_ids[
+ 1314:                         line_number - 1
+ 1315:                     ]
+ 1316:                     if str(item).strip()
+ 1317:                 ]
+ 1318: 
+ 1319:                 cited_evidence = {
+ 1320:                     evidence_id: evidence_map.get(
+ 1321:                         evidence_id,
+ 1322:                         "",
+ 1323:                     )
+ 1324:                     for evidence_id in cited_ids
+ 1325:                 }
+ 1326: 
+ 1327:                 repair_payload.append(
+ 1328:                     {
+ 1329:                         "line": line_number,
+ 1330:                         "current_text": (
+ 1331:                             working_lines[
+ 1332:                                 line_number - 1
+ 1333:                             ]
+ 1334:                         ),
+ 1335:                         "unsupported_claims": (
+ 1336:                             failure.get(
+ 1337:                                 "unsupported_claims",
+ 1338:                                 [],
+ 1339:                             )
+ 1340:                         ),
+ 1341:                         "evidence_ids": cited_ids,
+ 1342:                         "evidence": cited_evidence,
+ 1343:                     }
+ 1344:                 )
+ 1345: 
+ 1346:             messages = [
+ 1347:                 {
+ 1348:                     "role": "system",
+ 1349:                     "content": """
+ 1350: You repair unsupported factual claims in movie commentary.
+ 1351: 
+ 1352: Return ONLY valid JSON:
+ 1353: 
+ 1354: {
+ 1355:   "repairs": [
+ 1356:     {
+ 1357:       "line": 3,
+ 1358:       "text": "replacement narration"
+ 1359:     }
+ 1360:   ]
+ 1361: }
+ 1362: 
+ 1363: STRICT RULES:
+ 1364: 
+ 1365: 1. Rewrite only the requested failed lines.
+ 1366: 2. Use only the evidence supplied for that exact line.
+ 1367: 3. Remove every unsupported claim identified by the validator.
+ 1368: 4. Do not replace one unsupported claim with another unsupported claim.
+ 1369: 5. Prefer wording that closely follows the evidence.
+ 1370: 6. Do not strengthen the evidence.
+ 1371: 7. Do not simplify attribution incorrectly.
+ 1372: 8. If multiple studios contributed, do not attribute all work to one studio.
+ 1373: 9. If evidence says a filmmaker tried to take another film's effects further, do not change that into "inspired by" unless explicitly supported.
+ 1374: 10. Do not invent audience reactions, symbolism, rankings, historical importance, motivations, or production methods.
+ 1375: 11. Do not include evidence labels in narration.
+ 1376: 12. Keep the narration natural and cinematic.
+ 1377: 13. Keep the full script within 75-110 words.
+ 1378: """,
+ 1379:                 },
+ 1380:                 {
+ 1381:                     "role": "user",
+ 1382:                     "content": (
+ 1383:                         f"REPAIR ATTEMPT: {attempt}\n\n"
+ 1384:                         f"MOVIE:\n{movie_title}\n\n"
+ 1385:                         f"TOPIC:\n{topic}\n\n"
+ 1386:                         "FAILED LINES AND EVIDENCE:\n"
+ 1387:                         + json.dumps(
+ 1388:                             repair_payload,
+ 1389:                             indent=2,
+ 1390:                             ensure_ascii=False,
+ 1391:                         )
+ 1392:                     ),
+ 1393:                 },
+ 1394:             ]
+ 1395: 
+ 1396:             raw = await self.llm.chat(
+ 1397:                 messages,
+ 1398:                 json_mode=True,
+ 1399:             )
+ 1400: 
+ 1401:             repair_data = self._extract_json(
+ 1402:                 raw
+ 1403:             )
+ 1404: 
+ 1405:             repairs = repair_data.get(
+ 1406:                 "repairs",
+ 1407:                 [],
+ 1408:             )
+ 1409: 
+ 1410:             if not isinstance(
+ 1411:                 repairs,
+ 1412:                 list,
+ 1413:             ):
+ 1414:                 return None
+ 1415: 
+ 1416:             expected_lines = {
+ 1417:                 int(item["line"])
+ 1418:                 for item in repair_payload
+ 1419:             }
+ 1420: 
+ 1421:             repaired_line_numbers = set()
+ 1422: 
+ 1423:             candidate_lines = list(
+ 1424:                 working_lines
+ 1425:             )
+ 1426: 
+ 1427:             for repair in repairs:
+ 1428: 
+ 1429:                 if not isinstance(
+ 1430:                     repair,
+ 1431:                     dict,
+ 1432:                 ):
+ 1433:                     return None
+ 1434: 
+ 1435:                 try:
+ 1436:                     line_number = int(
+ 1437:                         repair.get(
+ 1438:                             "line",
+ 1439:                             0,
+ 1440:                         )
+ 1441:                     )
+ 1442:                 except (
+ 1443:                     TypeError,
+ 1444:                     ValueError,
+ 1445:                 ):
+ 1446:                     return None
+ 1447: 
+ 1448:                 text = str(
+ 1449:                     repair.get(
+ 1450:                         "text",
+ 1451:                         "",
+ 1452:                     )
+ 1453:                 ).strip()
+ 1454: 
+ 1455:                 if (
+ 1456:                     line_number not in expected_lines
+ 1457:                     or not text
+ 1458:                 ):
+ 1459:                     return None
+ 1460: 
+ 1461:                 if re.search(
+ 1462:                     r"\[E\d+\]",
+ 1463:                     text,
+ 1464:                     flags=re.IGNORECASE,
+ 1465:                 ):
+ 1466:                     return None
+ 1467: 
+ 1468:                 candidate_lines[
+ 1469:                     line_number - 1
+ 1470:                 ] = text
+ 1471: 
+ 1472:                 repaired_line_numbers.add(
+ 1473:                     line_number
+ 1474:                 )
+ 1475: 
+ 1476:             if repaired_line_numbers != expected_lines:
+ 1477:                 return None
+ 1478: 
+ 1479:             word_count = sum(
+ 1480:                 len(line.split())
+ 1481:                 for line in candidate_lines
+ 1482:             )
+ 1483: 
+ 1484:             if not (
+ 1485:                 self.MIN_WORDS
+ 1486:                 <= word_count
+ 1487:                 <= self.MAX_WORDS
+ 1488:             ):
+ 1489:                 logger.warning(
+ 1490:                     "Semantic repair attempt %s "
+ 1491:                     "produced invalid length: %s.",
+ 1492:                     attempt,
+ 1493:                     word_count,
+ 1494:                 )
+ 1495:                 continue
+ 1496: 
+ 1497:             lexical_validation = (
+ 1498:                 self.claim_evidence_validator.validate(
+ 1499:                     script_lines=candidate_lines,
+ 1500:                     evidence_ids=evidence_ids,
+ 1501:                     research=research,
+ 1502:                 )
+ 1503:             )
+ 1504: 
+ 1505:             if not lexical_validation.valid:
+ 1506:                 logger.warning(
+ 1507:                     "Semantic repair attempt %s "
+ 1508:                     "failed lexical validation: %s",
+ 1509:                     attempt,
+ 1510:                     lexical_validation.issues,
+ 1511:                 )
+ 1512:                 continue
+ 1513: 
+ 1514:             next_validation = (
+ 1515:                 await self.semantic_claim_evidence_validator.validate(
+ 1516:                     script_lines=candidate_lines,
+ 1517:                     evidence_ids=evidence_ids,
+ 1518:                     research=research,
+ 1519:                 )
+ 1520:             )
+ 1521: 
+ 1522:             if next_validation.valid:
+ 1523:                 logger.info(
+ 1524:                     "Semantic repair succeeded "
+ 1525:                     "on attempt %s.",
+ 1526:                     attempt,
+ 1527:                 )
+ 1528:                 return candidate_lines
+ 1529: 
+ 1530:             logger.warning(
+ 1531:                 "Semantic repair attempt %s "
+ 1532:                 "still failed: %s",
+ 1533:                 attempt,
+ 1534:                 next_validation.to_dict(),
+ 1535:             )
+ 1536: 
+ 1537:             working_lines = candidate_lines
+ 1538:             current_validation = next_validation
+ 1539: 
+ 1540:         return None
+ 1541: 
+ 1542: 
+ 1543:     def _recover_generation_length(
+ 1544:         self,
+ 1545:         data: dict,
+ 1546:         research: str,
+ 1547:     ) -> dict | None:
+ 1548:         """
+ 1549:         Expand a structurally valid but short script using only
+ 1550:         complete sentences already present in supplied research.
+ 1551:         """
+ 1552: 
+ 1553:         if not self._is_structurally_valid_content(data):
+ 1554:             return None
+ 1555: 
+ 1556:         current_words = self._word_count(data)
+ 1557: 
+ 1558:         if self.MIN_WORDS <= current_words <= self.MAX_WORDS:
+ 1559:             return data
+ 1560: 
+
+========================================================================
+CLAIM EVIDENCE VALIDATOR - COMPLETE
+========================================================================
+    1: """Claim-to-evidence validation for Rich V1 movie commentary."""
+    2: 
+    3: from __future__ import annotations
+    4: 
+    5: import re
+    6: from dataclasses import dataclass, asdict
+    7: 
+    8: 
+    9: @dataclass(slots=True)
+   10: class ClaimEvidenceResult:
+   11:     valid: bool
+   12:     issues: list[str]
+   13:     line_results: list[dict]
+   14: 
+   15:     def to_dict(self) -> dict:
+   16:         return asdict(self)
+   17: 
+   18: 
+   19: class ClaimEvidenceValidator:
+   20:     """
+   21:     Validate that movie-commentary narration lines cite existing
+   22:     research evidence and share meaningful factual concepts with it.
+   23: 
+   24:     This is a conservative V1 gate. It does not attempt to prove
+   25:     philosophical or subjective interpretation.
+   26:     """
+   27: 
+   28:     MIN_SHARED_TERMS = 2
+   29: 
+   30:     STOPWORDS = {
+   31:         "about",
+   32:         "after",
+   33:         "again",
+   34:         "against",
+   35:         "also",
+   36:         "because",
+   37:         "been",
+   38:         "being",
+   39:         "between",
+   40:         "both",
+   41:         "could",
+   42:         "does",
+   43:         "from",
+   44:         "have",
+   45:         "into",
+   46:         "more",
+   47:         "most",
+   48:         "movie",
+   49:         "scene",
+   50:         "scenes",
+   51:         "that",
+   52:         "their",
+   53:         "there",
+   54:         "these",
+   55:         "they",
+   56:         "this",
+   57:         "those",
+   58:         "through",
+   59:         "very",
+   60:         "what",
+   61:         "when",
+   62:         "where",
+   63:         "which",
+   64:         "while",
+   65:         "with",
+   66:         "would",
+   67:     }
+   68: 
+   69:     EVIDENCE_PATTERN = re.compile(
+   70:         r"\[E(\d+)\]\s*(.*?)(?=\n\s*\[E\d+\]|\Z)",
+   71:         flags=re.DOTALL,
+   72:     )
+   73: 
+   74:     def validate(
+   75:         self,
+   76:         *,
+   77:         script_lines: list[str],
+   78:         evidence_ids: list[list[str]],
+   79:         research: str,
+   80:     ) -> ClaimEvidenceResult:
+   81: 
+   82:         evidence = self._parse_evidence(
+   83:             research
+   84:         )
+   85: 
+   86:         issues: list[str] = []
+   87:         line_results: list[dict] = []
+   88: 
+   89:         if len(script_lines) != 4:
+   90:             issues.append(
+   91:                 "script_line_count_invalid"
+   92:             )
+   93: 
+   94:         if len(evidence_ids) != len(script_lines):
+   95:             issues.append(
+   96:                 "evidence_line_count_mismatch"
+   97:             )
+   98: 
+   99:         for index, line in enumerate(
+  100:             script_lines,
+  101:             start=1,
+  102:         ):
+  103: 
+  104:             cited = (
+  105:                 evidence_ids[index - 1]
+  106:                 if index - 1 < len(evidence_ids)
+  107:                 else []
+  108:             )
+  109: 
+  110:             if not isinstance(cited, list):
+  111:                 cited = []
+  112: 
+  113:             clean_ids = [
+  114:                 str(item).strip().upper()
+  115:                 for item in cited
+  116:                 if str(item).strip()
+  117:             ]
+  118: 
+  119:             missing = [
+  120:                 evidence_id
+  121:                 for evidence_id in clean_ids
+  122:                 if evidence_id not in evidence
+  123:             ]
+  124: 
+  125:             if missing:
+  126:                 issues.append(
+  127:                     f"line_{index}_unknown_evidence"
+  128:                 )
+  129: 
+  130:             supported_text = " ".join(
+  131:                 evidence[evidence_id]
+  132:                 for evidence_id in clean_ids
+  133:                 if evidence_id in evidence
+  134:             )
+  135: 
+  136:             shared_terms = self._shared_terms(
+  137:                 line,
+  138:                 supported_text,
+  139:             )
+  140: 
+  141:             required_shared_terms = (
+  142:                 1
+  143:                 if index == 4
+  144:                 else self.MIN_SHARED_TERMS
+  145:             )
+  146: 
+  147:             line_valid = (
+  148:                 bool(clean_ids)
+  149:                 and not missing
+  150:                 and len(shared_terms)
+  151:                 >= required_shared_terms
+  152:             )
+  153: 
+  154:             if not clean_ids:
+  155:                 issues.append(
+  156:                     f"line_{index}_has_no_evidence"
+  157:                 )
+  158:             elif (
+  159:                 not missing
+  160:                 and len(shared_terms)
+  161:                 < required_shared_terms
+  162:             ):
+  163:                 issues.append(
+  164:                     f"line_{index}_weak_evidence_match"
+  165:                 )
+  166: 
+  167:             line_results.append(
+  168:                 {
+  169:                     "line": index,
+  170:                     "valid": line_valid,
+  171:                     "evidence_ids": clean_ids,
+  172:                     "shared_terms": shared_terms,
+  173:                 }
+  174:             )
+  175: 
+  176:         return ClaimEvidenceResult(
+  177:             valid=(
+  178:                 not issues
+  179:                 and all(
+  180:                     item["valid"]
+  181:                     for item in line_results
+  182:                 )
+  183:             ),
+  184:             issues=issues,
+  185:             line_results=line_results,
+  186:         )
+  187: 
+  188:     @classmethod
+  189:     def _parse_evidence(
+  190:         cls,
+  191:         research: str,
+  192:     ) -> dict[str, str]:
+  193: 
+  194:         output: dict[str, str] = {}
+  195: 
+  196:         for match in cls.EVIDENCE_PATTERN.finditer(
+  197:             str(research)
+  198:         ):
+  199: 
+  200:             evidence_id = (
+  201:                 f"E{match.group(1)}"
+  202:             )
+  203: 
+  204:             text = " ".join(
+  205:                 match.group(2).split()
+  206:             )
+  207: 
+  208:             output[evidence_id] = text
+  209: 
+  210:         return output
+  211: 
+  212:     @classmethod
+  213:     def _shared_terms(
+  214:         cls,
+  215:         claim: str,
+  216:         evidence: str,
+  217:     ) -> list[str]:
+  218: 
+  219:         claim_terms = cls._terms(
+  220:             claim
+  221:         )
+  222: 
+  223:         evidence_terms = cls._terms(
+  224:             evidence
+  225:         )
+  226: 
+  227:         return sorted(
+  228:             claim_terms.intersection(
+  229:                 evidence_terms
+  230:             )
+  231:         )
+  232: 
+  233:     @classmethod
+  234:     def _terms(
+  235:         cls,
+  236:         text: str,
+  237:     ) -> set[str]:
+  238: 
+  239:         words = re.findall(
+  240:             r"[a-z0-9]+",
+  241:             str(text).lower(),
+  242:         )
+  243: 
+  244:         return {
+  245:             word
+  246:             for word in words
+  247:             if (
+  248:                 len(word) >= 4
+  249:                 and word not in cls.STOPWORDS
+  250:             )
+  251:         }
+  252: 

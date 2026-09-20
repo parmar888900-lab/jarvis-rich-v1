@@ -1,0 +1,2683 @@
+================ YOUTUBE HANDLER ================
+"""YouTube agent handler."""
+
+import asyncio
+import hashlib
+import logging
+from pathlib import Path
+
+from backend.database import async_session
+from backend.services.agent_handlers.base import BaseAgentHandler
+from backend.services.analytics.youtube_performance_collector import (
+    YoutubePerformanceCollector,
+)
+from backend.services.analytics.youtube_performance_evidence_service import (
+    YoutubePerformanceEvidenceService,
+)
+from backend.services.intelligence.production_selector import (
+    ProductionTopicSelector,
+)
+from backend.services.intelligence.trend_engine import TrendEngine
+from backend.services.orchestration.goal_production_strategy_service import (
+    GoalProductionStrategyService,
+)
+from backend.services.providers.registry import build_trend_manager
+from backend.services.orchestration.idempotency import (
+    OperationType,
+    build_idempotency_key,
+)
+from backend.services.orchestration.idempotent_operation_executor import (
+    IdempotentOperationExecutor,
+)
+from backend.services.pipelines import VideoPipeline
+from backend.services.providers.youtube_publisher import (
+    YoutubePublisher,
+    build_youtube_operation_tag,
+)
+
+
+logger = logging.getLogger(
+    "jarvis.youtube.agent"
+)
+
+
+class YoutubeAgentHandler(BaseAgentHandler):
+    """
+    Handles YouTube automation tasks.
+
+    Responsibilities:
+        - Collect trends
+        - Rank trends
+        - Select production-ready topics
+        - Launch the VideoPipeline for create_video
+
+    It should NEVER know how videos are built.
+    """
+
+    name = "youtube"
+
+    supported_tasks = frozenset(
+        {
+            "analyze_trends",
+            "create_video",
+            "upload_video",
+        }
+    )
+
+    def __init__(
+        self,
+        *,
+        performance_collector=None,
+        performance_evidence_service=None,
+        goal_strategy_service=None,
+        session_factory=None,
+    ):
+        self.engine = TrendEngine()
+        self.selector = ProductionTopicSelector()
+        self.pipeline = VideoPipeline()
+        self.publisher = YoutubePublisher()
+
+        self.performance_collector = (
+            performance_collector
+            or YoutubePerformanceCollector(
+                publisher=self.publisher
+            )
+        )
+
+        self.performance_evidence_service = (
+            performance_evidence_service
+            or YoutubePerformanceEvidenceService()
+        )
+
+        self.goal_strategy_service = (
+            goal_strategy_service
+            or GoalProductionStrategyService()
+        )
+
+        self.session_factory = (
+            session_factory
+            or async_session
+        )
+
+        self.operation_executor = (
+            IdempotentOperationExecutor(
+                async_session
+            )
+        )
+
+    async def execute(
+        self,
+        task: str,
+        command_id: str,
+        **kwargs,
+    ) -> dict:
+
+        if task == "analyze_trends":
+            return await self._analyze_trends(
+                command_id
+            )
+
+        if task == "create_video":
+            return await self._create_video(
+                command_id,
+                **kwargs,
+            )
+
+        if task == "upload_video":
+            return await self._upload_video(
+                command_id,
+                **kwargs,
+            )
+
+        return {
+            "status": "unsupported_task",
+            "task": task,
+        }
+
+    async def _performance_evidence(
+        self,
+    ) -> tuple[
+        dict | None,
+        dict,
+    ]:
+        """
+        Refresh channel analytics and build strategy evidence.
+
+        Analytics is an optimization signal, not a production
+        dependency. Provider or persistence failures therefore
+        fail neutral and cannot block topic selection.
+        """
+
+        try:
+            async with self.session_factory() as session:
+                collection = (
+                    await self.performance_collector.collect(
+                        session,
+                        max_items=50,
+                    )
+                )
+
+                channel_id = str(
+                    collection.get(
+                        "channel_id",
+                        "",
+                    )
+                ).strip()
+
+                if not channel_id:
+                    raise ValueError(
+                        "Performance collection returned "
+                        "an empty channel ID."
+                    )
+
+                evidence = (
+                    await self.performance_evidence_service.build(
+                        session,
+                        channel_id,
+                    )
+                )
+
+            return (
+                evidence,
+                {
+                    "status": "success",
+                    "channel_id": channel_id,
+                    "collected_video_count": int(
+                        collection.get(
+                            "collected_video_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "snapshot_count": int(
+                        collection.get(
+                            "snapshot_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "unique_video_count": int(
+                        evidence.get(
+                            "unique_video_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "eligible_video_count": int(
+                        evidence.get(
+                            "video_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "total_views": int(
+                        evidence.get(
+                            "total_views",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "confidence": float(
+                        evidence.get(
+                            "confidence",
+                            0.0,
+                        )
+                        or 0.0
+                    ),
+                    "strategy_ready": (
+                        evidence.get(
+                            "strategy_ready"
+                        )
+                        is True
+                    ),
+                },
+            )
+
+        except Exception as exc:
+            logger.warning(
+                "YouTube performance analytics "
+                "unavailable; continuing with neutral "
+                "historical evidence: %s",
+                exc,
+            )
+
+            return (
+                None,
+                {
+                    "status": "unavailable",
+                    "strategy_ready": False,
+                    "confidence": 0.0,
+                    "error_type": type(
+                        exc
+                    ).__name__,
+                },
+            )
+
+    async def _goal_strategy(
+        self,
+    ) -> tuple[
+        dict,
+        dict,
+    ]:
+        """
+        Build production strategy from active goals.
+
+        Goals are an optimization signal, not a production
+        dependency. Goal persistence or evaluation failures
+        therefore fail neutral and cannot block topic selection.
+
+        Goal strategy does not control scheduler cadence.
+        """
+
+        try:
+            async with self.session_factory() as session:
+                strategy = (
+                    await self.goal_strategy_service.build(
+                        session
+                    )
+                )
+
+            if not isinstance(strategy, dict):
+                raise TypeError(
+                    "Goal strategy service returned "
+                    "a non-dictionary result."
+                )
+
+            status = str(
+                strategy.get(
+                    "status",
+                    "neutral",
+                )
+            )
+
+            return (
+                strategy,
+                {
+                    "status": "success",
+                    "strategy_status": status,
+                    "goal_guided": (
+                        status == "goal_guided"
+                    ),
+                    "active_goal_count": int(
+                        strategy.get(
+                            "active_goal_count",
+                            0,
+                        )
+                        or 0
+                    ),
+                    "target_metric": (
+                        strategy.get(
+                            "target_metric"
+                        )
+                    ),
+                    "trajectory": (
+                        strategy.get(
+                            "trajectory"
+                        )
+                    ),
+                    "production_priority": float(
+                        strategy.get(
+                            "production_priority",
+                            50.0,
+                        )
+                        or 0.0
+                    ),
+                    "exploration_bias": float(
+                        strategy.get(
+                            "exploration_bias",
+                            0.5,
+                        )
+                        or 0.0
+                    ),
+                    "exploitation_bias": float(
+                        strategy.get(
+                            "exploitation_bias",
+                            0.5,
+                        )
+                        or 0.0
+                    ),
+                    "scheduler_interval_multiplier": float(
+                        strategy.get(
+                            "scheduler_interval_multiplier",
+                            1.0,
+                        )
+                        or 1.0
+                    ),
+                },
+            )
+
+        except Exception as exc:
+            logger.warning(
+                "Goal production strategy unavailable; "
+                "continuing with neutral goal evidence: %s",
+                exc,
+            )
+
+            neutral_strategy = {
+                "status": "neutral",
+                "active_goal_count": 0,
+                "primary_goal": None,
+                "target_metric": None,
+                "trajectory": None,
+                "urgency": 0.0,
+                "production_priority": 50.0,
+                "exploration_bias": 0.5,
+                "exploitation_bias": 0.5,
+                "scheduler_interval_multiplier": 1.0,
+                "rationale": (
+                    "Goal strategy unavailable; production "
+                    "continues with neutral goal influence."
+                ),
+            }
+
+            return (
+                neutral_strategy,
+                {
+                    "status": "unavailable",
+                    "strategy_status": "neutral",
+                    "goal_guided": False,
+                    "active_goal_count": 0,
+                    "target_metric": None,
+                    "trajectory": None,
+                    "production_priority": 50.0,
+                    "exploration_bias": 0.5,
+                    "exploitation_bias": 0.5,
+                    "scheduler_interval_multiplier": 1.0,
+                    "error_type": type(
+                        exc
+                    ).__name__,
+                },
+            )
+
+    async def _analyze_trends(
+        self,
+        command_id: str,
+    ) -> dict:
+
+        manager = build_trend_manager()
+
+        raw_trends = manager.collect_candidates(
+            per_provider_limit=25,
+        )
+
+        ranked_trends = self.engine.process(
+            raw_trends,
+            limit=10,
+        )
+
+        if not ranked_trends:
+            return {
+                "agent": self.name,
+                "task": "analyze_trends",
+                "command_id": command_id,
+                "status": "no_trends_found",
+            }
+
+        (
+            performance,
+            analytics,
+        ) = await self._performance_evidence()
+
+        (
+            goal_strategy,
+            goal_strategy_status,
+        ) = await self._goal_strategy()
+
+        best_trend = self.selector.select(
+            ranked_trends,
+            performance=performance,
+            goal_strategy=goal_strategy,
+        )
+
+        if best_trend is None:
+            return {
+                "agent": self.name,
+                "task": "analyze_trends",
+                "command_id": command_id,
+                "provider_count": len(
+                    manager.providers
+                ),
+                "raw_trend_count": len(
+                    raw_trends
+                ),
+                "final_trend_count": len(
+                    ranked_trends
+                ),
+                "analytics": analytics,
+                "goal_strategy": (
+                    goal_strategy_status
+                ),
+                "status": (
+                    "no_production_ready_topic"
+                ),
+            }
+
+        return {
+            "agent": self.name,
+            "task": "analyze_trends",
+            "command_id": command_id,
+            "provider_count": len(
+                manager.providers
+            ),
+            "raw_trend_count": len(
+                raw_trends
+            ),
+            "final_trend_count": len(
+                ranked_trends
+            ),
+            "analytics": analytics,
+            "goal_strategy": (
+                goal_strategy_status
+            ),
+            "best_trend": best_trend,
+            "status": "success",
+        }
+
+    async def _create_video(
+        self,
+        command_id: str,
+        **kwargs,
+    ) -> dict:
+
+        trend = kwargs.get("trend")
+
+        if not isinstance(trend, dict):
+            return {
+                "agent": self.name,
+                "task": "create_video",
+                "command_id": command_id,
+                "status": "invalid_parameters",
+                "error": (
+                    "create_video requires a "
+                    "trend dictionary."
+                ),
+            }
+
+        title = str(
+            trend.get("title", "")
+        ).strip()
+
+        if not title:
+            return {
+                "agent": self.name,
+                "task": "create_video",
+                "command_id": command_id,
+                "status": "invalid_parameters",
+                "error": (
+                    "trend.title is required."
+                ),
+            }
+
+        result = await self.pipeline.run(
+            trend
+        )
+
+        return {
+            "agent": self.name,
+            "task": "create_video",
+            "command_id": command_id,
+            "trend": trend,
+            "generated_content": (
+                result["generated"].to_dict()
+            ),
+            "production_package": (
+                result["production_package"]
+            ),
+            "video": (
+                result["video"]
+            ),
+            "status": "success",
+        }
+
+    @staticmethod
+    def _sha256_file(
+        path: Path,
+    ) -> str:
+        """Return a stable SHA-256 identity for a video."""
+
+        digest = hashlib.sha256()
+
+        with path.open("rb") as handle:
+            while True:
+                chunk = handle.read(
+                    1024 * 1024
+                )
+
+                if not chunk:
+                    break
+
+                digest.update(chunk)
+
+        return digest.hexdigest()
+
+    async def _upload_video(
+        self,
+        command_id: str,
+        *,
+        video_path: str,
+        title: str,
+        description: str = "",
+        tags: list[str] | None = None,
+        privacy_status: str = "private",
+        category_id: str = "22",
+    ) -> dict:
+        """Upload a video through the idempotent boundary."""
+
+        path = Path(
+            video_path
+        ).expanduser().resolve()
+
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Video not found: {path}"
+            )
+
+        clean_title = title.strip()
+
+        if not clean_title:
+            raise ValueError(
+                "YouTube title cannot be empty."
+            )
+
+        privacy = (
+            privacy_status
+            .strip()
+            .lower()
+        )
+
+        allowed_privacy = {
+            "private",
+            "unlisted",
+            "public",
+        }
+
+        if privacy not in allowed_privacy:
+            raise ValueError(
+                "privacy_status must be private, "
+                "unlisted, or public."
+            )
+
+        # Public publishing stays fail-closed until
+        # the autonomous release policy is added.
+        if privacy == "public":
+            raise ValueError(
+                "Direct public YouTube upload is forbidden. "
+                "Upload privately, then use the protected "
+                "release operation."
+            )
+
+        clean_tags = []
+
+        for tag in tags or []:
+            clean_tag = str(
+                tag
+            ).strip()
+
+            if clean_tag:
+                clean_tags.append(
+                    clean_tag
+                )
+
+        channel = await asyncio.to_thread(
+            self.publisher
+            .get_authorized_channel
+        )
+
+        video_hash = await asyncio.to_thread(
+            self._sha256_file,
+            path,
+        )
+
+        resource_id = (
+            f"youtube:"
+            f"{channel['channel_id']}:"
+            f"{video_hash}"
+        )
+
+        idempotency_key = (
+            build_idempotency_key(
+                OperationType.UPLOAD_VIDEO,
+                resource_id,
+            )
+        )
+
+        operation_tag = (
+            build_youtube_operation_tag(
+                idempotency_key
+            )
+        )
+
+        async def upload() -> dict:
+            return await self.publisher.upload_video(
+                video_path=path,
+                title=clean_title,
+                description=description,
+                tags=clean_tags,
+                privacy_status=privacy,
+                category_id=str(
+                    category_id
+                ),
+                operation_tag=operation_tag,
+            )
+
+        operation_result = (
+            await self.operation_executor.execute(
+                operation_type=(
+                    OperationType.UPLOAD_VIDEO
+                ),
+                resource_id=resource_id,
+                operation=upload,
+            )
+        )
+
+        return {
+            "agent": self.name,
+            "task": "upload_video",
+            "command_id": command_id,
+            "status": (
+                operation_result["status"]
+            ),
+            "channel_id": (
+                channel["channel_id"]
+            ),
+            "channel_title": (
+                channel["channel_title"]
+            ),
+            "artifact_sha256": video_hash,
+            "privacy_status": privacy,
+            "upload": operation_result,
+        }
+
+================ CONTENT GENERATOR ================
+import json
+import logging
+import re
+
+from backend.models.generated_content import GeneratedContent
+from backend.services.llm_service import LLMService
+
+logger = logging.getLogger(__name__)
+
+
+class ContentGenerator:
+
+    MIN_WORDS = 75
+    MAX_WORDS = 105
+
+    def __init__(self):
+        self.llm = LLMService()
+
+    async def generate(
+        self,
+        trend: dict,
+    ) -> GeneratedContent:
+
+        topic = (
+            trend.get("title")
+            or trend.get("topic")
+            or "Trending Story"
+        )
+
+        research = trend.get(
+            "research",
+            "",
+        )
+
+        if isinstance(research, list):
+            research = "\n".join(
+                str(x)
+                for x in research
+            )
+
+        if not research:
+            research = json.dumps(
+                trend,
+                indent=2,
+            )
+
+        ####################################################
+        # Attempt 1
+        ####################################################
+
+        raw = await self.llm.chat(
+            self._build_messages(
+                topic=topic,
+                research=research,
+            ),
+            json_mode=True,
+        )
+
+        data = self._extract_json(raw)
+
+        ####################################################
+        # Attempt 2 - controlled regeneration
+        ####################################################
+
+        if not self._is_valid_content(data):
+
+            previous_words = (
+                self._word_count(data)
+            )
+
+            logger.warning(
+                "Initial content invalid "
+                "(%s words). Regenerating.",
+                previous_words,
+            )
+
+            retry_raw = await self.llm.chat(
+                self._build_messages(
+                    topic=topic,
+                    research=research,
+                    previous_words=previous_words,
+                    retry=True,
+                ),
+                json_mode=True,
+            )
+
+            retry_data = self._extract_json(
+                retry_raw
+            )
+
+            if self._is_valid_content(
+                retry_data
+            ):
+                data = retry_data
+
+                logger.info(
+                    "Content regeneration succeeded."
+                )
+
+            else:
+                logger.warning(
+                    "Content regeneration failed "
+                    "(%s words).",
+                    self._word_count(
+                        retry_data
+                    ),
+                )
+
+                data = {}
+
+        ####################################################
+        # Emergency fallback
+        ####################################################
+
+        if not data:
+
+            logger.warning(
+                "Using emergency content fallback."
+            )
+
+            data = self._fallback(
+                topic=topic,
+                research=research,
+            )
+
+        ####################################################
+        # Normalize
+        ####################################################
+
+        title = str(
+            data.get(
+                "title",
+                topic,
+            )
+        ).strip()
+
+        hashtags = [
+            str(tag).strip()
+            for tag in data.get(
+                "hashtags",
+                []
+            )
+            if str(tag).strip()
+        ]
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+            if str(line).strip()
+        ]
+
+        while len(lines) < 4:
+            lines.append(
+                "Follow for more updates "
+                "as this story develops."
+            )
+
+        lines = lines[:4]
+
+        return GeneratedContent(
+            title=title,
+            hashtags=hashtags,
+            script_lines=lines,
+            metadata={
+                "source": topic,
+                "generator": "Jarvis Rich V1",
+                "word_count": sum(
+                    len(line.split())
+                    for line in lines
+                ),
+            },
+        )
+
+    ########################################################
+    # Content repair
+    ########################################################
+
+    async def repair(
+        self,
+        content: GeneratedContent,
+        trend: dict,
+        issues: list[dict],
+    ) -> GeneratedContent | None:
+
+        topic = (
+            trend.get("title")
+            or trend.get("topic")
+            or content.title
+            or "Trending Story"
+        )
+
+        research = trend.get(
+            "research",
+            "",
+        )
+
+        if isinstance(research, list):
+            research = "\n".join(
+                str(item)
+                for item in research
+            )
+
+        if not research:
+            research = json.dumps(
+                trend,
+                indent=2,
+            )
+
+        original_script = "\n".join(
+            content.script_lines
+        )
+
+        banned_terms = (
+            self._extract_flagged_terms(
+                issues
+            )
+        )
+
+        ####################################################
+        # Repair attempt 1
+        ####################################################
+
+        raw = await self.llm.chat(
+            self._build_repair_messages(
+                topic=topic,
+                research=research,
+                original_script=original_script,
+                issues=issues,
+                banned_terms=banned_terms,
+            ),
+            json_mode=True,
+        )
+
+        data = self._extract_json(
+            raw
+        )
+
+        if self._repair_candidate_valid(
+            data=data,
+            banned_terms=banned_terms,
+        ):
+            return self._build_repaired_content(
+                data=data,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=1,
+            )
+
+        recovered = self._recover_repair_length(
+            data=data,
+            research=research,
+            banned_terms=banned_terms,
+        )
+
+        if recovered is not None:
+            logger.info(
+                "Repair attempt 1 recovered "
+                "deterministically."
+            )
+
+            return self._build_repaired_content(
+                data=recovered,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=1,
+            )
+
+        first_words = self._word_count(
+            data
+        )
+
+        remaining_terms = (
+            self._remaining_flagged_terms(
+                data=data,
+                banned_terms=banned_terms,
+            )
+        )
+
+        logger.warning(
+            "Repair attempt 1 failed. "
+            "Words=%s, remaining terms=%s",
+            first_words,
+            remaining_terms,
+        )
+
+        ####################################################
+        # Repair attempt 2
+        ####################################################
+
+        previous_repair = ""
+
+        if isinstance(data, dict):
+            previous_repair = json.dumps(
+                data,
+                indent=2,
+            )
+
+        retry_raw = await self.llm.chat(
+            self._build_repair_messages(
+                topic=topic,
+                research=research,
+                original_script=original_script,
+                issues=issues,
+                banned_terms=banned_terms,
+                retry=True,
+                previous_repair=previous_repair,
+                previous_words=first_words,
+                remaining_terms=remaining_terms,
+            ),
+            json_mode=True,
+        )
+
+        retry_data = self._extract_json(
+            retry_raw
+        )
+
+        if self._repair_candidate_valid(
+            data=retry_data,
+            banned_terms=banned_terms,
+        ):
+            logger.info(
+                "Repair attempt 2 succeeded."
+            )
+
+            return self._build_repaired_content(
+                data=retry_data,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=2,
+            )
+
+        recovered_retry = self._recover_repair_length(
+            data=retry_data,
+            research=research,
+            banned_terms=banned_terms,
+        )
+
+        if recovered_retry is not None:
+            logger.info(
+                "Repair attempt 2 recovered "
+                "deterministically."
+            )
+
+            return self._build_repaired_content(
+                data=recovered_retry,
+                original=content,
+                topic=topic,
+                issues=issues,
+                attempt=2,
+            )
+
+        logger.warning(
+            "Repair attempt 2 failed. "
+            "Words=%s, remaining terms=%s",
+            self._word_count(
+                retry_data
+            ),
+            self._remaining_flagged_terms(
+                data=retry_data,
+                banned_terms=banned_terms,
+            ),
+        )
+
+        return None
+
+    def _build_repaired_content(
+        self,
+        data: dict,
+        original: GeneratedContent,
+        topic: str,
+        issues: list[dict],
+        attempt: int,
+    ) -> GeneratedContent:
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+            if str(line).strip()
+        ]
+
+        hashtags = [
+            str(tag).strip()
+            for tag in data.get(
+                "hashtags",
+                original.hashtags,
+            )
+            if str(tag).strip()
+        ]
+
+        return GeneratedContent(
+            title=str(
+                data.get(
+                    "title",
+                    original.title,
+                )
+            ).strip(),
+            hashtags=hashtags,
+            script_lines=lines,
+            metadata={
+                **original.metadata,
+                "source": topic,
+                "generator": "Jarvis Rich V1",
+                "repaired": True,
+                "repair_attempt": attempt,
+                "repair_issues": issues,
+                "word_count": sum(
+                    len(line.split())
+                    for line in lines
+                ),
+            },
+        )
+
+    def _recover_repair_length(
+        self,
+        data: dict,
+        research: str,
+        banned_terms: list[str],
+    ) -> dict | None:
+
+        if not self._is_structurally_valid_content(
+            data
+        ):
+            return None
+
+        current_words = self._word_count(
+            data
+        )
+
+        if (
+            self.MIN_WORDS
+            <= current_words
+            <= self.MAX_WORDS
+        ):
+            return data
+
+        if current_words > self.MAX_WORDS:
+            return None
+
+        lines = [
+            str(line).strip()
+            for line in data.get(
+                "script_lines",
+                []
+            )
+        ]
+
+        research_text = " ".join(
+            str(research).split()
+        ).strip()
+
+        if not research_text:
+            return None
+
+        # Preserve complete research sentences.
+        research_sentences = [
+            sentence.strip()
+            for sentence in re.split(
+                r"(?<=[.!?])\s+",
+                research_text,
+            )
+            if sentence.strip()
+        ]
+
+        safe_sentences = []
+
+        for sentence in research_sentences:
+
+            blocked = False
+
+            for term in banned_terms:
+
+                pattern = (
+                    r"(?<!\w)"
+                    + re.escape(term)
+                    + r"(?!\w)"
+                )
+
+                if re.search(
+                    pattern,
+                    sentence,
+                    flags=re.IGNORECASE,
+                ):
+                    blocked = True
+                    break
+
+            if not blocked:
+                safe_sentences.append(
+                    sentence
+                )
+
+        if not safe_sentences:
+            return None
+
+        candidate_lines = list(
+            lines
+        )
+
+        total_words = current_words
+        line_index = 0
+
+        for sentence in safe_sentences:
+
+            sentence_words = len(
+                sentence.split()
+            )
+
+            if (
+                total_words
+                + sentence_words
+                > self.MAX_WORDS
+            ):
+                continue
+
+            base = candidate_lines[
+                line_index
+            ].rstrip()
+
+            if (
+                base
+                and base[-1]
+                not in ".!?"
+            ):
+                base += "."
+
+            candidate_lines[
+                line_index
+            ] = (
+                base
+                + " "
+                + sentence
+            ).strip()
+
+            total_words += (
+                sentence_words
+            )
+
+            line_index = (
+                line_index + 1
+            ) % 4
+
+            if total_words >= self.MIN_WORDS:
+                break
+
+        candidate = {
+            **data,
+            "script_lines": candidate_lines,
+        }
+
+        if not self._is_valid_content(
+            candidate
+        ):
+            return None
+
+        if self._remaining_flagged_terms(
+            data=candidate,
+            banned_terms=banned_terms,
+        ):
+            return None
+
+        return candidate
+
+    def _repair_candidate_valid(
+        self,
+        data: dict,
+        banned_terms: list[str],
+    ) -> bool:
+
+        if not self._is_valid_content(
+            data
+        ):
+            return False
+
+        remaining = (
+            self._remaining_flagged_terms(
+                data=data,
+                banned_terms=banned_terms,
+            )
+        )
+
+        if remaining:
+            logger.warning(
+                "Repair still contains "
+                "flagged terms: %s",
+                remaining,
+            )
+            return False
+
+        return True
+
+    @staticmethod
+    def _extract_flagged_terms(
+        issues: list[dict],
+    ) -> list[str]:
+
+        terms = []
+
+        for issue in issues:
+
+            matches = issue.get(
+                "matches",
+                [],
+            )
+
+            if not isinstance(
+                matches,
+                list,
+            ):
+                continue
+
+            for match in matches:
+
+                term = str(
+                    match
+                ).strip()
+
+                if (
+                    term
+                    and term.lower()
+                    not in {
+                        existing.lower()
+                        for existing in terms
+                    }
+                ):
+                    terms.append(
+                        term
+                    )
+
+        return terms
+
+    @staticmethod
+    def _remaining_flagged_terms(
+        data: dict,
+        banned_terms: list[str],
+    ) -> list[str]:
+
+        if not isinstance(
+            data,
+            dict,
+        ):
+            return list(
+                banned_terms
+            )
+
+        lines = data.get(
+            "script_lines",
+            [],
+        )
+
+        if not isinstance(
+            lines,
+            list,
+        ):
+            return list(
+                banned_terms
+            )
+
+        script = " ".join(
+            str(line)
+            for line in lines
+        )
+
+        remaining = []
+
+        for term in banned_terms:
+
+            pattern = (
+                r"(?<!\w)"
+                + re.escape(term)
+                + r"(?!\w)"
+            )
+
+            if re.search(
+                pattern,
+                script,
+                flags=re.IGNORECASE,
+            ):
+                remaining.append(
+                    term
+                )
+
+        return remaining
+
+    def _build_repair_messages(
+        self,
+        topic: str,
+        research: str,
+        original_script: str,
+        issues: list[dict],
+        banned_terms: list[str],
+        retry: bool = False,
+        previous_repair: str = "",
+        previous_words: int = 0,
+        remaining_terms: list[str] | None = None,
+    ) -> list[dict]:
+
+        issue_text = json.dumps(
+            issues,
+            indent=2,
+        )
+
+        banned_text = (
+            ", ".join(
+                banned_terms
+            )
+            or "None"
+        )
+
+        retry_text = ""
+
+        if retry:
+
+            remaining_text = (
+                ", ".join(
+                    remaining_terms or []
+                )
+                or "None"
+            )
+
+            retry_text = f"""
+THIS IS REPAIR ATTEMPT 2.
+
+The first repair failed.
+
+Previous word count:
+{previous_words}
+
+Required word count:
+75-105.
+
+Flagged terms still present:
+{remaining_text}
+
+Previous failed repair:
+
+{previous_repair}
+
+Rewrite it again rather than copying it.
+
+If it was below 75 words, expand only with
+information supported by the research.
+
+None of the banned terms may appear.
+"""
+
+        system_prompt = """
+You are Jarvis, a factual YouTube Shorts script editor.
+
+Return ONLY one valid JSON object.
+Do not use markdown or code fences.
+Do not include text outside the JSON.
+
+Use exactly this schema:
+
+{
+  "title": "string",
+  "hashtags": [
+    "#hashtag1",
+    "#hashtag2",
+    "#hashtag3"
+  ],
+  "script_lines": [
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4"
+  ]
+}
+
+MANDATORY RULES:
+
+1. Exactly four narration lines.
+2. EACH line must contain about 19-26 words.
+3. Total narration must contain 75-105 words.
+4. Use only claims supported by the research.
+5. Remove every flagged high-risk claim.
+6. Do not invent replacement facts.
+7. Do not make absolute predictions.
+8. Banned terms must not appear anywhere
+   inside script_lines.
+9. Count the words before responding.
+"""
+
+        user_prompt = f"""
+TOPIC:
+
+{topic}
+
+RESEARCH:
+
+{research}
+
+ORIGINAL SCRIPT:
+
+{original_script}
+
+VALIDATION ISSUES:
+
+{issue_text}
+
+BANNED TERMS:
+
+{banned_text}
+
+The banned terms must not appear anywhere
+inside script_lines.
+
+Do not use a banned word even to negate it.
+For example, if "indistinguishable" is banned,
+do not write "not indistinguishable".
+
+{retry_text}
+
+Before returning:
+
+- verify exactly 4 script_lines
+- verify 75-105 total narration words
+- verify each line is approximately 19-26 words
+- verify no banned term appears
+- verify every factual claim is supported
+  by the research
+
+Return only JSON.
+"""
+
+        return [
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {
+                "role": "user",
+                "content": user_prompt,
+            },
+        ]
+
+    ########################################################
+    # Prompt construction
+    ########################################################
+
+    def _build_messages(
+        self,
+        topic: str,
+        research: str,
+        previous_words: int = 0,
+        retry: bool = False,
+    ) -> list[dict]:
+
+        system_prompt = """
+You are Jarvis, a YouTube Shorts script writer.
+
+Return ONLY one valid JSON object.
+Never use markdown or code fences.
+Never add text outside the JSON.
+
+Use exactly this schema:
+
+{
+  "title": "string",
+  "hashtags": [
+    "#hashtag1",
+    "#hashtag2",
+    "#hashtag3"
+  ],
+  "script_lines": [
+    "line 1",
+    "line 2",
+    "line 3",
+    "line 4"
+  ]
+}
+
+SCRIPT RULES:
+
+1. Exactly four narration lines.
+2. Total narration MUST be 75-105 words.
+3. Aim for 19-26 words per narration line.
+4. Line 1 must immediately hook the viewer.
+5. Lines 2 and 3 explain the important information.
+6. Line 4 concludes and ends with natural engagement.
+7. Use only information supported by the research.
+8. Do not exaggerate certainty.
+9. Do not invent facts.
+10. Count the narration words before responding.
+"""
+
+        retry_instruction = ""
+
+        if retry:
+            retry_instruction = f"""
+IMPORTANT RETRY:
+
+Your previous attempt contained approximately
+{previous_words} narration words and FAILED validation.
+
+You MUST rewrite the script.
+
+The new script must contain 75-105 total narration words.
+
+Each of the four lines should contain approximately
+19-26 words.
+
+Do not shorten the previous script.
+Expand it using only the supplied research.
+"""
+
+        user_prompt = f"""
+TOPIC:
+
+{topic}
+
+RESEARCH:
+
+{research}
+
+{retry_instruction}
+
+Create the final YouTube Shorts script.
+
+Before returning JSON:
+
+- verify there are exactly 4 script_lines
+- count the words across those 4 lines
+- verify the total is between 75 and 105
+- verify every factual claim is supported by the research
+
+Return only the JSON object.
+"""
+
+        return [
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {
+                "role": "user",
+                "content": user_prompt,
+            },
+        ]
+
+    ########################################################
+    # Validation
+    ########################################################
+
+    def _is_structurally_valid_content(
+        self,
+        data: dict,
+    ) -> bool:
+
+        if not isinstance(data, dict):
+            return False
+
+        title = data.get("title")
+        hashtags = data.get("hashtags")
+        lines = data.get("script_lines")
+
+        if (
+            not isinstance(title, str)
+            or not title.strip()
+        ):
+            return False
+
+        if (
+            not isinstance(hashtags, list)
+            or len(hashtags) < 3
+        ):
+            return False
+
+        if not all(
+            isinstance(tag, str)
+            and tag.strip()
+            for tag in hashtags
+        ):
+            return False
+
+        if (
+            not isinstance(lines, list)
+            or len(lines) != 4
+        ):
+            return False
+
+        if not all(
+            isinstance(line, str)
+            and line.strip()
+            for line in lines
+        ):
+            return False
+
+        return True
+
+    def _is_valid_content(
+        self,
+        data: dict,
+    ) -> bool:
+
+        if not self._is_structurally_valid_content(
+            data
+        ):
+            return False
+
+        word_count = self._word_count(
+            data
+        )
+
+        if not (
+            self.MIN_WORDS
+            <= word_count
+            <= self.MAX_WORDS
+        ):
+
+            logger.warning(
+                "Script length validation failed: "
+                "%s words.",
+                word_count,
+            )
+
+            return False
+
+        return True
+
+    ########################################################
+    # Word counting
+    ########################################################
+
+    @staticmethod
+    def _word_count(
+        data: dict,
+    ) -> int:
+
+        if not isinstance(data, dict):
+            return 0
+
+        lines = data.get(
+            "script_lines",
+            [],
+        )
+
+        if not isinstance(lines, list):
+            return 0
+
+        return sum(
+            len(str(line).split())
+            for line in lines
+        )
+
+    ########################################################
+    # Emergency fallback
+    ########################################################
+
+    def _fallback(
+        self,
+        topic: str,
+        research: str,
+    ) -> dict:
+
+        return {
+            "title": topic,
+            "hashtags": [
+                "#shorts",
+                "#technology",
+                "#trending",
+            ],
+            "script_lines": [
+                (
+                    f"{topic} is getting attention, "
+                    "and the technology behind it is "
+                    "developing quickly as creators "
+                    "experiment with increasingly "
+                    "automated production tools."
+                ),
+                (
+                    "Current AI video systems are "
+                    "improving image quality and motion "
+                    "consistency while helping creators "
+                    "turn ideas and scripts into visual "
+                    "content more efficiently."
+                ),
+                (
+                    "AI tools can also assist with "
+                    "narration, captions, editing, and "
+                    "other production steps, bringing "
+                    "more of the video workflow into "
+                    "a connected automated process."
+                ),
+                (
+                    "These improvements show how quickly "
+                    "AI-assisted video production is "
+                    "changing, although results still "
+                    "depend on the tools and material "
+                    "being used. What do you think?"
+                ),
+            ],
+        }
+
+    ########################################################
+    # JSON extraction
+    ########################################################
+
+    def _extract_json(
+        self,
+        raw: str,
+    ) -> dict:
+
+        if not raw:
+            return {}
+
+        cleaned = raw.strip()
+
+        cleaned = re.sub(
+            r"```json",
+            "",
+            cleaned,
+            flags=re.IGNORECASE,
+        )
+
+        cleaned = cleaned.replace(
+            "```",
+            "",
+        ).strip()
+
+        try:
+
+            parsed = json.loads(
+                cleaned
+            )
+
+            if isinstance(parsed, dict):
+                return parsed
+
+        except json.JSONDecodeError:
+            pass
+
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+
+        if (
+            start == -1
+            or end == -1
+            or end <= start
+        ):
+            return {}
+
+        candidate = cleaned[
+            start:end + 1
+        ]
+
+        try:
+
+            parsed = json.loads(
+                candidate
+            )
+
+            if isinstance(parsed, dict):
+                return parsed
+
+        except json.JSONDecodeError as exc:
+
+            logger.warning(
+                "Failed to parse LLM JSON: %s",
+                exc,
+            )
+
+        return {}
+
+
+
+================ STORYBOARD ================
+from backend.models.generated_content import GeneratedContent
+from backend.services.storyboard.scene import Scene
+
+
+class StoryboardGenerator:
+    """
+    Converts GeneratedContent into storyboard scenes.
+    """
+
+    def generate(
+        self,
+        content: GeneratedContent,
+    ) -> list[Scene]:
+
+        scenes = []
+
+        for line in content.script_lines:
+
+            scenes.append(
+                Scene(
+                    narration=line,
+                    image_prompt=line,
+                    duration=4.0,
+                )
+            )
+
+        return scenes
+================ IMAGE GENERATOR ================
+from backend.services.image_generation.base_provider import (
+    BaseImageProvider,
+)
+from backend.services.image_generation.cloudflare_flux_provider import (
+    CloudflareFluxProvider,
+)
+from backend.services.image_generation.flux_provider import FluxProvider
+from backend.services.image_generation.prompt_enhancer import PromptEnhancer
+from backend.services.runtime.runtime_config import RuntimeConfig
+
+
+class ImageGenerator:
+
+    def __init__(
+        self,
+        runtime_config: RuntimeConfig | None = None,
+        provider: BaseImageProvider | None = None,
+    ):
+        config = (
+            runtime_config
+            if runtime_config is not None
+            else RuntimeConfig.from_environment()
+        )
+
+        self.provider = (
+            provider
+            if provider is not None
+            else self._build_provider(
+                config
+            )
+        )
+
+        self.enhancer = PromptEnhancer()
+
+    @staticmethod
+    def _build_provider(
+        config: RuntimeConfig,
+    ) -> BaseImageProvider:
+
+        provider_name = (
+            config.image_provider
+            .strip()
+            .lower()
+        )
+
+        if provider_name in {
+            "comfyui",
+            "flux",
+            "flux-comfyui",
+        }:
+            return FluxProvider(
+                runtime_config=config
+            )
+
+        if provider_name in {
+            "cloudflare",
+            "flux-cloudflare",
+        }:
+            return CloudflareFluxProvider(
+                runtime_config=config
+            )
+
+        raise ValueError(
+            "Unsupported image provider: "
+            f"{config.image_provider}"
+        )
+
+    async def generate(
+        self,
+        scene,
+    ):
+
+        prompt = self.enhancer.enhance(
+            scene.image_prompt
+        )
+
+        return await self.provider.generate(
+            prompt
+        )
+
+================ PRODUCTION PACKAGE ================
+"""
+Builds a complete production package.
+
+Everything required to recreate the video is stored
+inside one folder.
+
+Package Structure
+
+generated/packages/<video>/
+
+    metadata.json
+    trend.json
+    script.txt
+    voice.json
+    scenes.json
+    images.json
+    captions.srt
+
+    narration.wav
+
+    images/
+        scene_001.png
+        scene_002.png
+        ...
+"""
+
+import json
+import shutil
+from dataclasses import asdict
+from pathlib import Path
+
+from backend.models.generated_content import GeneratedContent
+from backend.services.storyboard.scene import Scene
+from backend.services.runtime.runtime_config import RuntimeConfig
+from backend.services.video.voice_generator import VoiceGenerator
+
+
+class ProductionPackageBuilder:
+
+    def __init__(
+        self,
+        runtime_config: RuntimeConfig | None = None,
+    ):
+
+        config = (
+            runtime_config
+            if runtime_config is not None
+            else RuntimeConfig.from_environment()
+        )
+
+        self.voice = VoiceGenerator(
+            runtime_config=config
+        )
+
+        self.base_dir = (
+            Path(config.generated_dir)
+            / "packages"
+        )
+
+        self.base_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+    async def build(
+        self,
+        content: GeneratedContent,
+        scenes: list[Scene],
+        images: list,
+        trend: dict | None = None,
+    ) -> dict:
+
+        ####################################################
+        # Safe folder name
+        ####################################################
+
+        safe_name = "".join(
+            c if c.isalnum() else "_"
+            for c in content.title
+        )[:60]
+
+        package_dir = self.base_dir / safe_name
+
+        package_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        ####################################################
+        # Images folder
+        ####################################################
+
+        images_dir = package_dir / "images"
+
+        images_dir.mkdir(
+            exist_ok=True,
+        )
+
+        ####################################################
+        # Script
+        ####################################################
+
+        script = content.full_script
+
+        ####################################################
+        # Voice Generation
+        ####################################################
+
+        voice = await self.voice.generate_scenes(
+            scenes,
+            filename=safe_name,
+        )
+
+        ####################################################
+        # Copy narration into package
+        ####################################################
+
+        audio_source = Path(
+            voice["audio_path"]
+        )
+
+        audio_destination = (
+            package_dir / audio_source.name
+        )
+
+        if audio_source.exists():
+
+            shutil.copy2(
+                audio_source,
+                audio_destination,
+            )
+
+        voice["audio_path"] = str(
+            audio_destination
+        )
+
+        ####################################################
+        # Copy images
+        ####################################################
+
+        image_manifest = []
+
+        for index, image in enumerate(images):
+
+            source = Path(
+                image.image_path
+            )
+
+            destination = (
+                images_dir
+                / f"scene_{index+1:03d}{source.suffix}"
+            )
+
+            if source.exists():
+
+                shutil.copy2(
+                    source,
+                    destination,
+                )
+
+            image_manifest.append(
+                {
+                    "scene": index + 1,
+                    "provider": image.provider,
+                    "prompt": image.prompt,
+                    "image_path": str(destination),
+                    "width": image.width,
+                    "height": image.height,
+                }
+            )
+
+        ####################################################
+        # Metadata
+        ####################################################
+
+        duration = voice["duration"]
+
+        metadata = {
+
+            "title": content.title,
+
+            "hashtags": content.hashtags,
+
+            "scene_count": len(scenes),
+
+            "duration": duration,
+
+            "created_by": "Jarvis Rich V1",
+
+            "metadata": content.metadata,
+
+        }
+
+        ####################################################
+        # Save metadata
+        ####################################################
+
+        (
+            package_dir / "metadata.json"
+        ).write_text(
+
+            json.dumps(
+                metadata,
+                indent=4,
+            ),
+
+            encoding="utf-8",
+        )
+
+        ####################################################
+        # Save trend (optional)
+        ####################################################
+
+        if trend is not None:
+
+            (
+                package_dir / "trend.json"
+            ).write_text(
+
+                json.dumps(
+                    trend,
+                    indent=4,
+                ),
+
+                encoding="utf-8",
+            )
+
+        ####################################################
+        # Save script
+        ####################################################
+
+        (
+            package_dir / "script.txt"
+        ).write_text(
+
+            script,
+
+            encoding="utf-8",
+        )
+
+        ####################################################
+        # Save voice metadata
+        ####################################################
+
+        (
+            package_dir / "voice.json"
+        ).write_text(
+
+            json.dumps(
+                voice,
+                indent=4,
+            ),
+
+            encoding="utf-8",
+        )
+
+        ####################################################
+        # Save storyboard
+        ####################################################
+
+        (
+            package_dir / "scenes.json"
+        ).write_text(
+
+            json.dumps(
+
+                [
+                    asdict(scene)
+                    for scene in scenes
+                ],
+
+                indent=4,
+
+            ),
+
+            encoding="utf-8",
+        )
+
+        ####################################################
+        # Save image manifest
+        ####################################################
+
+        (
+            package_dir / "images.json"
+        ).write_text(
+
+            json.dumps(
+                image_manifest,
+                indent=4,
+            ),
+
+            encoding="utf-8",
+        )
+
+        ####################################################
+        # Empty captions (V1)
+        ####################################################
+
+        (
+            package_dir / "captions.srt"
+        ).write_text(
+            self._build_srt(scenes),
+            encoding="utf-8",
+        )
+
+        ####################################################
+        # Return package
+        ####################################################
+
+        return {
+
+            "package_dir": str(package_dir),
+
+            "metadata": metadata,
+
+            "voice": voice,
+
+            "images": image_manifest,
+
+            "scene_count": len(scenes),
+
+            "duration": duration,
+
+            "script": script,
+
+        }
+
+
+
+    @staticmethod
+    def _format_srt_time(
+        seconds: float,
+    ) -> str:
+
+        milliseconds = round(
+            seconds * 1000
+        )
+
+        hours = (
+            milliseconds // 3_600_000
+        )
+
+        milliseconds %= 3_600_000
+
+        minutes = (
+            milliseconds // 60_000
+        )
+
+        milliseconds %= 60_000
+
+        secs = (
+            milliseconds // 1000
+        )
+
+        millis = (
+            milliseconds % 1000
+        )
+
+        return (
+            f"{hours:02d}:"
+            f"{minutes:02d}:"
+            f"{secs:02d},"
+            f"{millis:03d}"
+        )
+
+    @classmethod
+    def _build_srt(
+        cls,
+        scenes: list[Scene],
+    ) -> str:
+
+        blocks = []
+
+        for index, scene in enumerate(
+            scenes,
+            start=1,
+        ):
+
+            start = cls._format_srt_time(
+                scene.start_time
+            )
+
+            end = cls._format_srt_time(
+                scene.end_time
+            )
+
+            blocks.append(
+                f"{index}\n"
+                f"{start} --> {end}\n"
+                f"{scene.narration.strip()}"
+            )
+
+        return "\n\n".join(
+            blocks
+        ) + "\n"
+
+================ RENDERER ================
+"""
+Video Renderer
+
+Responsible for creating the final MP4.
+
+MoviePy 2.x compatible.
+"""
+
+from pathlib import Path
+
+from backend.services.runtime.runtime_config import RuntimeConfig
+from backend.services.video_renderer.moviepy_runtime import (
+    configure_moviepy_ffmpeg,
+)
+
+from moviepy import (
+    AudioFileClip,
+    CompositeVideoClip,
+    ImageClip,
+    concatenate_videoclips,
+)
+
+from backend.models.generated_content import GeneratedContent
+from backend.services.storyboard.scene import Scene
+from backend.services.image_generation.models import GeneratedImage
+from backend.services.video.caption_aligner import CaptionAligner
+from backend.services.video_renderer.subtitle_renderer import SubtitleRenderer
+
+
+class VideoRenderer:
+
+    WIDTH = 1080
+    HEIGHT = 1920
+    FPS = 30
+
+    def __init__(
+        self,
+        runtime_config: RuntimeConfig | None = None,
+    ):
+
+        config = (
+            runtime_config
+            if runtime_config is not None
+            else RuntimeConfig.from_environment()
+        )
+
+        self.ffmpeg_executable = (
+            configure_moviepy_ffmpeg(
+                config.ffmpeg_executable
+            )
+        )
+
+        self.output_dir = (
+            Path(config.generated_dir)
+            / "videos"
+        )
+
+        self.output_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        self.subtitle_renderer = (
+            SubtitleRenderer()
+        )
+
+        self.caption_aligner = (
+            CaptionAligner()
+        )
+
+    async def render(
+        self,
+        content: GeneratedContent,
+        scenes: list[Scene],
+        images: list[GeneratedImage],
+        production_package: dict,
+    ) -> dict:
+
+        if not scenes:
+            raise RuntimeError(
+                "Storyboard contains no scenes."
+            )
+
+        if len(images) != len(scenes):
+            raise RuntimeError(
+                "Image/storyboard mismatch."
+            )
+
+        voice = production_package["voice"]
+
+        audio_path = Path(
+            voice["audio_path"]
+        )
+
+        if not audio_path.exists():
+            raise FileNotFoundError(
+                f"Audio not found: {audio_path}"
+            )
+
+        audio = AudioFileClip(
+            str(audio_path)
+        )
+
+        audio_duration = audio.duration
+
+        if audio_duration <= 0:
+            audio.close()
+
+            raise RuntimeError(
+                "Narration has invalid duration."
+            )
+
+        image_clips = []
+        subtitle_clips = []
+
+        base_video = None
+        final_video = None
+
+        caption_mode = "whisper"
+
+        try:
+
+            ##################################################
+            # Build synchronized image clips
+            ##################################################
+
+            for scene, image in zip(
+                scenes,
+                images,
+            ):
+
+                image_path = Path(
+                    image.image_path
+                )
+
+                if not image_path.exists():
+                    raise FileNotFoundError(
+                        f"Image not found: {image_path}"
+                    )
+
+                clip = (
+                    ImageClip(
+                        str(image_path)
+                    )
+                    .resized(
+                        (
+                            self.WIDTH,
+                            self.HEIGHT,
+                        )
+                    )
+                    .with_duration(
+                        scene.duration
+                    )
+                )
+
+                image_clips.append(
+                    clip
+                )
+
+            ##################################################
+            # Combine synchronized scenes
+            ##################################################
+
+            base_video = concatenate_videoclips(
+                image_clips,
+                method="compose",
+            )
+
+            ##################################################
+            # Build speech-aligned subtitles
+            ##################################################
+
+            try:
+
+                phrases = (
+                    await self.caption_aligner
+                    .align_phrases(
+                        str(audio_path)
+                    )
+                )
+
+                for phrase in phrases:
+
+                    subtitle = (
+                        self.subtitle_renderer
+                        .create_clip(
+                            text=phrase["text"],
+                            start_time=phrase[
+                                "start_time"
+                            ],
+                            end_time=phrase[
+                                "end_time"
+                            ],
+                        )
+                    )
+
+                    subtitle_clips.append(
+                        subtitle
+                    )
+
+            except Exception as exc:
+
+                caption_mode = "fallback"
+
+                print(
+                    "Whisper caption alignment "
+                    "failed. Using fallback "
+                    "captions."
+                )
+
+                print(
+                    f"Alignment error: {exc}"
+                )
+
+                ##################################################
+                # Fallback proportional captions
+                ##################################################
+
+                for scene in scenes:
+
+                    phrase_clips = (
+                        self.subtitle_renderer
+                        .create_phrase_clips(
+                            text=scene.narration,
+                            start_time=scene.start_time,
+                            end_time=scene.end_time,
+                        )
+                    )
+
+                    subtitle_clips.extend(
+                        phrase_clips
+                    )
+
+            ##################################################
+            # Composite images + subtitles
+            ##################################################
+
+            final_video = CompositeVideoClip(
+                [
+                    base_video,
+                    *subtitle_clips,
+                ],
+                size=(
+                    self.WIDTH,
+                    self.HEIGHT,
+                ),
+            )
+
+            final_video = (
+                final_video
+                .with_audio(audio)
+                .with_duration(
+                    audio_duration
+                )
+            )
+
+            ##################################################
+            # Safe filename
+            ##################################################
+
+            safe_name = "".join(
+                c if c.isalnum() else "_"
+                for c in content.title
+            )[:60]
+
+            output = (
+                self.output_dir
+                / f"{safe_name}.mp4"
+            )
+
+            ##################################################
+            # Render
+            ##################################################
+
+            final_video.write_videofile(
+                str(output),
+                fps=self.FPS,
+                codec="libx264",
+                audio_codec="aac",
+                logger=None,
+            )
+
+        finally:
+
+            if final_video is not None:
+                final_video.close()
+
+            if base_video is not None:
+                base_video.close()
+
+            for subtitle in subtitle_clips:
+                subtitle.close()
+
+            for clip in image_clips:
+                clip.close()
+
+            audio.close()
+
+        return {
+            "status": "success",
+            "video_path": str(output),
+            "title": content.title,
+            "duration": audio_duration,
+            "resolution": (
+                f"{self.WIDTH}x{self.HEIGHT}"
+            ),
+            "fps": self.FPS,
+            "captions": True,
+            "caption_mode": caption_mode,
+        }
+

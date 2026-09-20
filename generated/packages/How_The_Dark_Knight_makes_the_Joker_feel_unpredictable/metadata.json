@@ -1,0 +1,46 @@
+{
+    "title": "How The Dark Knight makes the Joker feel unpredictable",
+    "hashtags": [
+        "#DarkKnight",
+        "#Joker",
+        "#SuperheroMovies"
+    ],
+    "scene_count": 4,
+    "duration": 35.16662131519274,
+    "created_by": "Jarvis Rich V1",
+    "metadata": {
+        "source": "How The Dark Knight makes the Joker feel unpredictable",
+        "generator": "Jarvis Rich V1",
+        "content_format": "famous_movie_commentary",
+        "movie_title": "The Dark Knight",
+        "evidence_ids": [
+            [
+                "E2",
+                "E3"
+            ],
+            [
+                "E2",
+                "E3"
+            ],
+            [
+                "E3"
+            ],
+            [
+                "E3",
+                "E11"
+            ]
+        ],
+        "word_count": 93,
+        "repaired": true,
+        "repair_attempt": 1,
+        "repair_issues": [
+            {
+                "type": "high_risk_claim",
+                "pattern": "\\bperfect(?:ed|ly)?\\b",
+                "matches": [
+                    "perfectly"
+                ]
+            }
+        ]
+    }
+}

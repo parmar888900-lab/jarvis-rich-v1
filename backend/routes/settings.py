@@ -1,11 +1,14 @@
 """Settings endpoints."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from backend.services.remote_auth import require_remote_token
 from backend.config import settings
 from backend.models.schemas import SettingsResponse, SettingsUpdate
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(require_remote_token)],
+)
 
 
 @router.get("/", response_model=SettingsResponse)

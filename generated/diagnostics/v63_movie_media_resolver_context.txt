@@ -1,0 +1,1592 @@
+﻿======================================================================
+V6.3 MOVIE MEDIA RESOLVER - FINAL PATCH CONTEXT
+======================================================================
+
+======================================================================
+MOVIE MEDIA RESOLVER
+======================================================================
+"""Rights-aware media resolution for movie commentary."""
+
+from __future__ import annotations
+
+import asyncio
+
+from dataclasses import asdict, dataclass
+
+from backend.services.storyboard.movie_visual_beat_planner import (
+    MovieVisualBeat,
+)
+from backend.services.video.movie_contextual_query_builder import (
+    MovieContextualQueryBuilder,
+)
+
+from backend.services.video.asset_collector import AssetCollector
+from backend.services.video.media_asset import MediaAsset
+from backend.services.video.media_sources.wikimedia import (
+    WikimediaCommonsProvider,
+)
+from backend.services.video.media_sources.pexels import (
+    PexelsProvider,
+)
+from backend.services.video.visual_semantic_validator import (
+    VisualSemanticValidator,
+)
+from backend.services.video.visual_quality_validator import (
+    VisualQualityValidator,
+)
+
+
+@dataclass(slots=True)
+class ResolvedMovieBeat:
+    beat_id: str
+    narration_index: int
+    purpose: str
+    visual_query: str
+    target_duration: float
+    evidence_ids: list[str]
+
+    asset: MediaAsset | None
+    status: str
+    attempted_queries: list[str]
+
+    def to_dict(self) -> dict:
+        data = asdict(self)
+
+        if self.asset is not None:
+            data["asset"] = asdict(
+                self.asset
+            )
+
+        return data
+
+
+class MovieMediaResolver:
+    """
+    Resolve movie visual beats to production-authorized media.
+
+    Search availability is never treated as reuse permission.
+
+    Every selected asset must:
+        - exist locally
+        - identify its source
+        - identify its license
+        - permit commercial reuse
+        - pass relevance validation
+        - match the production content_id
+
+    Copyrighted movie footage is not acquired from streaming
+    platforms, YouTube uploads, or other unauthorized sources.
+    """
+
+    MAX_QUERY_VARIANTS = 3
+    RESULTS_PER_QUERY = 1
+
+    def __init__(
+        self,
+        *,
+        providers=None,
+        asset_collector=None,
+    ) -> None:
+
+        self.providers = (
+            providers
+            if providers is not None
+            else [
+                WikimediaCommonsProvider(),
+                PexelsProvider(),
+            ]
+        )
+
+        self.asset_collector = (
+            asset_collector
+            if asset_collector is not None
+            else AssetCollector()
+        )
+
+        self.visual_semantic_validator = (
+            VisualSemanticValidator()
+        )
+
+        self.visual_quality_validator = (
+            VisualQualityValidator()
+        )
+
+    async def resolve(
+        self,
+        *,
+        beats: list[MovieVisualBeat],
+        content_id: str,
+        movie_title: str,
+    ) -> list[ResolvedMovieBeat]:
+
+        if not beats:
+            raise RuntimeError(
+                "MovieMediaResolver received no beats."
+            )
+
+        clean_content_id = str(
+            content_id
+        ).strip()
+
+        if not clean_content_id:
+            raise RuntimeError(
+                "Movie media resolution requires content_id."
+            )
+
+        used_source_urls: set[str] = set()
+
+        resolved: list[ResolvedMovieBeat] = []
+
+        for beat in beats:
+
+            queries = self._query_variants(
+                beat=beat,
+                movie_title=movie_title,
+            )
+
+            candidates: list[MediaAsset] = []
+
+            for query in queries[
+                :self.MAX_QUERY_VARIANTS
+            ]:
+
+                for provider in self.providers:
+
+                    try:
+                        found = await provider.search_and_download(
+                            query=query,
+                            content_id=clean_content_id,
+                            limit=self.RESULTS_PER_QUERY,
+                        )
+                    except Exception:
+                        # Provider failure is isolated to this
+                        # query/provider combination.
+                        continue
+
+                    for asset in found:
+
+                        if (
+                            asset.source_url
+                            in used_source_urls
+                        ):
+                            continue
+
+                        self._apply_query_relevance(
+                            asset=asset,
+                            query=query,
+                            beat=beat,
+                            movie_title=movie_title,
+                        )
+
+                        valid, issues = (
+                            self.asset_collector.validate_asset(
+                                asset,
+                                content_id=clean_content_id,
+                            )
+                        )
+
+                        if not valid:
+                            continue
+
+                        if not self._passes_identity_policy(
+                            asset=asset,
+                            beat=beat,
+                            query=query,
+                            movie_title=movie_title,
+                        ):
+                            continue
+
+                        visual_validation = await asyncio.to_thread(
+                            self.visual_semantic_validator.validate,
+                            asset=asset,
+                            beat=beat,
+                            movie_title=movie_title,
+                        )
+
+                        if not visual_validation["valid"]:
+                            continue
+
+                        quality_validation = await asyncio.to_thread(
+                            self.visual_quality_validator.validate,
+                            asset=asset,
+                        )
+
+                        if not quality_validation["valid"]:
+                            continue
+
+
+                        candidates.append(
+                            asset
+                        )
+
+
+            winner = self._select_best(
+                candidates
+            )
+
+            ####################################################
+            # Second-stage unresolved fallback
+            #
+            # Only spend additional provider/API work when the
+            # primary candidate pool produced no valid winner.
+            ####################################################
+
+            if winner is None:
+
+                fallback_candidates: list[MediaAsset] = []
+
+                fallback_queries = queries[
+                    self.MAX_QUERY_VARIANTS:
+                ]
+
+                for query in fallback_queries:
+
+                    for provider in self.providers:
+
+                        try:
+                            found = await provider.search_and_download(
+                                query=query,
+                                content_id=clean_content_id,
+                                limit=self.RESULTS_PER_QUERY,
+                            )
+
+                        except Exception:
+                            continue
+
+                        for asset in found:
+
+                            if (
+                                asset.source_url
+                                in used_source_urls
+                            ):
+                                continue
+
+                            self._apply_query_relevance(
+                                asset=asset,
+                                query=query,
+                                beat=beat,
+                                movie_title=movie_title,
+                            )
+
+                            valid, issues = (
+                                self.asset_collector.validate_asset(
+                                    asset,
+                                    content_id=clean_content_id,
+                                )
+                            )
+
+                            if not valid:
+                                continue
+
+                            if not self._passes_identity_policy(
+                                asset=asset,
+                                beat=beat,
+                                query=query,
+                                movie_title=movie_title,
+                            ):
+                                continue
+
+                            visual_validation = await asyncio.to_thread(
+                                self.visual_semantic_validator.validate,
+                                asset=asset,
+                                beat=beat,
+                                movie_title=movie_title,
+                            )
+
+                            if not visual_validation["valid"]:
+                                continue
+
+                            quality_validation = await asyncio.to_thread(
+                                self.visual_quality_validator.validate,
+                                asset=asset,
+                            )
+
+                            if not quality_validation["valid"]:
+                                continue
+
+
+                            fallback_candidates.append(
+                                asset
+                            )
+
+                    # Stop after the first fallback query that
+                    # yields authorized candidates. Unlike the
+                    # primary pool, this stage exists only to
+                    # recover an otherwise unresolved beat.
+                    if fallback_candidates:
+                        break
+
+                winner = self._select_best(
+                    fallback_candidates
+                )
+
+
+            if winner is None:
+
+                resolved.append(
+                    ResolvedMovieBeat(
+                        beat_id=beat.beat_id,
+                        narration_index=(
+                            beat.narration_index
+                        ),
+                        purpose=beat.purpose,
+                        visual_query=beat.visual_query,
+                        target_duration=(
+                            beat.target_duration
+                        ),
+                        evidence_ids=list(
+                            beat.evidence_ids
+                        ),
+                        asset=None,
+                        status="unresolved",
+                        attempted_queries=queries,
+                    )
+                )
+
+                continue
+
+            used_source_urls.add(
+                winner.source_url
+            )
+
+            resolved.append(
+                ResolvedMovieBeat(
+                    beat_id=beat.beat_id,
+                    narration_index=(
+                        beat.narration_index
+                    ),
+                    purpose=beat.purpose,
+                    visual_query=beat.visual_query,
+                    target_duration=(
+                        beat.target_duration
+                    ),
+                    evidence_ids=list(
+                        beat.evidence_ids
+                    ),
+                    asset=winner,
+                    status="resolved",
+                    attempted_queries=queries,
+                )
+            )
+
+        return resolved
+
+    @staticmethod
+    def _passes_identity_policy(
+        *,
+        asset: MediaAsset,
+        beat: MovieVisualBeat,
+        query: str,
+        movie_title: str,
+    ) -> bool:
+        """
+        Prevent generic stock media from impersonating a specific
+        filmmaker or named movie identity.
+
+        Pexels may still satisfy these beats through contextual
+        fallback queries such as "film director on set".
+        """
+
+        if (
+            str(
+                asset.source_name
+            ).strip().lower()
+            != "pexels"
+        ):
+            return True
+
+        clean_query = " ".join(
+            str(query).lower().split()
+        )
+
+        clean_movie = " ".join(
+            str(movie_title).lower().split()
+        )
+
+        visual_text = " ".join(
+            str(
+                beat.visual_query
+            ).lower().split()
+        )
+
+        identity_words = {
+            "director",
+            "directing",
+            "filmmaker",
+        }
+
+        has_identity_intent = any(
+            word in visual_text
+            for word in identity_words
+        )
+
+        if (
+            has_identity_intent
+            and clean_movie
+            and clean_movie in clean_query
+        ):
+            return False
+
+        return True
+
+    @staticmethod
+    def _apply_query_relevance(
+        *,
+        asset: MediaAsset,
+        query: str,
+        beat: MovieVisualBeat,
+        movie_title: str,
+    ) -> None:
+        """
+        Apply resolver-level retrieval relevance.
+
+        Direct movie-specific matches receive the strongest
+        retrieval confidence.
+
+        Contextual Pexels results may enter the candidate pool,
+        but do not outrank stronger direct matches merely because
+        they are video.
+        """
+
+        current = float(
+            asset.relevance_score
+            or 0.0
+        )
+
+        clean_query = " ".join(
+            str(query).lower().split()
+        )
+
+        clean_visual = " ".join(
+            str(
+                beat.visual_query
+            ).lower().split()
+        )
+
+        clean_movie = " ".join(
+            str(movie_title).lower().split()
+        )
+
+        score = current
+
+        ####################################################
+        # Exact planned visual request
+        ####################################################
+
+        if (
+            clean_visual
+            and clean_query == clean_visual
+        ):
+            score = max(
+                score,
+                78.0,
+            )
+
+        ####################################################
+        # Movie-specific retrieval
+        ####################################################
+
+        elif (
+            clean_movie
+            and clean_movie in clean_query
+        ):
+            score = max(
+                score,
+                72.0,
+            )
+
+        ####################################################
+        # Contextual provider retrieval
+        ####################################################
+
+        if (
+            str(
+                asset.source_name
+            ).strip().lower()
+            == "pexels"
+        ):
+            score = max(
+                score,
+                68.0,
+            )
+
+        ####################################################
+        # Purpose/query alignment
+        ####################################################
+
+        purpose_terms = {
+            "hook_subject": {
+                "film",
+                "mirror",
+                "dimension",
+                "cinematic",
+                "surreal",
+            },
+            "hook_detail": {
+                "visual",
+                "effects",
+                "geometry",
+                "surreal",
+                "cinematic",
+            },
+            "filmmaker_context": {
+                "director",
+                "film",
+                "production",
+                "camera",
+                "filmmaking",
+            },
+            "explanation": {
+                "production",
+                "dimension",
+                "action",
+                "film",
+                "behind",
+            },
+            "technical_detail": {
+                "visual",
+                "effects",
+                "vfx",
+                "compositing",
+                "graphics",
+            },
+            "supporting_visual": {
+                "visual",
+                "effects",
+                "production",
+                "surreal",
+                "geometry",
+            },
+            "payoff": {
+                "cinematic",
+                "action",
+                "film",
+                "city",
+                "visual",
+            },
+            "closing_visual": {
+                "visual",
+                "effects",
+                "cinematic",
+                "dimension",
+                "geometry",
+            },
+        }
+
+        expected = purpose_terms.get(
+            beat.purpose,
+            set(),
+        )
+
+        query_words = set(
+            clean_query.split()
+        )
+
+        overlap = len(
+            expected.intersection(
+                query_words
+            )
+        )
+
+        if overlap >= 2:
+            score += 4.0
+
+        elif overlap == 1:
+            score += 2.0
+
+        asset.relevance_score = round(
+            min(
+                score,
+                95.0,
+            ),
+            1,
+        )
+
+    @staticmethod
+    def _select_best(
+        candidates: list[MediaAsset],
+    ) -> MediaAsset | None:
+
+        if not candidates:
+            return None
+
+        ranked = sorted(
+            candidates,
+            key=lambda asset: (
+                ################################################
+                # Relevance is always the primary criterion.
+                ################################################
+                float(
+                    asset.relevance_score
+                    or 0.0
+                ),
+
+                ################################################
+                # Prefer motion only after relevance.
+                ################################################
+                asset.asset_type == "video",
+
+                ################################################
+                # Portrait assets fit Shorts better.
+                ################################################
+                (
+                    (asset.height or 0)
+                    >
+                    (asset.width or 0)
+                ),
+
+                ################################################
+                # Resolution is only a final tie-breaker.
+                ################################################
+                (
+                    (asset.width or 0)
+                    *
+                    (asset.height or 0)
+                ),
+            ),
+            reverse=True,
+        )
+
+        return ranked[0]
+
+    @staticmethod
+    def _query_variants(
+        *,
+        beat: MovieVisualBeat,
+        movie_title: str,
+    ) -> list[str]:
+
+        ####################################################
+        # Tier 1: direct movie/context searches
+        ####################################################
+
+        primary = " ".join(
+            beat.visual_query.split()
+        ).strip()
+
+        direct_queries = [
+            primary,
+        ]
+
+        purpose_queries = {
+            "hook_subject": [
+                f"{movie_title} film",
+                f"{movie_title} promotional image",
+            ],
+            "hook_detail": [
+                f"{movie_title} visual effects",
+                f"{movie_title} production still",
+            ],
+            "filmmaker_context": [
+                f"{movie_title} director",
+                f"{movie_title} production",
+            ],
+            "explanation": [
+                f"{movie_title} behind the scenes",
+                f"{movie_title} production still",
+            ],
+            "technical_detail": [
+                f"{movie_title} visual effects",
+                f"{movie_title} VFX production",
+            ],
+            "supporting_visual": [
+                f"{movie_title} production image",
+                f"{movie_title} film still",
+            ],
+            "payoff": [
+                f"{movie_title} film",
+                f"{movie_title} promotional image",
+            ],
+            "closing_visual": [
+                f"{movie_title} visual effects",
+                f"{movie_title} production still",
+            ],
+        }
+
+        direct_queries.extend(
+            purpose_queries.get(
+                beat.purpose,
+                [],
+            )
+        )
+
+        ####################################################
+        # Tier 2: contextual licensed B-roll
+        ####################################################
+
+        contextual_queries = (
+            MovieContextualQueryBuilder.build(
+                visual_query=beat.visual_query,
+                purpose=beat.purpose,
+            )
+        )
+
+        ####################################################
+        # Preserve order:
+        #
+        # direct movie relevance first,
+        # broader contextual fallback second.
+        ####################################################
+
+        queries = (
+            direct_queries
+            + contextual_queries
+        )
+
+        output = []
+        seen = set()
+
+        for query in queries:
+
+            clean = " ".join(
+                str(query).split()
+            ).strip()
+
+            key = clean.lower()
+
+            if (
+                not clean
+                or key in seen
+            ):
+                continue
+
+            seen.add(key)
+            output.append(clean)
+
+        return output
+
+
+
+
+
+======================================================================
+ALL MOVIE MEDIA RESOLVER REFERENCES
+======================================================================
+C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:219:             "rights_unverified_movie_media", C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:56: class MovieMediaResolver: C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:117:                 "MovieMediaResolver received no beats." C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:11: from backend.services.video.movie_media_resolver import (
+
+======================================================================
+VISUAL AUDIT MOVIE LOGIC
+======================================================================
+"""Visual audit generation for Rich V1 resolved movie media."""
+
+from __future__ import annotations
+
+import html
+import json
+import shutil
+import subprocess
+from pathlib import Path
+
+from backend.services.video.movie_media_resolver import (
+    ResolvedMovieBeat,
+)
+
+
+class VisualAuditGenerator:
+    """
+    Build a human-reviewable audit of resolved visual assets.
+
+    Images are converted to audit thumbnails.
+    Videos use a representative frame extracted with FFmpeg.
+    """
+
+    THUMB_WIDTH = 540
+    THUMB_HEIGHT = 960
+
+    def __init__(
+        self,
+        *,
+        ffmpeg_binary: str = "ffmpeg",
+    ) -> None:
+
+        self.ffmpeg_binary = ffmpeg_binary
+
+    def generate(
+        self,
+        *,
+        resolved_beats: list[ResolvedMovieBeat],
+        content_id: str,
+        output_root: str | Path = "generated/audits",
+    ) -> Path:
+
+        clean_content_id = str(
+            content_id
+        ).strip()
+
+        if not clean_content_id:
+            raise RuntimeError(
+                "Visual audit requires content_id."
+            )
+
+        output_dir = (
+            Path(output_root)
+            / clean_content_id
+        )
+
+        thumbnails_dir = (
+            output_dir
+            / "thumbnails"
+        )
+
+        thumbnails_dir.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        records: list[dict] = []
+
+        for item in resolved_beats:
+
+            record = self._build_record(
+                item=item,
+                thumbnails_dir=thumbnails_dir,
+            )
+
+            records.append(record)
+
+        json_path = (
+            output_dir
+            / "audit.json"
+        )
+
+        json_path.write_text(
+            json.dumps(
+                records,
+                indent=2,
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+
+        html_path = (
+            output_dir
+            / "audit.html"
+        )
+
+        html_path.write_text(
+            self._build_html(
+                content_id=clean_content_id,
+                records=records,
+            ),
+            encoding="utf-8",
+        )
+
+        return html_path
+
+    def _build_record(
+        self,
+        *,
+        item: ResolvedMovieBeat,
+        thumbnails_dir: Path,
+    ) -> dict:
+
+        asset = item.asset
+
+        if asset is None:
+
+            return {
+                "beat_id": item.beat_id,
+                "status": "unresolved",
+                "purpose": item.purpose,
+                "visual_query": item.visual_query,
+                "target_duration": item.target_duration,
+                "evidence_ids": list(
+                    item.evidence_ids
+                ),
+                "attempted_queries": list(
+                    item.attempted_queries
+                ),
+                "thumbnail": None,
+            }
+
+        source_path = Path(
+            asset.file_path
+        )
+
+        if not source_path.exists():
+
+            return {
+                "beat_id": item.beat_id,
+                "status": "asset_missing",
+                "purpose": item.purpose,
+                "visual_query": item.visual_query,
+                "file_path": str(
+                    source_path
+                ),
+                "thumbnail": None,
+            }
+
+        thumb_path = (
+            thumbnails_dir
+            / f"{item.beat_id}.jpg"
+        )
+
+        thumbnail_ok = (
+            self._create_thumbnail(
+                source_path=source_path,
+                asset_type=asset.asset_type,
+                output_path=thumb_path,
+            )
+        )
+
+        relative_thumb = None
+
+        if thumbnail_ok:
+            relative_thumb = (
+                "thumbnails/"
+                + thumb_path.name
+            )
+
+        return {
+            "beat_id": item.beat_id,
+            "status": item.status,
+            "purpose": item.purpose,
+            "visual_query": item.visual_query,
+            "target_duration": (
+                item.target_duration
+            ),
+            "evidence_ids": list(
+                item.evidence_ids
+            ),
+            "attempted_queries": list(
+                item.attempted_queries
+            ),
+            "asset_id": asset.asset_id,
+            "asset_type": asset.asset_type,
+            "file_path": asset.file_path,
+            "source_url": asset.source_url,
+            "source_name": asset.source_name,
+            "creator": asset.creator,
+            "license_name": asset.license_name,
+            "license_url": asset.license_url,
+            "commercial_use_allowed": (
+                asset.commercial_use_allowed
+            ),
+            "relevance_score": (
+                asset.relevance_score
+            ),
+            "duration": asset.duration,
+            "width": asset.width,
+            "height": asset.height,
+            "content_id": asset.content_id,
+            "thumbnail": relative_thumb,
+        }
+
+    def _create_thumbnail(
+        self,
+        *,
+        source_path: Path,
+        asset_type: str,
+        output_path: Path,
+    ) -> bool:
+
+        output_path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        if asset_type == "video":
+
+            return self._video_thumbnail(
+                source_path=source_path,
+                output_path=output_path,
+            )
+
+        if asset_type == "image":
+
+            return self._image_thumbnail(
+                source_path=source_path,
+                output_path=output_path,
+            )
+
+        return False
+
+    def _video_thumbnail(
+        self,
+        *,
+        source_path: Path,
+        output_path: Path,
+    ) -> bool:
+
+        command = [
+            self.ffmpeg_binary,
+            "-y",
+            "-loglevel",
+            "error",
+            "-ss",
+            "1.0",
+            "-i",
+            str(source_path),
+            "-frames:v",
+            "1",
+            "-vf",
+            (
+                "scale="
+                f"{self.THUMB_WIDTH}:"
+                f"{self.THUMB_HEIGHT}:"
+                "force_original_aspect_ratio=decrease,"
+                "pad="
+                f"{self.THUMB_WIDTH}:"
+                f"{self.THUMB_HEIGHT}:"
+                "(ow-iw)/2:(oh-ih)/2"
+            ),
+            "-q:v",
+            "3",
+            str(output_path),
+        ]
+
+        try:
+
+            completed = subprocess.run(
+                command,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=45,
+            )
+
+        except (
+            OSError,
+            subprocess.TimeoutExpired,
+        ):
+            return False
+
+        return (
+            completed.returncode == 0
+            and output_path.exists()
+        )
+
+    def _image_thumbnail(
+        self,
+        *,
+        source_path: Path,
+        output_path: Path,
+    ) -> bool:
+
+        try:
+            from PIL import (
+                Image,
+                ImageOps,
+            )
+
+            with Image.open(
+                source_path
+            ) as image:
+
+                image = image.convert(
+                    "RGB"
+                )
+
+                canvas = ImageOps.pad(
+                    image,
+                    (
+                        self.THUMB_WIDTH,
+                        self.THUMB_HEIGHT,
+                    ),
+                    method=(
+                        Image.Resampling.LANCZOS
+                    ),
+                    color=(
+                        20,
+                        20,
+                        20,
+                    ),
+                )
+
+                canvas.save(
+                    output_path,
+                    format="JPEG",
+                    quality=88,
+                )
+
+        except Exception:
+            return False
+
+        return output_path.exists()
+
+    @staticmethod
+    def _build_html(
+        *,
+        content_id: str,
+        records: list[dict],
+    ) -> str:
+
+        cards: list[str] = []
+
+        for record in records:
+
+            thumbnail = record.get(
+                "thumbnail"
+            )
+
+            if thumbnail:
+
+                visual = (
+                    '<img class="thumb" src="'
+                    + html.escape(
+                        thumbnail
+                    )
+                    + '" alt="'
+                    + html.escape(
+                        record.get(
+                            "beat_id",
+                            "",
+                        )
+                    )
+                    + '">'
+                )
+
+            else:
+
+                visual = (
+                    '<div class="missing">'
+                    'NO THUMBNAIL'
+                    '</div>'
+                )
+
+            score = record.get(
+                "relevance_score"
+            )
+
+            score_text = (
+                str(score)
+                if score is not None
+                else "N/A"
+            )
+
+            attempted = record.get(
+                "attempted_queries",
+                [],
+            )
+
+            attempted_html = "".join(
+                "<li>"
+                + html.escape(
+                    str(query)
+                )
+                + "</li>"
+                for query in attempted
+            )
+
+            source_url = str(
+                record.get(
+                    "source_url",
+                    "",
+                )
+                or ""
+            )
+
+            if source_url:
+
+                source_display = (
+                    '<a href="'
+                    + html.escape(
+                        source_url
+                    )
+                    + '" target="_blank">'
+                    + "Open source"
+                    + "</a>"
+                )
+
+            else:
+
+                source_display = "N/A"
+
+            card = f"""
+            <article class="card">
+                {visual}
+
+                <div class="info">
+                    <h2>{html.escape(str(record.get("beat_id", "")))}</h2>
+
+                    <div class="score">
+                        Score: {html.escape(score_text)}
+                    </div>
+
+                    <p>
+                        <strong>Purpose:</strong>
+                        {html.escape(str(record.get("purpose", "")))}
+                    </p>
+
+                    <p>
+                        <strong>Query:</strong>
+                        {html.escape(str(record.get("visual_query", "")))}
+                    </p>
+
+                    <p>
+                        <strong>Asset:</strong>
+                        {html.escape(str(record.get("asset_type", "")))}
+                    </p>
+
+                    <p>
+                        <strong>Provider:</strong>
+                        {html.escape(str(record.get("source_name", "")))}
+                    </p>
+
+                    <p>
+                        <strong>License:</strong>
+                        {html.escape(str(record.get("license_name", "")))}
+                    </p>
+
+                    <p>
+                        <strong>Resolution:</strong>
+                        {html.escape(str(record.get("width", "")))}
+                        Ã—
+                        {html.escape(str(record.get("height", "")))}
+                    </p>
+
+                    <p>
+                        <strong>Duration:</strong>
+                        {html.escape(str(record.get("duration", "")))}
+                    </p>
+
+                    <p>
+                        <strong>Target:</strong>
+                        {html.escape(str(record.get("target_duration", "")))}s
+                    </p>
+
+                    <p>
+                        <strong>Evidence:</strong>
+                        {html.escape(str(record.get("evidence_ids", [])))}
+                    </p>
+
+                    <p>
+                        <strong>Source:</strong>
+                        {source_display}
+                    </p>
+
+                    <details>
+                        <summary>Attempted queries</summary>
+                        <ol>
+                            {attempted_html}
+                        </ol>
+                    </details>
+
+                    <details>
+                        <summary>Local file</summary>
+                        <code>
+                            {html.escape(str(record.get("file_path", "")))}
+                        </code>
+                    </details>
+                </div>
+            </article>
+            """
+
+            cards.append(card)
+
+        return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+>
+<title>Rich V1 Visual Audit</title>
+
+<style>
+    * {{
+        box-sizing: border-box;
+    }}
+
+    body {{
+        margin: 0;
+        background: #101114;
+        color: #f4f4f4;
+        font-family:
+            Inter,
+            Arial,
+            sans-serif;
+    }}
+
+    header {{
+        padding: 28px;
+        border-bottom:
+            1px solid #303238;
+    }}
+
+    header h1 {{
+        margin: 0 0 8px 0;
+    }}
+
+    header p {{
+        margin: 0;
+        color: #aeb2bb;
+    }}
+
+    main {{
+        display: grid;
+        grid-template-columns:
+            repeat(
+                auto-fit,
+                minmax(330px, 1fr)
+            );
+        gap: 22px;
+        padding: 24px;
+    }}
+
+    .card {{
+        background: #191b20;
+        border:
+            1px solid #303238;
+        border-radius: 14px;
+        overflow: hidden;
+    }}
+
+    .thumb {{
+        display: block;
+        width: 100%;
+        aspect-ratio: 9 / 16;
+        object-fit: contain;
+        background: #08090b;
+    }}
+
+    .missing {{
+        width: 100%;
+        aspect-ratio: 9 / 16;
+        display: grid;
+        place-items: center;
+        background: #08090b;
+        color: #888;
+    }}
+
+    .info {{
+        padding: 18px;
+    }}
+
+    .info h2 {{
+        margin:
+            0 0 10px 0;
+    }}
+
+    .score {{
+        display: inline-block;
+        padding:
+            6px 10px;
+        margin-bottom: 10px;
+        border-radius: 999px;
+        background: #292c33;
+        font-weight: 700;
+    }}
+
+    p {{
+        line-height: 1.45;
+    }}
+
+    strong {{
+        color: #cdd2dc;
+    }}
+
+    a {{
+        color: #8ab4ff;
+    }}
+
+    details {{
+        margin-top: 12px;
+    }}
+
+    code {{
+        display: block;
+        margin-top: 8px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        color: #b8bec9;
+    }}
+
+    li {{
+        margin-bottom: 5px;
+    }}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Jarvis Rich V1 â€” Visual Audit</h1>
+    <p>
+        Content ID:
+        {html.escape(content_id)}
+        Â· Beats:
+        {len(records)}
+    </p>
+</header>
+
+<main>
+    {''.join(cards)}
+</main>
+
+</body>
+</html>
+"""
+
+
+
+
+======================================================================
+CONTENT GENERATOR MOVIE PATHS
+======================================================================
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:30:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:31:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:32:    @staticmethod
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:33:    def _is_movie_fact_generation(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:34:        *,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:35:        format_name: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:36:        reference_format: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:37:    ) -> bool:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:38:        return (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:39:            str(format_name).strip()
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:40:            == "famous_movie_commentary"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:41:            or str(reference_format).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:42:            == "movie_facts"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:43:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:44:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:45:    async def generate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:46:        self,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:47:        trend: dict,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:48:    ) -> GeneratedContent:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:49:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:50:        topic = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:51:            trend.get("title")
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:52:            or trend.get("topic")
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:53:            or "Trending Story"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:54:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:55:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:56:        research = trend.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:57:            "research",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:58:            "",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:59:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:60:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:61:        content_format = trend.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:62:            "content_format",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:63:            {},
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:64:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:65:   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:265:        ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:266:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:267:        if len(lines) != 4:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:268:            raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:269:                "Generated content normalization produced "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:270:                f"{len(lines)} script lines; expected exactly 4."
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:271:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:272:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:273:        lines = lines[:4]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:274:
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:275:        if format_name == "famous_movie_commentary":
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:276:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:277:            evidence_ids = data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:278:                "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:279:                [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:280:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:281:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:282:            evidence_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:283:                self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:284:                    script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:285:                    evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:286:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:287:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:288:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:289:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:290:            if not evidence_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:291:                raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:292:                    "Movie script failed claim-evidence validation: "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:293:                    f"{evidence_validation.issues}"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:294:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:295: > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:296:        if format_name == "famous_movie_commentary":
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:297:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:298:            semantic_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:299:                await self.semantic_claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:300:                    script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:301:                    evidence_ids=data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:302:                        "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:303:                        [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:304:                    ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:305:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:306:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:307:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:308:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:309:            if not semantic_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:310:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:311:                repaired_lines = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:312:                    await self._repair_movie_semantic_failures(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:313:                        script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:314:                        evidence_ids=data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:315:                            "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:316:                            [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:317:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:318:                        research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:319:                        semantic_validation=semantic_validation,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:320:                        topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:321:                        movie_title=movie_title,   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:368:            hashtags=hashtags,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:369:            script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:370:            metadata={
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:371:                "source": topic,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:372:                "generator": "Jarvis Rich V1",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:373:                "premise_audit": self.evaluate_premise_strength(topic, reference_format),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:374:                "content_format": format_name,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:375:                "movie_title": movie_title,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:376:                "evidence_ids": (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:377:                    data.get("evidence_ids", [])
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:378:                    if format_name == "famous_movie_commentary"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:379:                    else []
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:380:                ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:381:                "word_count": sum(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:382:                    len(line.split())
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:383:                    for line in lines
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:384:                ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:385:            },
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:386:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:387:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:388:    ########################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:389:    # Content repair
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:390:    ########################################################
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:391:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:392:    async def _recover_movie_generation_length(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:393:        self,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:394:        *,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:395:        data: dict,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:396:        topic: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:397:        movie_title: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:398:        research: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:399:    ) -> dict | None:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:400:        """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:401:        Recover short grounded movie-facts scripts.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:402:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:403:        The research string may contain grounded facts without   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2426:        reference_profile: dict | None = None,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2427:    ) -> list[dict]:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2428:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2429:        reference_instruction = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2430:            self._reference_script_instruction(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2431:                reference_profile
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2432:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2433:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2434:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2435:
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2436:        if format_name == "famous_movie_commentary":
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2437:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2438:            system_prompt = """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2439:You are Jarvis, writing an original high-retention YouTube Short commentary about a famous movie.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2440:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2441:Return ONLY one valid JSON object.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2442:Never use markdown or code fences.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2443:Never add text outside the JSON.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2444:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2445:Use exactly this schema:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2446:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2447:{
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2448:  "title": "string",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2449:  "hashtags": [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2450:    "#hashtag1",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2451:    "#hashtag2",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2452:    "#hashtag3"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2453:  ],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2454:  "script_lines": [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2455:    "line 1",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2456:    "line 2",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2457:    "line 3",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2458:    "line 4"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2459:  ],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2460:  "evidence_ids": [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2461:    ["E1"],
+
+======================================================================
+END
+======================================================================

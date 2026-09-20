@@ -1,0 +1,236 @@
+﻿0378:                     if format_name == "famous_movie_commentary"
+0379:                     else []
+0380:                 ),
+0381:                 "word_count": sum(
+0382:                     len(line.split())
+0383:                     for line in lines
+0384:                 ),
+0385:             },
+0386:         )
+0387: 
+0388:     ########################################################
+0389:     # Content repair
+0390:     ########################################################
+0391: 
+0392:     async def _recover_movie_generation_length(
+0393:         self,
+0394:         *,
+0395:         data: dict,
+0396:         topic: str,
+0397:         movie_title: str,
+0398:         research: str,
+0399:     ) -> dict | None:
+0400:         """
+0401:         Recover short grounded movie-facts scripts.
+0402: 
+0403:         The research string may contain grounded facts without
+0404:         explicit evidence labels. Recovery therefore creates a
+0405:         deterministic local evidence contract from those facts.
+0406: 
+0407:         Validation remains fail-closed.
+0408:         """
+0409: 
+0410:         if not self._is_structurally_valid_content(
+0411:             data
+0412:         ):
+0413:             return None
+0414: 
+0415:         current_words = self._word_count(
+0416:             data
+0417:         )
+0418: 
+0419:         if (
+0420:             self.MIN_WORDS
+0421:             <= current_words
+0422:             <= self.MAX_WORDS
+0423:         ):
+0424:             return data
+0425: 
+0426:         if current_words > self.MAX_WORDS:
+0427:             return None
+0428: 
+0429:         # -------------------------------------------------
+0430:         # Build deterministic evidence units.
+0431:         #
+0432:         # Existing labelled evidence is preserved when
+0433:         # available. Otherwise grounded research sentences
+0434:         # become E1, E2, ... locally for this recovery.
+0435:         # -------------------------------------------------
+0436: 
+0437:         labelled_matches = re.findall(
+0438:             r"\[(E\d+)\]\s*([^\n]+)",
+0439:             research,
+0440:             flags=re.IGNORECASE,
+0441:         )
+0442: 
+0443:         evidence_map = {}
+0444: 
+0445:         for evidence_id, text in labelled_matches:
+0446: 
+0447:             normalized = (
+0448:                 str(evidence_id)
+0449:                 .strip()
+0450:                 .upper()
+0451:             )
+0452: 
+0453:             cleaned = " ".join(
+0454:                 str(text).split()
+0455:             ).strip()
+0456: 
+0457:             if normalized and cleaned:
+0458:                 evidence_map[
+0459:                     normalized
+0460:                 ] = cleaned
+0461: 
+0462:         if not evidence_map:
+0463: 
+0464:             # Research supplied by EvergreenResearch currently
+0465:             # arrives as grounded prose rather than E-labelled
+0466:             # evidence. Split it conservatively into factual
+0467:             # sentence-sized evidence units.
+0468: 
+0469:             raw_sentences = re.split(
+0470:                 r"(?<=[.!?])\s+",
+0471:                 str(research),
+0472:             )
+0473: 
+0474:             evidence_units = []
+0475: 
+0476:             banned_fragments = (
+0477:                 '"topic"',
+0478:                 '"summary"',
+0479:                 '"facts"',
+0480:                 '"keywords"',
+0481:                 '"sources"',
+0482:                 '"score"',
+0483:                 '"category"',
+0484:                 '"url"',
+0485:                 '"confidence"',
+0486:             )
+0487: 
+0488:             for sentence in raw_sentences:
+0489: 
+0490:                 cleaned = " ".join(
+0491:                     sentence.split()
+0492:                 ).strip()
+0493: 
+0494:                 if not cleaned:
+0495:                     continue
+0496: 
+0497:                 lower = cleaned.lower()
+0498: 
+0499:                 if any(
+0500:                     fragment in lower
+0501:                     for fragment in banned_fragments
+0502:                 ):
+0503:                     # JSON/key scaffolding is not evidence.
+0504:                     # Content following a key can still appear
+0505:                     # in later sentence units.
+0506:                     continue
+0507: 
+0508:                 words = cleaned.split()
+0509: 
+0510:                 if len(words) < 5:
+0511:                     continue
+0512: 
+0513:                 if cleaned in evidence_units:
+0514:                     continue
+0515: 
+0516:                 evidence_units.append(
+0517:                     cleaned
+0518:                 )
+0519: 
+0520:                 if len(evidence_units) >= 12:
+0521:                     break
+0522: 
+0523:             # If the serialized research format caused the
+0524:             # conservative pass to reject everything, perform
+0525:             # one bounded textual extraction rather than
+0526:             # inventing evidence.
+0527:             if not evidence_units:
+0528: 
+0529:                 candidate_text = re.sub(
+0530:                     r'https?://\S+',
+0531:                     ' ',
+0532:                     str(research),
+0533:                 )
+0534: 
+0535:                 candidate_text = re.sub(
+0536:                     r'["{}\[\],:]',
+0537:                     ' ',
+0538:                     candidate_text,
+0539:                 )
+0540: 
+0541:                 candidate_text = " ".join(
+0542:                     candidate_text.split()
+0543:                 )
+0544: 
+0545:                 raw_sentences = re.split(
+0546:                     r"(?<=[.!?])\s+",
+0547:                     candidate_text,
+0548:                 )
+0549: 
+0550:                 for sentence in raw_sentences:
+0551: 
+0552:                     cleaned = " ".join(
+0553:                         sentence.split()
+0554:                     ).strip()
+0555: 
+0556:                     if len(
+0557:                         cleaned.split()
+0558:                     ) < 5:
+0559:                         continue
+0560: 
+0561:                     if cleaned in evidence_units:
+0562:                         continue
+0563: 
+0564:                     evidence_units.append(
+0565:                         cleaned
+0566:                     )
+0567: 
+0568:                     if len(evidence_units) >= 12:
+0569:                         break
+0570: 
+0571:             for index, text in enumerate(
+0572:                 evidence_units,
+0573:                 start=1,
+0574:             ):
+0575:                 evidence_map[
+0576:                     f"E{index}"
+0577:                 ] = text
+0578: 
+0579:         if not evidence_map:
+0580:             logger.warning(
+0581:                 "Movie length recovery blocked: "
+0582:                 "no grounded evidence units could be derived."
+0583:             )
+0584:             return None
+0585: 
+0586:         allowed_evidence_ids = list(
+0587:             evidence_map.keys()
+0588:         )
+0589: 
+0590:         allowed_evidence_set = set(
+0591:             allowed_evidence_ids
+0592:         )
+0593: 
+0594:         allowed_evidence_text = ", ".join(
+0595:             allowed_evidence_ids
+0596:         )
+0597: 
+0598:         evidence_packet = "\n".join(
+0599:             f"[{evidence_id}] {text}"
+0600:             for evidence_id, text
+0601:             in evidence_map.items()
+0602:         )
+0603: 
+0604:         current_candidate = data
+0605: 
+0606:         for attempt in range(1, 4):
+0607: 
+0608:             candidate_words = self._word_count(
+0609:                 current_candidate
+0610:             )
+0611: 
+0612:             current_json = json.dumps(
+0613:                 current_candidate,

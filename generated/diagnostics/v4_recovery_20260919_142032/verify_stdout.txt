@@ -1,0 +1,9 @@
+[PASS] V4 is fully installed.
+[PASS] V3 acquisition preserved.
+[PASS] Foley-specific searches installed.
+[PASS] Generic-media rejection installed.
+[PASS] Weighted semantic scoring installed.
+[PASS] Semantic fallback installed.
+[PASS] Duplicate controls preserved.
+[PASS] Rights authorization preserved.
+[PASS] Block 5 preserved.

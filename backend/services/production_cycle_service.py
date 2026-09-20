@@ -1,4 +1,4 @@
-﻿"""Persistence service for production cycles."""
+"""Persistence service for production cycles."""
 
 import json
 from datetime import datetime, timedelta, timezone

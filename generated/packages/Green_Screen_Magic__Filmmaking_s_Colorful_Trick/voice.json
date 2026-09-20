@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Green_Screen_Magic__Filmmaking_s_Colorful_Trick\\Green_Screen_Magic__Filmmaking_s_Colorful_Trick.wav",
+    "duration": 33.29741496598639,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__Filmmaking_s_Colorful_Trick_scene_001.wav",
+            "duration": 4.9806802721088435,
+            "start_time": 0.0,
+            "end_time": 4.9806802721088435,
+            "narration": "Transform any scene with chroma keying, making subjects appear in front of any background."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__Filmmaking_s_Colorful_Trick_scene_002.wav",
+            "duration": 15.801179138321995,
+            "start_time": 4.9806802721088435,
+            "end_time": 20.78185941043084,
+            "narration": "Green and blue screens are the most common, but any uniform color can work for chroma keying. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range)."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__Filmmaking_s_Colorful_Trick_scene_003.wav",
+            "duration": 5.642448979591837,
+            "start_time": 20.78185941043084,
+            "end_time": 26.424308390022677,
+            "narration": "Filmmakers use this technique for everything from weather forecasts to complex visual effects in movies and games."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__Filmmaking_s_Colorful_Trick_scene_004.wav",
+            "duration": 6.873106575963718,
+            "start_time": 26.424308390022677,
+            "end_time": 33.2974149659864,
+            "narration": "By making a specific color transparent, you can replace the background with anything, from CGI maps to stunning landscapes."
+        }
+    ],
+    "script": "Transform any scene with chroma keying, making subjects appear in front of any background.\nGreen and blue screens are the most common, but any uniform color can work for chroma keying. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).\nFilmmakers use this technique for everything from weather forecasts to complex visual effects in movies and games.\nBy making a specific color transparent, you can replace the background with anything, from CGI maps to stunning landscapes."
+}

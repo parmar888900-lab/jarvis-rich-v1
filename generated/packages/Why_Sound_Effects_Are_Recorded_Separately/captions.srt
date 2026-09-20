@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:05,341
+Sound effects in movies are recorded separately to ensure clarity and flexibility during editing.
+
+2
+00:00:05,341 --> 00:00:14,454
+This method allows filmmakers to match the exact moment and intensity of effects with visual scenes. Filmmaking, or film production, is the process of creating a motion picture.
+
+3
+00:00:14,454 --> 00:00:29,153
+Separate recording also helps in creating a seamless audio-visual experience, enhancing the overall quality. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later.
+
+4
+00:00:29,153 --> 00:00:35,213
+By mastering sound effects before finalizing visuals, editors can make precise adjustments, improving the final product.

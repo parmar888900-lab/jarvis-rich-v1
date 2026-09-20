@@ -1,0 +1,2 @@
+[ROLLBACK] RuntimeError: _master_metadata_score has duplicate @classmethod decorators.
+[PASS] Pre-fix V4 source restored.

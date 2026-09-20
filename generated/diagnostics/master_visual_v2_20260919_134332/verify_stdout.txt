@@ -1,0 +1,3 @@
+[ROLLBACK] Verification failed.
+[ROLLBACK] RuntimeError: Beat candidate acquisition not confirmed.
+[PASS] Original source restored.

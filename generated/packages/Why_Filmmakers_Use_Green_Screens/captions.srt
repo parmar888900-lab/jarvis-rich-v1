@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:06,188
+Imagine a weather presenter magically stepping into a live broadcast with a world map behind them - that's green screen magic!
+
+2
+00:00:06,188 --> 00:00:13,015
+Filmmakers use green screens to replace backgrounds with CGI, creating seamless, fantastical worlds without limitations.
+
+3
+00:00:13,015 --> 00:00:19,389
+Common in both news and entertainment, this technique allows for dynamic visual effects and flexible post-production editing.
+
+4
+00:00:19,389 --> 00:00:25,925
+By using chroma keying, they can easily remove the green and replace it with any background, making magic happen frame by frame.

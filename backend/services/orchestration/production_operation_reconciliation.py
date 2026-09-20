@@ -1,4 +1,4 @@
-﻿"""Reconcile stale production operations with external providers."""
+"""Reconcile stale production operations with external providers."""
 
 import json
 

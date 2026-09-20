@@ -1,0 +1,10 @@
+[PASS] Master visual V2 patch installed.
+[PASS] Multi-candidate stage acquisition.
+[PASS] Multi-candidate beat acquisition.
+[PASS] Query variants installed.
+[PASS] Duplicate avoidance installed.
+[PASS] Rotating fallback installed.
+[PASS] Semantic metadata ranking installed.
+[PASS] Research specificity installed.
+[PASS] Block 5 marker preserved.
+[PASS] Rights authorization preserved.

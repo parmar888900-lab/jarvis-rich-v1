@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:04,249
+Imagine an actor performing a scene with a green screen behind them, how does that work?
+
+2
+00:00:04,249 --> 00:00:20,364
+Chroma keying allows the background to be removed, replacing it with anything from CGI maps to digital landscapes. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).
+
+3
+00:00:20,364 --> 00:00:27,492
+This technique is widely used in weather broadcasts and movie productions, making actors appear in front of different backgrounds seamlessly.
+
+4
+00:00:27,492 --> 00:00:32,856
+Simple yet powerful, chroma keying transforms scenes, giving filmmakers endless creative possibilities.

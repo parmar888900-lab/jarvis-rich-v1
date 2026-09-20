@@ -1,0 +1,12 @@
+[PASS] Reference Visual V5 installed.
+[PASS] Literal Foley mechanism queries installed.
+[PASS] Footsteps acquisition installed.
+[PASS] Prop-action acquisition installed.
+[PASS] ADR/dialogue acquisition installed.
+[PASS] Sound-editing acquisition installed.
+[PASS] Field-recording acquisition installed.
+[PASS] Generic creator imagery strongly penalized.
+[PASS] Immediate-repeat penalty installed.
+[PASS] Semantic rejection preserved.
+[PASS] Rights authorization preserved.
+[PASS] Block 5 preserved.

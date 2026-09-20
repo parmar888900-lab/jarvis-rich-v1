@@ -1,0 +1,1119 @@
+﻿
+============================================================
+FILE: .\backend\services\video\source_footage_resolver.py
+============================================================
+0001: """Topic-specific source-footage resolution for Jarvis Rich V1."""
+0002: 
+0003: from __future__ import annotations
+0004: 
+0005: from dataclasses import dataclass, field
+0006: 
+0007: from backend.services.video.asset_collector import (
+0008:     AssetCollector,
+0009: )
+0010: from backend.services.video.media_asset import (
+0011:     MediaAsset,
+0012: )
+0013: from backend.services.video.media_sources.internet_archive import (
+0014:     InternetArchiveProvider,
+0015: )
+0016: from backend.services.video.media_sources.pexels import (
+0017:     PexelsProvider,
+0018: )
+0019: from backend.services.video.media_sources.wikimedia import (
+0020:     WikimediaCommonsProvider,
+0021: )
+0022: 
+0023: 
+0024: @dataclass(slots=True)
+0025: class SourceFootageResult:
+0026:     format_name: str
+0027:     topic: str
+0028:     assets: list[MediaAsset] = field(
+0029:         default_factory=list
+0030:     )
+0031:     primary_assets: list[MediaAsset] = field(
+0032:         default_factory=list
+0033:     )
+0034:     fallback_assets: list[MediaAsset] = field(
+0035:         default_factory=list
+0036:     )
+0037:     attempted_queries: list[str] = field(
+0038:         default_factory=list
+0039:     )
+0040:     status: str = "unresolved"
+0041: 
+0042: 
+0043: class SourceFootageResolver:
+0044:     """
+0045:     Resolve real/topic-specific reusable footage before generic B-roll.
+0046: 
+0047:     Priority:
+0048:         1. Wikimedia Commons
+0049:         2. Internet Archive
+0050:         3. Pexels contextual fallback
+0051: 
+0052:     Unauthorized scraping/downloading is deliberately outside this
+0053:     resolver.
+0054:     """
+0055: 
+0056:     PRIMARY_LIMIT_PER_QUERY = 2
+0057:     FALLBACK_LIMIT_PER_QUERY = 2
+0058: 
+0059:     def __init__(
+0060:         self,
+0061:         *,
+0062:         primary_providers=None,
+0063:         fallback_providers=None,
+0064:         asset_collector=None,
+0065:     ) -> None:
+0066: 
+0067:         self.primary_providers = (
+0068:             primary_providers
+0069:             if primary_providers is not None
+0070:             else [
+0071:                 WikimediaCommonsProvider(),
+0072:                 InternetArchiveProvider(),
+0073:             ]
+0074:         )
+0075: 
+0076:         if fallback_providers is not None:
+0077: 
+0078:             self.fallback_providers = (
+0079:                 fallback_providers
+0080:             )
+0081: 
+0082:         else:
+0083: 
+0084:             self.fallback_providers = []
+0085: 
+0086:             try:
+0087: 
+0088:                 self.fallback_providers.append(
+0089:                     PexelsProvider()
+0090:                 )
+0091: 
+0092:             except RuntimeError as exc:
+0093: 
+0094:                 print(
+0095:                     "Pexels fallback unavailable: "
+0096:                     f"{exc}"
+0097:                 )
+0098: 
+0099:         self.asset_collector = (
+0100:             asset_collector
+0101:             if asset_collector is not None
+0102:             else AssetCollector()
+0103:         )
+0104: 
+0105:     async def resolve(
+0106:         self,
+0107:         *,
+0108:         format_name: str,
+0109:         topic: str,
+0110:         content_id: str,
+0111:         minimum_assets: int = 6,
+0112:         target_assets: int = 12,
+0113:     ) -> SourceFootageResult:
+0114: 
+0115:         queries = self._queries(
+0116:             format_name=format_name,
+0117:             topic=topic,
+0118:         )
+0119: 
+0120:         primary: list[
+0121:             MediaAsset
+0122:         ] = []
+0123: 
+0124:         fallback: list[
+0125:             MediaAsset
+0126:         ] = []
+0127: 
+0128:         used_urls: set[str] = set()
+0129: 
+0130:         ####################################################
+0131:         # Primary topic-specific footage
+0132:         ####################################################
+0133: 
+0134:         for query in queries:
+0135: 
+0136:             if len(primary) >= target_assets:
+0137:                 break
+0138: 
+0139:             for provider in self.primary_providers:
+0140: 
+0141:                 try:
+0142: 
+0143:                     found = await provider.search_and_download(
+0144:                         query=query,
+0145:                         content_id=content_id,
+0146:                         limit=(
+0147:                             self.PRIMARY_LIMIT_PER_QUERY
+0148:                         ),
+0149:                     )
+0150: 
+0151:                 except Exception:
+0152:                     continue
+0153: 
+0154:                 for asset in found:
+0155: 
+0156:                     if (
+0157:                         asset.source_url
+0158:                         in used_urls
+0159:                     ):
+0160:                         continue
+0161: 
+0162:                     valid, _ = (
+0163:                         self.asset_collector
+0164:                         .validate_asset(
+0165:                             asset,
+0166:                             content_id=content_id,
+0167:                         )
+0168:                     )
+0169: 
+0170:                     if not valid:
+0171:                         continue
+0172: 
+0173:                     if asset.asset_type != "video":
+0174:                         continue
+0175: 
+0176:                     used_urls.add(
+0177:                         asset.source_url
+0178:                     )
+0179: 
+0180:                     primary.append(
+0181:                         asset
+0182:                     )
+0183: 
+0184:         ####################################################
+0185:         # Contextual fallback only when primary supply is
+0186:         # insufficient.
+0187:         ####################################################
+0188: 
+0189:         if len(primary) < minimum_assets:
+0190: 
+0191:             for query in queries:
+0192: 
+0193:                 if (
+0194:                     len(primary)
+0195:                     + len(fallback)
+0196:                     >= target_assets
+0197:                 ):
+0198:                     break
+0199: 
+0200:                 for provider in self.fallback_providers:
+0201: 
+0202:                     try:
+0203: 
+0204:                         found = await provider.search_and_download(
+0205:                             query=query,
+0206:                             content_id=content_id,
+0207:                             limit=(
+0208:                                 self.FALLBACK_LIMIT_PER_QUERY
+0209:                             ),
+0210:                         )
+0211: 
+0212:                     except Exception:
+0213:                         continue
+0214: 
+0215:                     for asset in found:
+0216: 
+0217:                         if (
+0218:                             asset.source_url
+0219:                             in used_urls
+0220:                         ):
+0221:                             continue
+0222: 
+0223:                         valid, _ = (
+0224:                             self.asset_collector
+0225:                             .validate_asset(
+0226:                                 asset,
+0227:                                 content_id=content_id,
+0228:                             )
+0229:                         )
+0230: 
+0231:                         if not valid:
+0232:                             continue
+0233: 
+0234:                         if asset.asset_type != "video":
+0235:                             continue
+0236: 
+0237:                         used_urls.add(
+0238:                             asset.source_url
+0239:                         )
+0240: 
+0241:                         fallback.append(
+0242:                             asset
+0243:                         )
+0244: 
+0245:         assets = (
+0246:             primary
+0247:             + fallback
+0248:         )[:target_assets]
+0249: 
+0250:         if len(assets) >= minimum_assets:
+0251:             status = "resolved"
+0252: 
+0253:         elif assets:
+0254:             status = "partial"
+0255: 
+0256:         else:
+0257:             status = (
+0258:                 "insufficient_source_footage"
+0259:             )
+0260: 
+0261:         return SourceFootageResult(
+0262:             format_name=format_name,
+0263:             topic=topic,
+0264:             assets=assets,
+0265:             primary_assets=primary,
+0266:             fallback_assets=fallback,
+0267:             attempted_queries=queries,
+0268:             status=status,
+0269:         )
+0270: 
+0271:     @staticmethod
+0272:     def _queries(
+0273:         *,
+0274:         format_name: str,
+0275:         topic: str,
+0276:     ) -> list[str]:
+0277: 
+0278:         clean = " ".join(
+0279:             str(topic).split()
+0280:         ).strip()
+0281: 
+0282:         format_queries = {
+0283: 
+0284:             "movie_facts": [
+0285:                 clean,
+0286:                 f"{clean} behind the scenes",
+0287:                 f"{clean} production",
+0288:                 f"{clean} visual effects",
+0289:                 f"{clean} filmmaking",
+0290:             ],
+0291: 
+0292:             "cinematic_movie_edit": [
+0293:                 clean,
+0294:                 f"{clean} cinematic",
+0295:                 f"{clean} film",
+0296:                 f"{clean} scene",
+0297:                 f"{clean} production",
+0298:             ],
+0299: 
+0300:             "curiosity_story": [
+0301:                 clean,
+0302:                 f"{clean} documentary",
+0303:                 f"{clean} real footage",
+0304:                 f"{clean} location",
+0305:                 f"{clean} archive footage",
+0306:             ],
+0307: 
+0308:             "luxury_product": [
+0309:                 clean,
+0310:                 f"{clean} product",
+0311:                 f"{clean} close up",
+0312:                 f"{clean} manufacturing",
+0313:                 f"{clean} craftsmanship",
+0314:                 f"{clean} detail",
+0315:             ],
+0316: 
+0317:             "science_explainer": [
+0318:                 clean,
+0319:                 f"{clean} demonstration",
+0320:                 f"{clean} mechanism",
+0321:                 f"{clean} engineering",
+0322:                 f"{clean} experiment",
+0323:                 f"{clean} animation",
+0324:             ],
+0325: 
+0326:             "business_wealth": [
+0327:                 clean,
+0328:                 f"{clean} company",
+0329:                 f"{clean} founder",
+0330:                 f"{clean} headquarters",
+0331:                 f"{clean} products",
+0332:                 f"{clean} archive",
+0333:             ],
+0334:         }
+0335: 
+0336:         raw = format_queries.get(
+0337:             format_name,
+0338:             [
+0339:                 clean,
+0340:             ],
+0341:         )
+0342: 
+0343:         output = []
+0344:         seen = set()
+0345: 
+0346:         for query in raw:
+0347: 
+0348:             normalized = " ".join(
+0349:                 str(query).split()
+0350:             ).strip()
+0351: 
+0352:             key = normalized.lower()
+0353: 
+0354:             if (
+0355:                 not normalized
+0356:                 or key in seen
+0357:             ):
+0358:                 continue
+0359: 
+0360:             seen.add(key)
+0361:             output.append(
+0362:                 normalized
+0363:             )
+0364: 
+0365:         return output
+0366: 
+
+============================================================
+FILE: .\backend\services\pipelines\video_pipeline.py
+============================================================
+0001: import asyncio
+0002: """
+0003: Rich V1 video production pipeline.
+0004: 
+0005: Responsibilities:
+0006:     - Generate grounded content
+0007:     - Validate/repair content
+0008:     - Build narration storyboard
+0009:     - Acquire real licensed media
+0010:     - Validate media provenance and relevance
+0011:     - Build production package
+0012:     - Render final video
+0013: 
+0014: AI-generated imagery is no longer the primary visual source.
+0015: """
+0016: 
+0017: import re
+0018: 
+0019: from backend.services.content_generator import ContentGenerator
+0020: from backend.services.content_validator import ContentValidator
+0021: from backend.services.intelligence.content_format_classifier import ContentFormatClassifier
+0022: from backend.services.intelligence.movie_topic_parser import MovieTopicParser
+0023: from backend.services.research.evergreen_research_service import EvergreenResearchService
+0024: from backend.services.research.movie_research_service import MovieResearchService
+0025: from backend.services.storyboard.generator import StoryboardGenerator
+0026: from backend.services.video.asset_collector import AssetCollector
+0027: from backend.services.video.media_query_builder import MediaQueryBuilder
+0028: from backend.services.video.media_sources.wikimedia import (
+0029:     WikimediaCommonsProvider,
+0030: )
+0031: from backend.services.video.production_package import (
+0032:     ProductionPackageBuilder,
+0033: )
+0034: from backend.services.video.visual_beat_planner import VisualBeatPlanner
+0035: from backend.services.video_renderer.renderer import VideoRenderer
+0036: 
+0037: 
+0038: # RICH_V1_REAL_VIDEO_V6_1
+0039: from backend.services.video.source_clip_indexer import (
+0040:     SourceClipIndexer,
+0041: )
+0042: from backend.services.video.strict_clip_matcher import (
+0043:     StrictClipMatcher,
+0044: )
+0045: from backend.services.video.visual_beat_source_planner import (
+0046:     SourceVisualBeat,
+0047: )
+0048: 
+0049: 
+0050: class VideoPipeline:
+0051: 
+0052:     MIN_ASSETS_PER_SCENE = 1
+0053:     TARGET_ASSETS_PER_SCENE = 1
+0054: 
+0055:     # Stage media remains mandatory and rights-validated.
+0056:     # Beat-level provider searches are optional enrichment.
+0057:     MAX_SEMANTIC_MEDIA_ENRICHMENTS = 10
+0058: 
+0059:     # MASTER_VISUAL_ACQUISITION_V2
+0060:     STAGE_MEDIA_CANDIDATE_LIMIT = 3
+0061:     BEAT_MEDIA_CANDIDATE_LIMIT = 3
+0062:     TARGET_DISTINCT_BEAT_ASSETS = 6
+0063:     SEMANTIC_VISUAL_V4 = True
+0064:     REFERENCE_VISUAL_V5 = True
+0065: 
+0066:     def __init__(self):
+0067: 
+0068:         self.generator = ContentGenerator()
+0069:         self.content_validator = ContentValidator()
+0070:         self.research_service = EvergreenResearchService()
+0071:         self.movie_research_service = MovieResearchService()
+0072:         self.format_classifier = ContentFormatClassifier()
+0073:         self.storyboard = StoryboardGenerator()
+0074: 
+0075:         self.media_provider = (
+0076:             WikimediaCommonsProvider()
+0077:         )
+0078: 
+0079:         self.asset_collector = AssetCollector()
+0080:         self.media_query_builder = MediaQueryBuilder()
+0081: 
+0082:         self.visual_beat_planner = VisualBeatPlanner()
+0083: 
+0084:         self.package_builder = (
+0085:             ProductionPackageBuilder()
+0086:         )
+0087: 
+0088:         self.renderer = VideoRenderer()
+0089: 
+0090: 
+0091:     # MASTER_VISUAL_HELPERS_V2
+0092: 
+0093:     @staticmethod
+0094:     def _master_asset_identity(asset) -> str:
+0095: 
+0096:         if asset is None:
+0097:             return ""
+0098: 
+0099:         for attribute in (
+0100:             "local_path",
+0101:             "source_url",
+0102:             "asset_id",
+0103:         ):
+0104: 
+0105:             value = getattr(
+0106:                 asset,
+0107:                 attribute,
+0108:                 None,
+0109:             )
+0110: 
+0111:             if value:
+0112:                 return (
+0113:                     str(value)
+0114:                     .strip()
+0115:                     .lower()
+0116:                 )
+0117: 
+0118:         if isinstance(asset, dict):
+0119: 
+0120:             for key in (
+0121:                 "local_path",
+0122:                 "source_url",
+0123:                 "asset_id",
+0124:             ):
+0125: 
+0126:                 value = asset.get(key)
+0127: 
+0128:                 if value:
+0129:                     return (
+0130:                         str(value)
+0131:                         .strip()
+0132:                         .lower()
+0133:                     )
+0134: 
+0135:         return (
+0136:             str(asset)
+0137:             .strip()
+0138:             .lower()
+0139:         )
+0140: 
+
+============================================================
+V6.1 VIDEO INTEGRATION LOCATIONS
+============================================================
+
+PATTERN: _v61_build_video_matches
+LINE: 1073
+1049:         # Copy compatible fields directly when available.
+1050:         for field_name in source_fields:
+1051: 
+1052:             if field_name in values:
+1053:                 continue
+1054: 
+1055:             if hasattr(
+1056:                 beat,
+1057:                 field_name,
+1058:             ):
+1059:                 values[field_name] = getattr(
+1060:                     beat,
+1061:                     field_name,
+1062:                 )
+1063: 
+1064:         try:
+1065:             return SourceVisualBeat(
+1066:                 **values
+1067:             )
+1068: 
+1069:         except Exception:
+1070:             return None
+1071: 
+1072: 
+1073:     def _v61_build_video_matches(
+1074:         self,
+1075:         *,
+1076:         media_groups,
+1077:         visual_beats,
+1078:         content_id: str,
+1079:     ) -> dict:
+1080:         """
+1081:         Existing authorized MediaAsset videos
+1082:             -> SourceClipIndexer
+1083:             -> StrictClipMatcher
+1084:             -> exact source timestamps.
+1085: 
+1086:         Failure at any point returns to V5 image rendering.
+1087:         """
+1088: 
+1089:         videos = []
+1090:         seen = set()
+1091: 
+1092:         # ----------------------------------------------------
+1093:         # Only use assets that already passed the production
+1094:         # acquisition/authorization layer.
+1095:         # ----------------------------------------------------
+1096: 
+1097:         for group in media_groups:
+1098: 
+1099:             for asset in group:
+1100: 
+1101:                 if (
+1102:                     getattr(
+1103:                         asset,
+1104:                         "asset_type",
+1105:                         "",
+1106:                     )
+1107:                     != "video"
+1108:                 ):
+1109:                     continue
+1110: 
+1111:                 source_path = str(
+1112:                     getattr(
+1113:                         asset,
+1114:                         "file_path",
+1115:                         "",
+1116:                     )
+1117:                     or ""
+1118:                 ).strip()
+1119: 
+1120:                 if not source_path:
+1121:                     continue
+1122: 
+1123:                 if not Path(
+1124:                     source_path
+
+PATTERN: _v61_build_video_matches
+LINE: 2129
+2105:                 None,
+2106:             )
+2107: 
+2108:             if image_asset is None:
+2109:                 raise RuntimeError(
+2110:                     "Scene "
+2111:                     f"{index} has no image-compatible "
+2112:                     "asset for the current renderer."
+2113:                 )
+2114: 
+2115:             render_assets.append(
+2116:                 image_asset
+2117:             )
+2118: 
+2119:         ####################################################
+2120:         # 8. Build production package
+2121:         ####################################################
+2122: 
+2123: 
+2124:         # ====================================================
+2125:         # RICH_V1_REAL_VIDEO_V6_1
+2126:         # ====================================================
+2127: 
+2128:         v61_video_result = (
+2129:             self._v61_build_video_matches(
+2130:                 media_groups=media_groups,
+2131:                 visual_beats=visual_beats,
+2132:                 content_id=str(
+2133:                     content_id
+2134:                 ),
+2135:             )
+2136:         )
+2137: 
+2138:         v61_video_matches = list(
+2139:             v61_video_result.get(
+2140:                 "matches",
+2141:                 [],
+2142:             )
+2143:         )
+2144: 
+2145:         package = await self.package_builder.build(
+2146:             content=generated,
+2147:             scenes=storyboard,
+2148:             images=render_assets,
+2149:             trend=trend,
+2150:         )
+2151: 
+2152:         ####################################################
+2153:         # 9. Render
+2154:         ####################################################
+2155: 
+2156:         # BLOCK5_VISUAL_QA_BEGIN
+2157:         #
+2158:         # The previous Stage2B implementation could legally
+2159:         # resolve many semantic beats to the same authorized
+2160:         # fallback image. That produced a technically valid
+2161:         # 12-cut video which visually behaved like a slideshow.
+2162:         #
+2163:         # Rights authorization has already happened upstream.
+2164:         # This gate does not authorize media and does not weaken
+2165:         # any rights/evidence requirement. It only evaluates the
+2166:         # final authorized beat sequence before expensive render.
+2167: 
+2168:         def _block5_asset_identity(asset):
+2169:             if asset is None:
+2170:                 return ""
+2171: 
+2172:             for attribute in (
+2173:                 "image_path",
+2174:                 "file_path",
+2175:                 "local_path",
+2176:                 "path",
+2177:                 "source_url",
+2178:                 "asset_id",
+2179:             ):
+2180:                 value = getattr(
+
+PATTERN: _v61_make_source_beat
+LINE: 914
+0890:                 != previous_identity
+0891:                 and negative_overlap == 0
+0892:                 and semantic_score >= 0.36
+0893:                 and domain_overlap >= 1
+0894:             ):
+0895:                 return asset
+0896: 
+0897:         # ====================================================
+0898:         # TIER 3
+0899:         #
+0900:         # Do NOT force a generic candidate.
+0901:         # Returning None lets the pipeline use its authorized
+0902:         # fallback path and lets Block 5 reject bad sequences.
+0903:         # ====================================================
+0904: 
+0905:         return None
+0906: 
+0907: 
+0908: 
+0909:     # ========================================================
+0910:     # RICH_V1_REAL_VIDEO_V6_1
+0911:     # ========================================================
+0912: 
+0913:     @staticmethod
+0914:     def _v61_make_source_beat(
+0915:         beat,
+0916:         beat_index: int,
+0917:     ):
+0918:         """
+0919:         Convert the current VisualBeat into the existing
+0920:         SourceVisualBeat contract used by StrictClipMatcher.
+0921: 
+0922:         Reflection is intentional here so optional fields can
+0923:         evolve without breaking the V5 image fallback.
+0924:         """
+0925: 
+0926:         import dataclasses
+0927: 
+0928:         try:
+0929:             source_fields = {
+0930:                 field.name
+0931:                 for field
+0932:                 in dataclasses.fields(
+0933:                     SourceVisualBeat
+0934:                 )
+0935:             }
+0936:         except Exception:
+0937:             return None
+0938: 
+0939:         beat_id = str(
+0940:             getattr(
+0941:                 beat,
+0942:                 "beat_id",
+0943:                 "",
+0944:             )
+0945:             or f"beat_{beat_index + 1}"
+0946:         ).strip()
+0947: 
+0948:         visual_goal = str(
+0949:             getattr(
+0950:                 beat,
+0951:                 "visual_goal",
+0952:                 "",
+0953:             )
+0954:             or getattr(
+0955:                 beat,
+0956:                 "visual_requirement",
+0957:                 "",
+0958:             )
+0959:             or getattr(
+0960:                 beat,
+0961:                 "purpose",
+0962:                 "",
+0963:             )
+0964:             or getattr(
+0965:                 beat,
+
+PATTERN: _v61_make_source_beat
+LINE: 1233
+1209:                 "reason":
+1210:                     "no_indexed_video_clips",
+1211: 
+1212:                 "authorized_video_assets":
+1213:                     len(videos),
+1214: 
+1215:                 "indexed_clips":
+1216:                     0,
+1217: 
+1218:                 "matched_beats":
+1219:                     0,
+1220: 
+1221:                 "matches":
+1222:                     [],
+1223:             }
+1224: 
+1225:         source_beats = []
+1226:         index_by_beat_id = {}
+1227: 
+1228:         for zero_index, beat in enumerate(
+1229:             visual_beats
+1230:         ):
+1231: 
+1232:             source_beat = (
+1233:                 self._v61_make_source_beat(
+1234:                     beat,
+1235:                     zero_index,
+1236:                 )
+1237:             )
+1238: 
+1239:             if source_beat is None:
+1240:                 continue
+1241: 
+1242:             source_beats.append(
+1243:                 source_beat
+1244:             )
+1245: 
+1246:             # Renderer beat_index starts at 1.
+1247:             index_by_beat_id[
+1248:                 str(source_beat.beat_id)
+1249:             ] = zero_index + 1
+1250: 
+1251:         if not source_beats:
+1252: 
+1253:             return {
+1254:                 "status":
+1255:                     "fallback_images",
+1256: 
+1257:                 "reason":
+1258:                     "source_beat_conversion_failed",
+1259: 
+1260:                 "authorized_video_assets":
+1261:                     len(videos),
+1262: 
+1263:                 "indexed_clips":
+1264:                     len(clips),
+1265: 
+1266:                 "matched_beats":
+1267:                     0,
+1268: 
+1269:                 "matches":
+1270:                     [],
+1271:             }
+1272: 
+1273:         # ----------------------------------------------------
+1274:         # Existing strict positive/negative CLIP matcher.
+1275:         # ----------------------------------------------------
+1276: 
+1277:         try:
+1278: 
+1279:             matcher = StrictClipMatcher()
+1280: 
+1281:             matches = matcher.match_many(
+1282:                 beats=source_beats,
+1283:                 clips=clips,
+1284: 
+
+PATTERN: v61_video_matches
+LINE: 2138
+2114: 
+2115:             render_assets.append(
+2116:                 image_asset
+2117:             )
+2118: 
+2119:         ####################################################
+2120:         # 8. Build production package
+2121:         ####################################################
+2122: 
+2123: 
+2124:         # ====================================================
+2125:         # RICH_V1_REAL_VIDEO_V6_1
+2126:         # ====================================================
+2127: 
+2128:         v61_video_result = (
+2129:             self._v61_build_video_matches(
+2130:                 media_groups=media_groups,
+2131:                 visual_beats=visual_beats,
+2132:                 content_id=str(
+2133:                     content_id
+2134:                 ),
+2135:             )
+2136:         )
+2137: 
+2138:         v61_video_matches = list(
+2139:             v61_video_result.get(
+2140:                 "matches",
+2141:                 [],
+2142:             )
+2143:         )
+2144: 
+2145:         package = await self.package_builder.build(
+2146:             content=generated,
+2147:             scenes=storyboard,
+2148:             images=render_assets,
+2149:             trend=trend,
+2150:         )
+2151: 
+2152:         ####################################################
+2153:         # 9. Render
+2154:         ####################################################
+2155: 
+2156:         # BLOCK5_VISUAL_QA_BEGIN
+2157:         #
+2158:         # The previous Stage2B implementation could legally
+2159:         # resolve many semantic beats to the same authorized
+2160:         # fallback image. That produced a technically valid
+2161:         # 12-cut video which visually behaved like a slideshow.
+2162:         #
+2163:         # Rights authorization has already happened upstream.
+2164:         # This gate does not authorize media and does not weaken
+2165:         # any rights/evidence requirement. It only evaluates the
+2166:         # final authorized beat sequence before expensive render.
+2167: 
+2168:         def _block5_asset_identity(asset):
+2169:             if asset is None:
+2170:                 return ""
+2171: 
+2172:             for attribute in (
+2173:                 "image_path",
+2174:                 "file_path",
+2175:                 "local_path",
+2176:                 "path",
+2177:                 "source_url",
+2178:                 "asset_id",
+2179:             ):
+2180:                 value = getattr(
+2181:                     asset,
+2182:                     attribute,
+2183:                     None,
+2184:                 )
+2185: 
+2186:                 if value:
+2187:                     return str(value).strip().lower()
+2188: 
+2189:             if isinstance(asset, dict):
+
+PATTERN: v61_video_matches
+LINE: 2325
+2301:                 block5_distinct_assets
+2302:             ),
+2303:             "total_beats": (
+2304:                 len(block5_identities)
+2305:             ),
+2306:             "largest_asset_share": round(
+2307:                 block5_largest_share,
+2308:                 4,
+2309:             ),
+2310:             "max_consecutive_identical": (
+2311:                 block5_max_repeat_run
+2312:             ),
+2313:             "quality_gate": "passed",
+2314:         }
+2315: 
+2316:         # BLOCK5_VISUAL_QA_END
+2317: 
+2318:         video = await self.renderer.render(
+2319:             content=generated,
+2320:             scenes=storyboard,
+2321:             images=render_assets,
+2322:             production_package=package,
+2323:             visual_beats=visual_beat_dicts,
+2324:             beat_images=beat_render_assets,
+2325:             beat_videos=v61_video_matches,
+2326:         )
+2327: 
+2328:         ####################################################
+2329:         # 10. Return production evidence
+2330:         ####################################################
+2331: 
+2332:         return {
+2333:             "generated": generated,
+2334:             "content_validation": validation,
+2335:             "storyboard": storyboard,
+2336:             "licensed_media": [
+2337:                 [
+2338:                     {
+2339:                         "asset_id": asset.asset_id,
+2340:                         "asset_type": asset.asset_type,
+2341:                         "file_path": asset.file_path,
+2342:                         "source_url": asset.source_url,
+2343:                         "source_name": asset.source_name,
+2344:                         "creator": asset.creator,
+2345:                         "license_name": asset.license_name,
+2346:                         "license_url": asset.license_url,
+2347:                         "attribution_required": (
+2348:                             asset.attribution_required
+2349:                         ),
+2350:                         "commercial_use_allowed": (
+2351:                             asset.commercial_use_allowed
+2352:                         ),
+2353:                         "relevance_score": (
+2354:                             asset.relevance_score
+2355:                         ),
+2356:                         "content_id": asset.content_id,
+2357:                     }
+2358:                     for asset in group
+2359:                 ]
+2360:                 for group in media_groups
+2361:             ],
+2362:             "production_package": package,
+2363:             "visual_beats": visual_beat_dicts,
+2364:             "beat_media": beat_media_evidence,
+2365:             "v6_video_matching": v61_video_result,
+2366:             "semantic_media_metrics": {
+2367:                 "enrichment_budget": self.MAX_SEMANTIC_MEDIA_ENRICHMENTS,
+2368:                 "enrichment_attempts": semantic_enrichment_attempts,
+2369:                 "enrichment_successes": semantic_enrichment_successes,
+2370:                 "fallback_count": semantic_fallback_count,
+2371:                 "total_beats": len(visual_beats),
+2372:                 "visual_quality": block5_visual_metrics,
+2373:             },
+2374:             "video": video,
+2375:             "status": "success",
+2376:         }
+
+PATTERN: v6_video_matching
+LINE: 2365
+2341:                         "file_path": asset.file_path,
+2342:                         "source_url": asset.source_url,
+2343:                         "source_name": asset.source_name,
+2344:                         "creator": asset.creator,
+2345:                         "license_name": asset.license_name,
+2346:                         "license_url": asset.license_url,
+2347:                         "attribution_required": (
+2348:                             asset.attribution_required
+2349:                         ),
+2350:                         "commercial_use_allowed": (
+2351:                             asset.commercial_use_allowed
+2352:                         ),
+2353:                         "relevance_score": (
+2354:                             asset.relevance_score
+2355:                         ),
+2356:                         "content_id": asset.content_id,
+2357:                     }
+2358:                     for asset in group
+2359:                 ]
+2360:                 for group in media_groups
+2361:             ],
+2362:             "production_package": package,
+2363:             "visual_beats": visual_beat_dicts,
+2364:             "beat_media": beat_media_evidence,
+2365:             "v6_video_matching": v61_video_result,
+2366:             "semantic_media_metrics": {
+2367:                 "enrichment_budget": self.MAX_SEMANTIC_MEDIA_ENRICHMENTS,
+2368:                 "enrichment_attempts": semantic_enrichment_attempts,
+2369:                 "enrichment_successes": semantic_enrichment_successes,
+2370:                 "fallback_count": semantic_fallback_count,
+2371:                 "total_beats": len(visual_beats),
+2372:                 "visual_quality": block5_visual_metrics,
+2373:             },
+2374:             "video": video,
+2375:             "status": "success",
+2376:         }
+2377: 
+2378: 
+2379: 
+2380: 
+2381: 
+2382: 
+2383: 
+2384: 
+2385: 
+
+PATTERN: beat_videos=
+LINE: 2325
+2301:                 block5_distinct_assets
+2302:             ),
+2303:             "total_beats": (
+2304:                 len(block5_identities)
+2305:             ),
+2306:             "largest_asset_share": round(
+2307:                 block5_largest_share,
+2308:                 4,
+2309:             ),
+2310:             "max_consecutive_identical": (
+2311:                 block5_max_repeat_run
+2312:             ),
+2313:             "quality_gate": "passed",
+2314:         }
+2315: 
+2316:         # BLOCK5_VISUAL_QA_END
+2317: 
+2318:         video = await self.renderer.render(
+2319:             content=generated,
+2320:             scenes=storyboard,
+2321:             images=render_assets,
+2322:             production_package=package,
+2323:             visual_beats=visual_beat_dicts,
+2324:             beat_images=beat_render_assets,
+2325:             beat_videos=v61_video_matches,
+2326:         )
+2327: 
+2328:         ####################################################
+2329:         # 10. Return production evidence
+2330:         ####################################################
+2331: 
+2332:         return {
+2333:             "generated": generated,
+2334:             "content_validation": validation,
+2335:             "storyboard": storyboard,
+2336:             "licensed_media": [
+2337:                 [
+2338:                     {
+2339:                         "asset_id": asset.asset_id,
+2340:                         "asset_type": asset.asset_type,
+2341:                         "file_path": asset.file_path,
+2342:                         "source_url": asset.source_url,
+2343:                         "source_name": asset.source_name,
+2344:                         "creator": asset.creator,
+2345:                         "license_name": asset.license_name,
+2346:                         "license_url": asset.license_url,
+2347:                         "attribution_required": (
+2348:                             asset.attribution_required
+2349:                         ),
+2350:                         "commercial_use_allowed": (
+2351:                             asset.commercial_use_allowed
+2352:                         ),
+2353:                         "relevance_score": (
+2354:                             asset.relevance_score
+2355:                         ),
+2356:                         "content_id": asset.content_id,
+2357:                     }
+2358:                     for asset in group
+2359:                 ]
+2360:                 for group in media_groups
+2361:             ],
+2362:             "production_package": package,
+2363:             "visual_beats": visual_beat_dicts,
+2364:             "beat_media": beat_media_evidence,
+2365:             "v6_video_matching": v61_video_result,
+2366:             "semantic_media_metrics": {
+2367:                 "enrichment_budget": self.MAX_SEMANTIC_MEDIA_ENRICHMENTS,
+2368:                 "enrichment_attempts": semantic_enrichment_attempts,
+2369:                 "enrichment_successes": semantic_enrichment_successes,
+2370:                 "fallback_count": semantic_fallback_count,
+2371:                 "total_beats": len(visual_beats),
+2372:                 "visual_quality": block5_visual_metrics,
+2373:             },
+2374:             "video": video,
+2375:             "status": "success",
+2376:         }

@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:PSM_V17_D322_Curve_traced_by_plethysmograph_on_emotional_change.jpg",
+        "image_path": "generated\\packages\\How_Editing_Changes_the_Emotional_Impact_of_a_Scene\\images\\scene_001.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:PSM_V17_D322_Curve_traced_by_plethysmograph_on_emotional_change.jpg",
+        "image_path": "generated\\packages\\How_Editing_Changes_the_Emotional_Impact_of_a_Scene\\images\\scene_002.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:PSM_V17_D322_Curve_traced_by_plethysmograph_on_emotional_change.jpg",
+        "image_path": "generated\\packages\\How_Editing_Changes_the_Emotional_Impact_of_a_Scene\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:PSM_V17_D322_Curve_traced_by_plethysmograph_on_emotional_change.jpg",
+        "image_path": "generated\\packages\\How_Editing_Changes_the_Emotional_Impact_of_a_Scene\\images\\scene_004.jpg",
+        "width": null,
+        "height": null
+    }
+]

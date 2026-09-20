@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Imagine a car factory where robots work tirelessly, precision welding and assembling parts, 24/7 with no breaks.",
+        "image_prompt": "Imagine a car factory where robots work tirelessly, precision welding and assembling parts, 24/7 with no breaks.",
+        "duration": 7.87156462585034,
+        "start_time": 0.0,
+        "end_time": 7.87156462585034
+    },
+    {
+        "narration": "With up to 4.7 million industrial robots in operation globally, these machines handle tasks with speed and accuracy. An industrial robot is a robot used for manufacturing.",
+        "image_prompt": "With up to 4.7 million industrial robots in operation globally, these machines handle tasks with speed and accuracy. An industrial robot is a robot used for manufacturing.",
+        "duration": 10.27482993197279,
+        "start_time": 7.87156462585034,
+        "end_time": 18.14639455782313
+    },
+    {
+        "narration": "From welding to packaging, robots boost efficiency and reduce human error, making them indispensable in modern manufacturing. Industrial robots are automated, programmable and capable of movement on three or more axes.",
+        "image_prompt": "From welding to packaging, robots boost efficiency and reduce human error, making them indispensable in modern manufacturing. Industrial robots are automated, programmable and capable of movement on three or more axes.",
+        "duration": 12.527165532879819,
+        "start_time": 18.14639455782313,
+        "end_time": 30.67356009070295
+    },
+    {
+        "narration": "By automating labor-intensive tasks, they increase productivity and help car factories stay competitive.",
+        "image_prompt": "By automating labor-intensive tasks, they increase productivity and help car factories stay competitive.",
+        "duration": 6.106848072562358,
+        "start_time": 30.67356009070295,
+        "end_time": 36.78040816326531
+    }
+]

@@ -1,0 +1,218 @@
+﻿========================================================================
+V6.3.4 IRON MAN - CLAIM/EVIDENCE FAILURE
+========================================================================
+
+--- FAILURE JSON ---
+
+{
+  "status": "FAIL",
+  "elapsed_seconds": 47.35,
+  "topic": "Why Iron Man's first suit-building scene became iconic",
+  "exception_type": "RuntimeError",
+  "exception": "Movie script failed claim-evidence validation: ['line_3_weak_evidence_match']",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\hp\\jarvis.ai\\generated\\diagnostics\\run_v63_iron_man.py\", line 42, in main\n    result = await pipeline.run(trend)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\hp\\jarvis.ai\\backend\\services\\pipelines\\video_pipeline.py\", line 1653, in run\n    generated = await self.generator.generate(\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        trend\n        ^^^^^\n    )\n    ^\n  File \"C:\\Users\\hp\\jarvis.ai\\backend\\services\\content_generator.py\", line 291, in generate\n    raise RuntimeError(\n    ...<2 lines>...\n    )\nRuntimeError: Movie script failed claim-evidence validation: ['line_3_weak_evidence_match']\n"
+}
+
+========================================================================
+CONTENT GENERATOR - CLAIM VALIDATION REGION
+========================================================================
+
+  240:         ####################################################   241:    242:         title = str(   243:             data.get(   244:                 "title",   245:                 topic,   246:             )   247:         ).strip()   248:    249:         hashtags = [   250:             str(tag).strip()   251:             for tag in data.get(   252:                 "hashtags",   253:                 []   254:             )   255:             if str(tag).strip()   256:         ]   257:    258:         lines = [   259:             str(line).strip()   260:             for line in data.get(   261:                 "script_lines",   262:                 []   263:             )   264:             if str(line).strip()   265:         ]   266:    267:         if len(lines) != 4:   268:             raise RuntimeError(   269:                 "Generated content normalization produced "   270:                 f"{len(lines)} script lines; expected exactly 4."   271:             )   272:    273:         lines = lines[:4]   274:    275:         if format_name == "famous_movie_commentary":   276:    277:             evidence_ids = data.get(   278:                 "evidence_ids",   279:                 [],   280:             )   281:    282:             evidence_validation = (   283:                 self.claim_evidence_validator.validate(   284:                     script_lines=lines,   285:                     evidence_ids=evidence_ids,   286:                     research=research,   287:                 )   288:             )   289:    290:             if not evidence_validation.valid:   291:                 raise RuntimeError(   292:                     "Movie script failed claim-evidence validation: "   293:                     f"{evidence_validation.issues}"   294:                 )   295:    296:         if format_name == "famous_movie_commentary":   297:    298:             semantic_validation = (   299:                 await self.semantic_claim_evidence_validator.validate(   300:                     script_lines=lines,   301:                     evidence_ids=data.get(   302:                         "evidence_ids",   303:                         [],   304:                     ),   305:                     research=research,   306:                 )   307:             )   308:    309:             if not semantic_validation.valid:   310:    311:                 repaired_lines = (   312:                     await self._repair_movie_semantic_failures(   313:                         script_lines=lines,   314:                         evidence_ids=data.get(   315:                             "evidence_ids",   316:                             [],   317:                         ),   318:                         research=research,   319:                         semantic_validation=semantic_validation,   320:                         topic=topic,   321:                         movie_title=movie_title,   322:                     )   323:                 )   324:    325:                 if repaired_lines is None:   326:                     raise RuntimeError(   327:                         "Movie script failed semantic evidence "   328:                         "validation and targeted repair failed: "   329:                         f"{semantic_validation.to_dict()}"   330:                     )
+
+========================================================================
+CLAIM EVIDENCE VALIDATOR LOCATIONS
+========================================================================
+
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1:import json
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2:import logging
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:3:import re
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:4:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:5:from backend.models.generated_content import GeneratedContent
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:6:from backend.services.llm_service import LLMService
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:7:from backend.services.intelligence.claim_evidence_validator import (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:8:    ClaimEvidenceValidator,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:9:) > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:10:from backend.services.intelligence.semantic_claim_evidence_validator import (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:11:    SemanticClaimEvidenceValidator,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:12:)
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:13:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:14:logger = logging.getLogger(__name__)
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:15:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:16:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:17:class ContentGenerator:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:18:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:19:    MIN_WORDS = 75
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:20:    MAX_WORDS = 110
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:21:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:22:    def __init__(self):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:23:        self.llm = LLMService() > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:24:        self.claim_evidence_validator = ClaimEvidenceValidator() > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:25:        self.semantic_claim_evidence_validator = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:26:            SemanticClaimEvidenceValidator(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:27:                llm=self.llm
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:28:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:29:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:30:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:31:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:32:    @staticmethod
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:33:    def _is_movie_fact_generation(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:34:        *,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:35:        format_name: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:36:        reference_format: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:37:    ) -> bool:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:38:        return (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:39:            str(format_name).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:40:            == "famous_movie_commentary"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:41:            or str(reference_format).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:42:            == "movie_facts"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:43:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:44:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:45:    async def generate(   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:275:        if format_name == "famous_movie_commentary":
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:276:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:277:            evidence_ids = data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:278:                "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:279:                [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:280:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:281:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:282:            evidence_validation = (
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:283:                self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:284:                    script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:285:                    evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:286:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:287:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:288:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:289:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:290:            if not evidence_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:291:                raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:292:                    "Movie script failed claim-evidence validation: "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:293:                    f"{evidence_validation.issues}"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:294:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:295:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:296:        if format_name == "famous_movie_commentary":
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:297:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:298:            semantic_validation = ( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:299:                await self.semantic_claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:300:                    script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:301:                    evidence_ids=data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:302:                        "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:303:                        [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:304:                    ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:305:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:306:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:307:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:308:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:309:            if not semantic_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:310:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:311:                repaired_lines = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:312:                    await self._repair_movie_semantic_failures(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:313:                        script_lines=lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:314:                        evidence_ids=data.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:315:                            "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:316:                            [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:317:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:318:                        research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:319:                        semantic_validation=semantic_validation,   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1179:            recovered[
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1180:                "evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1181:            ] = sanitized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1182:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1183:            # IMPORTANT:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1184:            # Validate against the SAME deterministic labelled
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1185:            # evidence packet supplied to the recovery model.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1186:            validation = (
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1187:                self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1188:                    script_lines=recovered_lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1189:                    evidence_ids=sanitized,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1190:                    research=evidence_packet,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1191:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1192:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1193:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1194:            if not validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1195:                logger.warning(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1196:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1197:                    "failed claim-evidence validation: %s",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1198:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1199:                    validation.issues,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1200:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1201:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1202:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1203:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1204:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1205:            if any(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1206:                re.search(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1207:                    r"\[E\d+\]",   C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1490:                    "Semantic repair attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1491:                    "produced invalid length: %s.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1492:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1493:                    word_count,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1494:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1495:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1496:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1497:            lexical_validation = (
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1498:                self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1499:                    script_lines=candidate_lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1500:                    evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1501:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1502:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1503:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1504:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1505:            if not lexical_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1506:                logger.warning(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1507:                    "Semantic repair attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1508:                    "failed lexical validation: %s",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1509:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1510:                    lexical_validation.issues,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1511:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1512:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1513:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1514:            next_validation = ( > C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1515:                await self.semantic_claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1516:                    script_lines=candidate_lines,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1517:                    evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1518:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1519:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1520:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1521:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1522:            if next_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1523:                logger.info(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1524:                    "Semantic repair succeeded "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1525:                    "on attempt %s.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1526:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1527:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1528:                return candidate_lines
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1529:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1530:            logger.warning(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1531:                "Semantic repair attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1532:                "still failed: %s",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1533:                attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1534:                next_validation.to_dict(),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1535:            )   C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:2:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:3:from __future__ import annotations
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:4:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:5:import re
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:6:from dataclasses import dataclass, asdict
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:7:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:8:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:9:@dataclass(slots=True)
+> C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:10:class ClaimEvidenceResult:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:11:    valid: bool
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:12:    issues: list[str]
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:13:    line_results: list[dict]
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:14:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:15:    def to_dict(self) -> dict:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:16:        return asdict(self)
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:17:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:18: > C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:19:class ClaimEvidenceValidator:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:20:    """
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:21:    Validate that movie-commentary narration lines cite existing
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:22:    research evidence and share meaningful factual concepts with it.
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:23:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:24:    This is a conservative V1 gate. It does not attempt to prove
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:25:    philosophical or subjective interpretation.
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:26:    """
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:27:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:28:    MIN_SHARED_TERMS = 2
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:29:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:30:    STOPWORDS = {
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:31:        "about",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:32:        "after",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:33:        "again",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:34:        "against",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:35:        "also",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:36:        "because",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:37:        "been",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:38:        "being",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:39:        "between",

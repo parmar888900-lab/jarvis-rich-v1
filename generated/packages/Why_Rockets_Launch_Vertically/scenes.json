@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "To reach space, rockets must overcome Earth's gravity, starting vertically.",
+        "image_prompt": "To reach space, rockets must overcome Earth's gravity, starting vertically.",
+        "duration": 3.900952380952381,
+        "start_time": 0.0,
+        "end_time": 3.900952380952381
+    },
+    {
+        "narration": "Launching straight up minimizes fuel use by avoiding lateral speeds needed for horizontal travel. A rocket (from Italian: rocchetto, lit.",
+        "image_prompt": "Launching straight up minimizes fuel use by avoiding lateral speeds needed for horizontal travel. A rocket (from Italian: rocchetto, lit.",
+        "duration": 7.291065759637188,
+        "start_time": 3.900952380952381,
+        "end_time": 11.19201814058957
+    },
+    {
+        "narration": "Vertical ascent allows rockets to quickly achieve orbital velocity without wasting fuel on lateral movement. ''bobbin/spool'', and so named for its shape) is an elongated flying vehicle that uses a rocket engine to accelerate without using any surrounding air.",
+        "image_prompt": "Vertical ascent allows rockets to quickly achieve orbital velocity without wasting fuel on lateral movement. ''bobbin/spool'', and so named for its shape) is an elongated flying vehicle that uses a rocket engine to accelerate without using any surrounding air.",
+        "duration": 13.200544217687074,
+        "start_time": 11.19201814058957,
+        "end_time": 24.392562358276642
+    },
+    {
+        "narration": "Once vertical ascent is complete, rockets can safely tilt and navigate their trajectories.",
+        "image_prompt": "Once vertical ascent is complete, rockets can safely tilt and navigate their trajectories.",
+        "duration": 4.551111111111111,
+        "start_time": 24.392562358276642,
+        "end_time": 28.943673469387754
+    }
+]

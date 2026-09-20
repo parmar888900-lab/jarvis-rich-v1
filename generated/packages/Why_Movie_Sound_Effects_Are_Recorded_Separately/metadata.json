@@ -1,0 +1,31 @@
+{
+    "title": "Why Movie Sound Effects Are Recorded Separately",
+    "hashtags": [
+        "#SoundEffects",
+        "#MovieMaking",
+        "#FoleyArtist"
+    ],
+    "scene_count": 4,
+    "duration": 29.31519274376417,
+    "created_by": "Jarvis Rich V1",
+    "metadata": {
+        "source": "Why movie sound effects are often recorded separately",
+        "generator": "Jarvis Rich V1",
+        "premise_audit": {
+            "score": 80,
+            "strong": true,
+            "reasons": [
+                "curiosity_gap",
+                "mechanism_or_consequence",
+                "specific_premise_length",
+                "question_structure"
+            ],
+            "reference_format": "visual_explainer",
+            "advisory_only": true
+        },
+        "content_format": "visual_explainer",
+        "movie_title": "",
+        "evidence_ids": [],
+        "word_count": 80
+    }
+}

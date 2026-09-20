@@ -1,4 +1,4 @@
-﻿"""Persistent idempotent production operation model."""
+"""Persistent idempotent production operation model."""
 
 from datetime import datetime
 from enum import Enum

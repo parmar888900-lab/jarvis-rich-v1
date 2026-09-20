@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:06,165
+Imagine the world without standardized containers; goods would be lost in transit or damaged, slowing international commerce.
+
+2
+00:00:06,165 --> 00:00:25,577
+Invented in the early 20th century, intermodal containers, 90% of which are 20 or 40 feet long, made transport more efficient. Intermodal containers are primarily used to store and transport materials and products efficiently and securely in the global containerized intermodal freight transport system, but smaller numbers are in regional use as well.
+
+3
+00:00:25,577 --> 00:00:34,633
+By 2012, over 20 million containers were in use, accounting for 60% of seaborne trade, drastically reducing shipping times and costs.
+
+4
+00:00:34,633 --> 00:00:40,565
+Now, containerization is the backbone of global commerce, transforming how we move goods across continents.

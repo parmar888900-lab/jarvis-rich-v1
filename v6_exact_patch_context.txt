@@ -1,0 +1,2688 @@
+
+################################################################################
+# PIPELINE: backend\services\pipelines\video_pipeline.py
+################################################################################
+TOTAL_LINES: 1843
+
+========================================================================
+MATCH: 'class VideoPipeline' @ LINE 38
+========================================================================
+20: from backend.services.content_validator import ContentValidator
+21: from backend.services.intelligence.content_format_classifier import ContentFormatClassifier
+22: from backend.services.intelligence.movie_topic_parser import MovieTopicParser
+23: from backend.services.research.evergreen_research_service import EvergreenResearchService
+24: from backend.services.research.movie_research_service import MovieResearchService
+25: from backend.services.storyboard.generator import StoryboardGenerator
+26: from backend.services.video.asset_collector import AssetCollector
+27: from backend.services.video.media_query_builder import MediaQueryBuilder
+28: from backend.services.video.media_sources.wikimedia import (
+29:     WikimediaCommonsProvider,
+30: )
+31: from backend.services.video.production_package import (
+32:     ProductionPackageBuilder,
+33: )
+34: from backend.services.video.visual_beat_planner import VisualBeatPlanner
+35: from backend.services.video_renderer.renderer import VideoRenderer
+36: 
+37: 
+38: class VideoPipeline:
+39: 
+40:     MIN_ASSETS_PER_SCENE = 1
+41:     TARGET_ASSETS_PER_SCENE = 1
+42: 
+43:     # Stage media remains mandatory and rights-validated.
+44:     # Beat-level provider searches are optional enrichment.
+45:     MAX_SEMANTIC_MEDIA_ENRICHMENTS = 10
+46: 
+47:     # MASTER_VISUAL_ACQUISITION_V2
+48:     STAGE_MEDIA_CANDIDATE_LIMIT = 3
+49:     BEAT_MEDIA_CANDIDATE_LIMIT = 3
+50:     TARGET_DISTINCT_BEAT_ASSETS = 6
+51:     SEMANTIC_VISUAL_V4 = True
+52:     REFERENCE_VISUAL_V5 = True
+53: 
+54:     def __init__(self):
+55: 
+56:         self.generator = ContentGenerator()
+57:         self.content_validator = ContentValidator()
+58:         self.research_service = EvergreenResearchService()
+59:         self.movie_research_service = MovieResearchService()
+60:         self.format_classifier = ContentFormatClassifier()
+61:         self.storyboard = StoryboardGenerator()
+62: 
+63:         self.media_provider = (
+64:             WikimediaCommonsProvider()
+65:         )
+66: 
+67:         self.asset_collector = AssetCollector()
+68:         self.media_query_builder = MediaQueryBuilder()
+69: 
+70:         self.visual_beat_planner = VisualBeatPlanner()
+71: 
+72:         self.package_builder = (
+73:             ProductionPackageBuilder()
+74:         )
+75: 
+76:         self.renderer = VideoRenderer()
+77: 
+78: 
+79:     # MASTER_VISUAL_HELPERS_V2
+80: 
+81:     @staticmethod
+82:     def _master_asset_identity(asset) -> str:
+83: 
+84:         if asset is None:
+85:             return ""
+86: 
+87:         for attribute in (
+88:             "local_path",
+89:             "source_url",
+90:             "asset_id",
+91:         ):
+92: 
+93:             value = getattr(
+
+========================================================================
+MATCH: 'async def run(' @ LINE 896
+========================================================================
+878:                 != previous_identity
+879:                 and negative_overlap == 0
+880:                 and semantic_score >= 0.36
+881:                 and domain_overlap >= 1
+882:             ):
+883:                 return asset
+884: 
+885:         # ====================================================
+886:         # TIER 3
+887:         #
+888:         # Do NOT force a generic candidate.
+889:         # Returning None lets the pipeline use its authorized
+890:         # fallback path and lets Block 5 reject bad sequences.
+891:         # ====================================================
+892: 
+893:         return None
+894: 
+895: 
+896:     async def run(
+897:         self,
+898:         trend: dict,
+899:     ) -> dict:
+900: 
+901:         ####################################################
+902:         # 1. Content identity
+903:         ####################################################
+904: 
+905:         content_id = str(
+906:             trend.get(
+907:                 "content_id",
+908:                 "",
+909:             )
+910:         ).strip()
+911: 
+912:         if not content_id:
+913:             raise RuntimeError(
+914:                 "Production topic has no content_id."
+915:             )
+916: 
+917:         ####################################################
+918:         # 2. Choose production format
+919:         ####################################################
+920: 
+921:         topic_title = str(
+922:             trend.get(
+923:                 "title",
+924:                 "",
+925:             )
+926:         ).strip()
+927: 
+928:         genre = str(
+929:             trend.get(
+930:                 "genre",
+931:                 "",
+932:             )
+933:         ).strip()
+934: 
+935:         format_decision = (
+936:             self.format_classifier.classify(
+937:                 topic=topic_title,
+938:                 genre=genre,
+939:                 authorized_movie_source=False,
+940:             )
+941:         )
+942: 
+943:         trend["content_format"] = {
+944:             "format_name": format_decision.format_name,
+945:             "target_duration_min": format_decision.target_duration_min,
+946:             "target_duration_max": format_decision.target_duration_max,
+947:             "preferred_media": format_decision.preferred_media,
+948:             "narration_mode": format_decision.narration_mode,
+949:             "pacing": format_decision.pacing,
+950:             "rights_gate_required": format_decision.rights_gate_required,
+951:             "reference_profile": format_decision.reference_profile,
+
+========================================================================
+MATCH: 'media_groups' @ LINE 1084
+========================================================================
+1066: 
+1067:         ####################################################
+1068:         # 5. Build narration storyboard
+1069:         ####################################################
+1070: 
+1071:         storyboard = self.storyboard.generate(
+1072:             generated
+1073:         )
+1074: 
+1075:         if not storyboard:
+1076:             raise RuntimeError(
+1077:                 "StoryboardGenerator produced no scenes."
+1078:             )
+1079: 
+1080:         ####################################################
+1081:         # 6. Acquire real licensed media
+1082:         ####################################################
+1083: 
+1084:         media_groups = []
+1085: 
+1086:         topic = str(
+1087:             trend.get(
+1088:                 "title",
+1089:                 "",
+1090:             )
+1091:         ).strip()
+1092: 
+1093:         genre = str(
+1094:             trend.get(
+1095:                 "genre",
+1096:                 "",
+1097:             )
+1098:         ).strip()
+1099: 
+1100:         ####################################################
+1101:         # Stage 2B - semantic visual micro-beats
+1102:         #
+1103:         # Narration remains four grounded story stages.
+1104:         # Visuals are planned independently at a denser cadence.
+1105:         ####################################################
+1106: 
+1107:         visual_beats = self.visual_beat_planner.plan(
+1108:             content=generated,
+1109:             topic=topic,
+1110:             genre=genre,
+1111:             format_name=(
+1112:                 format_decision.format_name
+1113:             ),
+1114:         )
+1115: 
+1116:         if not visual_beats:
+1117:             raise RuntimeError(
+1118:                 "VisualBeatPlanner produced no visual beats."
+1119:             )
+1120: 
+1121:         visual_beat_dicts = (
+1122:             self.visual_beat_planner.to_dicts(
+1123:                 visual_beats
+1124:             )
+1125:         )
+1126: 
+1127:         for index, scene in enumerate(
+1128:             storyboard,
+1129:             start=1,
+1130:         ):
+1131: 
+1132:             queries = (
+1133:                 self.media_query_builder.build(
+1134:                     topic=topic,
+1135:                     genre=genre,
+1136:                     narration=scene.narration,
+1137:                 )
+1138:             )[:3]
+1139: 
+
+========================================================================
+MATCH: 'media_groups' @ LINE 1219
+========================================================================
+1201:                         >= self.STAGE_MEDIA_CANDIDATE_LIMIT
+1202:                     ):
+1203:                         break
+1204: 
+1205:                 if (
+1206:                     len(authorized_scene_assets)
+1207:                     >= self.STAGE_MEDIA_CANDIDATE_LIMIT
+1208:                 ):
+1209:                     break
+1210: 
+1211:             if not authorized_scene_assets:
+1212:                 raise RuntimeError(
+1213:                     "Scene "
+1214:                     f"{index} produced no authorized "
+1215:                     "image after limited media search. "
+1216:                     f"Queries: {queries}"
+1217:                 )
+1218: 
+1219:             media_groups.append(
+1220:                 authorized_scene_assets
+1221:             )
+1222: 
+1223:         if (
+1224:             len(media_groups)
+1225:             != len(storyboard)
+1226:         ):
+1227:             raise RuntimeError(
+1228:                 "Storyboard/media group mismatch."
+1229:             )
+1230:         ####################################################
+1231:         # Stage 2B - beat-specific authorized media
+1232:         #
+1233:         # IMPORTANT:
+1234:         # This layer is deliberately fail-soft.
+1235:         #
+1236:         # Every beat has a known-good authorized fallback from
+1237:         # its narration stage. A failed provider query therefore
+1238:         # reduces visual specificity instead of failing the video.
+1239:         ####################################################
+1240: 
+1241:         beat_render_assets = []
+1242:         beat_media_evidence = []
+1243: 
+1244:         semantic_enrichment_attempts = 0
+1245:         semantic_enrichment_successes = 0
+1246:         semantic_fallback_count = 0
+1247: 
+1248:         master_candidate_count = 0
+1249:         master_semantic_rejections = 0
+1250:         master_duplicate_avoidance_events = 0
+1251:         master_query_count = 0
+1252: 
+1253:         used_identities: set[str] = set()
+1254:         previous_identity = ""
+1255: 
+1256:         for beat_index, beat in enumerate(
+1257:             visual_beats
+1258:         ):
+1259: 
+1260:             narration_index = int(
+1261:                 beat.narration_index
+1262:             )
+1263: 
+1264:             stage_index = max(
+1265:                 0,
+1266:                 min(
+1267:                     narration_index - 1,
+1268:                     len(media_groups) - 1,
+1269:                 ),
+1270:             )
+1271: 
+1272:             stage_candidates = [
+1273:                 asset
+1274:                 for asset
+
+========================================================================
+MATCH: 'media_groups' @ LINE 1224
+========================================================================
+1206:                     len(authorized_scene_assets)
+1207:                     >= self.STAGE_MEDIA_CANDIDATE_LIMIT
+1208:                 ):
+1209:                     break
+1210: 
+1211:             if not authorized_scene_assets:
+1212:                 raise RuntimeError(
+1213:                     "Scene "
+1214:                     f"{index} produced no authorized "
+1215:                     "image after limited media search. "
+1216:                     f"Queries: {queries}"
+1217:                 )
+1218: 
+1219:             media_groups.append(
+1220:                 authorized_scene_assets
+1221:             )
+1222: 
+1223:         if (
+1224:             len(media_groups)
+1225:             != len(storyboard)
+1226:         ):
+1227:             raise RuntimeError(
+1228:                 "Storyboard/media group mismatch."
+1229:             )
+1230:         ####################################################
+1231:         # Stage 2B - beat-specific authorized media
+1232:         #
+1233:         # IMPORTANT:
+1234:         # This layer is deliberately fail-soft.
+1235:         #
+1236:         # Every beat has a known-good authorized fallback from
+1237:         # its narration stage. A failed provider query therefore
+1238:         # reduces visual specificity instead of failing the video.
+1239:         ####################################################
+1240: 
+1241:         beat_render_assets = []
+1242:         beat_media_evidence = []
+1243: 
+1244:         semantic_enrichment_attempts = 0
+1245:         semantic_enrichment_successes = 0
+1246:         semantic_fallback_count = 0
+1247: 
+1248:         master_candidate_count = 0
+1249:         master_semantic_rejections = 0
+1250:         master_duplicate_avoidance_events = 0
+1251:         master_query_count = 0
+1252: 
+1253:         used_identities: set[str] = set()
+1254:         previous_identity = ""
+1255: 
+1256:         for beat_index, beat in enumerate(
+1257:             visual_beats
+1258:         ):
+1259: 
+1260:             narration_index = int(
+1261:                 beat.narration_index
+1262:             )
+1263: 
+1264:             stage_index = max(
+1265:                 0,
+1266:                 min(
+1267:                     narration_index - 1,
+1268:                     len(media_groups) - 1,
+1269:                 ),
+1270:             )
+1271: 
+1272:             stage_candidates = [
+1273:                 asset
+1274:                 for asset
+1275:                 in media_groups[stage_index]
+1276:                 if asset.asset_type == "image"
+1277:             ]
+1278: 
+1279:             if not stage_candidates:
+
+========================================================================
+MATCH: 'media_groups' @ LINE 1268
+========================================================================
+1250:         master_duplicate_avoidance_events = 0
+1251:         master_query_count = 0
+1252: 
+1253:         used_identities: set[str] = set()
+1254:         previous_identity = ""
+1255: 
+1256:         for beat_index, beat in enumerate(
+1257:             visual_beats
+1258:         ):
+1259: 
+1260:             narration_index = int(
+1261:                 beat.narration_index
+1262:             )
+1263: 
+1264:             stage_index = max(
+1265:                 0,
+1266:                 min(
+1267:                     narration_index - 1,
+1268:                     len(media_groups) - 1,
+1269:                 ),
+1270:             )
+1271: 
+1272:             stage_candidates = [
+1273:                 asset
+1274:                 for asset
+1275:                 in media_groups[stage_index]
+1276:                 if asset.asset_type == "image"
+1277:             ]
+1278: 
+1279:             if not stage_candidates:
+1280:                 raise RuntimeError(
+1281:                     "Stage 2B fallback media missing for "
+1282:                     f"narration stage {narration_index}."
+1283:                 )
+1284: 
+1285:             query_variants = (
+1286:                 self._master_query_variants(
+1287:                     topic=topic,
+1288:                     beat=beat,
+1289:                 )
+1290:             )
+1291: 
+1292:             primary_query = (
+1293:                 query_variants[0]
+1294:                 if query_variants
+1295:                 else str(
+1296:                     beat.search_query
+1297:                 ).strip()
+1298:             )
+1299: 
+1300:             selected_asset = None
+1301:             selected_via = ""
+1302:             authorized_candidates = []
+1303: 
+1304:             for query in query_variants:
+1305: 
+1306:                 if (
+1307:                     semantic_enrichment_attempts
+1308:                     >= self.MAX_SEMANTIC_MEDIA_ENRICHMENTS
+1309:                 ):
+1310:                     break
+1311: 
+1312:                 semantic_enrichment_attempts += 1
+1313:                 master_query_count += 1
+1314: 
+1315:                 try:
+1316: 
+1317:                     found = await (
+1318:                         self.media_provider
+1319:                         .search_and_download(
+1320:                             query=query,
+1321:                             content_id=content_id,
+1322:                             limit=(
+1323:                                 self.BEAT_MEDIA_CANDIDATE_LIMIT
+
+========================================================================
+MATCH: 'media_groups' @ LINE 1275
+========================================================================
+1257:             visual_beats
+1258:         ):
+1259: 
+1260:             narration_index = int(
+1261:                 beat.narration_index
+1262:             )
+1263: 
+1264:             stage_index = max(
+1265:                 0,
+1266:                 min(
+1267:                     narration_index - 1,
+1268:                     len(media_groups) - 1,
+1269:                 ),
+1270:             )
+1271: 
+1272:             stage_candidates = [
+1273:                 asset
+1274:                 for asset
+1275:                 in media_groups[stage_index]
+1276:                 if asset.asset_type == "image"
+1277:             ]
+1278: 
+1279:             if not stage_candidates:
+1280:                 raise RuntimeError(
+1281:                     "Stage 2B fallback media missing for "
+1282:                     f"narration stage {narration_index}."
+1283:                 )
+1284: 
+1285:             query_variants = (
+1286:                 self._master_query_variants(
+1287:                     topic=topic,
+1288:                     beat=beat,
+1289:                 )
+1290:             )
+1291: 
+1292:             primary_query = (
+1293:                 query_variants[0]
+1294:                 if query_variants
+1295:                 else str(
+1296:                     beat.search_query
+1297:                 ).strip()
+1298:             )
+1299: 
+1300:             selected_asset = None
+1301:             selected_via = ""
+1302:             authorized_candidates = []
+1303: 
+1304:             for query in query_variants:
+1305: 
+1306:                 if (
+1307:                     semantic_enrichment_attempts
+1308:                     >= self.MAX_SEMANTIC_MEDIA_ENRICHMENTS
+1309:                 ):
+1310:                     break
+1311: 
+1312:                 semantic_enrichment_attempts += 1
+1313:                 master_query_count += 1
+1314: 
+1315:                 try:
+1316: 
+1317:                     found = await (
+1318:                         self.media_provider
+1319:                         .search_and_download(
+1320:                             query=query,
+1321:                             content_id=content_id,
+1322:                             limit=(
+1323:                                 self.BEAT_MEDIA_CANDIDATE_LIMIT
+1324:                             ),
+1325:                         )
+1326:                     )
+1327: 
+1328:                 except Exception:
+1329: 
+1330:                     found = []
+
+========================================================================
+MATCH: 'media_groups' @ LINE 1570
+========================================================================
+1552: 
+1553:         if (
+1554:             len(beat_render_assets)
+1555:             != len(visual_beats)
+1556:         ):
+1557:             raise RuntimeError(
+1558:                 "Visual beat/media timeline mismatch."
+1559:             )
+1560: 
+1561:         ####################################################
+1562:         # 7. Temporary renderer compatibility
+1563:         #
+1564:         # The existing renderer still accepts one image
+1565:         # object per narration scene. For this integration
+1566:         # test we pass the strongest authorized IMAGE from
+1567:         # each group.
+1568:         #
+1569:         # The next renderer patch will consume the complete
+1570:         # media_groups structure and produce multiple cuts.
+1571:         ####################################################
+1572: 
+1573:         render_assets = []
+1574: 
+1575:         for index, group in enumerate(
+1576:             media_groups,
+1577:             start=1,
+1578:         ):
+1579: 
+1580:             image_asset = next(
+1581:                 (
+1582:                     asset
+1583:                     for asset in group
+1584:                     if asset.asset_type
+1585:                     == "image"
+1586:                 ),
+1587:                 None,
+1588:             )
+1589: 
+1590:             if image_asset is None:
+1591:                 raise RuntimeError(
+1592:                     "Scene "
+1593:                     f"{index} has no image-compatible "
+1594:                     "asset for the current renderer."
+1595:                 )
+1596: 
+1597:             render_assets.append(
+1598:                 image_asset
+1599:             )
+1600: 
+1601:         ####################################################
+1602:         # 8. Build production package
+1603:         ####################################################
+1604: 
+1605:         package = await self.package_builder.build(
+1606:             content=generated,
+1607:             scenes=storyboard,
+1608:             images=render_assets,
+1609:             trend=trend,
+1610:         )
+1611: 
+1612:         ####################################################
+1613:         # 9. Render
+1614:         ####################################################
+1615: 
+1616:         # BLOCK5_VISUAL_QA_BEGIN
+1617:         #
+1618:         # The previous Stage2B implementation could legally
+1619:         # resolve many semantic beats to the same authorized
+1620:         # fallback image. That produced a technically valid
+1621:         # 12-cut video which visually behaved like a slideshow.
+1622:         #
+1623:         # Rights authorization has already happened upstream.
+1624:         # This gate does not authorize media and does not weaken
+1625:         # any rights/evidence requirement. It only evaluates the
+
+========================================================================
+MATCH: 'media_groups' @ LINE 1576
+========================================================================
+1558:                 "Visual beat/media timeline mismatch."
+1559:             )
+1560: 
+1561:         ####################################################
+1562:         # 7. Temporary renderer compatibility
+1563:         #
+1564:         # The existing renderer still accepts one image
+1565:         # object per narration scene. For this integration
+1566:         # test we pass the strongest authorized IMAGE from
+1567:         # each group.
+1568:         #
+1569:         # The next renderer patch will consume the complete
+1570:         # media_groups structure and produce multiple cuts.
+1571:         ####################################################
+1572: 
+1573:         render_assets = []
+1574: 
+1575:         for index, group in enumerate(
+1576:             media_groups,
+1577:             start=1,
+1578:         ):
+1579: 
+1580:             image_asset = next(
+1581:                 (
+1582:                     asset
+1583:                     for asset in group
+1584:                     if asset.asset_type
+1585:                     == "image"
+1586:                 ),
+1587:                 None,
+1588:             )
+1589: 
+1590:             if image_asset is None:
+1591:                 raise RuntimeError(
+1592:                     "Scene "
+1593:                     f"{index} has no image-compatible "
+1594:                     "asset for the current renderer."
+1595:                 )
+1596: 
+1597:             render_assets.append(
+1598:                 image_asset
+1599:             )
+1600: 
+1601:         ####################################################
+1602:         # 8. Build production package
+1603:         ####################################################
+1604: 
+1605:         package = await self.package_builder.build(
+1606:             content=generated,
+1607:             scenes=storyboard,
+1608:             images=render_assets,
+1609:             trend=trend,
+1610:         )
+1611: 
+1612:         ####################################################
+1613:         # 9. Render
+1614:         ####################################################
+1615: 
+1616:         # BLOCK5_VISUAL_QA_BEGIN
+1617:         #
+1618:         # The previous Stage2B implementation could legally
+1619:         # resolve many semantic beats to the same authorized
+1620:         # fallback image. That produced a technically valid
+1621:         # 12-cut video which visually behaved like a slideshow.
+1622:         #
+1623:         # Rights authorization has already happened upstream.
+1624:         # This gate does not authorize media and does not weaken
+1625:         # any rights/evidence requirement. It only evaluates the
+1626:         # final authorized beat sequence before expensive render.
+1627: 
+1628:         def _block5_asset_identity(asset):
+1629:             if asset is None:
+1630:                 return ""
+1631: 
+
+========================================================================
+MATCH: 'media_groups' @ LINE 1819
+========================================================================
+1801:                         "source_url": asset.source_url,
+1802:                         "source_name": asset.source_name,
+1803:                         "creator": asset.creator,
+1804:                         "license_name": asset.license_name,
+1805:                         "license_url": asset.license_url,
+1806:                         "attribution_required": (
+1807:                             asset.attribution_required
+1808:                         ),
+1809:                         "commercial_use_allowed": (
+1810:                             asset.commercial_use_allowed
+1811:                         ),
+1812:                         "relevance_score": (
+1813:                             asset.relevance_score
+1814:                         ),
+1815:                         "content_id": asset.content_id,
+1816:                     }
+1817:                     for asset in group
+1818:                 ]
+1819:                 for group in media_groups
+1820:             ],
+1821:             "production_package": package,
+1822:             "visual_beats": visual_beat_dicts,
+1823:             "beat_media": beat_media_evidence,
+1824:             "semantic_media_metrics": {
+1825:                 "enrichment_budget": self.MAX_SEMANTIC_MEDIA_ENRICHMENTS,
+1826:                 "enrichment_attempts": semantic_enrichment_attempts,
+1827:                 "enrichment_successes": semantic_enrichment_successes,
+1828:                 "fallback_count": semantic_fallback_count,
+1829:                 "total_beats": len(visual_beats),
+1830:                 "visual_quality": block5_visual_metrics,
+1831:             },
+1832:             "video": video,
+1833:             "status": "success",
+1834:         }
+1835: 
+1836: 
+1837: 
+1838: 
+1839: 
+1840: 
+1841: 
+1842: 
+1843: 
+
+========================================================================
+MATCH: 'beat_render_assets' @ LINE 1241
+========================================================================
+1223:         if (
+1224:             len(media_groups)
+1225:             != len(storyboard)
+1226:         ):
+1227:             raise RuntimeError(
+1228:                 "Storyboard/media group mismatch."
+1229:             )
+1230:         ####################################################
+1231:         # Stage 2B - beat-specific authorized media
+1232:         #
+1233:         # IMPORTANT:
+1234:         # This layer is deliberately fail-soft.
+1235:         #
+1236:         # Every beat has a known-good authorized fallback from
+1237:         # its narration stage. A failed provider query therefore
+1238:         # reduces visual specificity instead of failing the video.
+1239:         ####################################################
+1240: 
+1241:         beat_render_assets = []
+1242:         beat_media_evidence = []
+1243: 
+1244:         semantic_enrichment_attempts = 0
+1245:         semantic_enrichment_successes = 0
+1246:         semantic_fallback_count = 0
+1247: 
+1248:         master_candidate_count = 0
+1249:         master_semantic_rejections = 0
+1250:         master_duplicate_avoidance_events = 0
+1251:         master_query_count = 0
+1252: 
+1253:         used_identities: set[str] = set()
+1254:         previous_identity = ""
+1255: 
+1256:         for beat_index, beat in enumerate(
+1257:             visual_beats
+1258:         ):
+1259: 
+1260:             narration_index = int(
+1261:                 beat.narration_index
+1262:             )
+1263: 
+1264:             stage_index = max(
+1265:                 0,
+1266:                 min(
+1267:                     narration_index - 1,
+1268:                     len(media_groups) - 1,
+1269:                 ),
+1270:             )
+1271: 
+1272:             stage_candidates = [
+1273:                 asset
+1274:                 for asset
+1275:                 in media_groups[stage_index]
+1276:                 if asset.asset_type == "image"
+1277:             ]
+1278: 
+1279:             if not stage_candidates:
+1280:                 raise RuntimeError(
+1281:                     "Stage 2B fallback media missing for "
+1282:                     f"narration stage {narration_index}."
+1283:                 )
+1284: 
+1285:             query_variants = (
+1286:                 self._master_query_variants(
+1287:                     topic=topic,
+1288:                     beat=beat,
+1289:                 )
+1290:             )
+1291: 
+1292:             primary_query = (
+1293:                 query_variants[0]
+1294:                 if query_variants
+1295:                 else str(
+1296:                     beat.search_query
+
+========================================================================
+MATCH: 'beat_render_assets' @ LINE 1530
+========================================================================
+1512: 
+1513:                     identity = (
+1514:                         self._master_asset_identity(
+1515:                             selected_asset
+1516:                         )
+1517:                     )
+1518: 
+1519:                     selected_via += (
+1520:                         "_duplicate_avoided"
+1521:                     )
+1522: 
+1523:             if identity:
+1524:                 used_identities.add(
+1525:                     identity
+1526:                 )
+1527: 
+1528:             previous_identity = identity
+1529: 
+1530:             beat_render_assets.append(
+1531:                 selected_asset
+1532:             )
+1533: 
+1534:             beat_media_evidence.append(
+1535:                 {
+1536:                     "beat_id": beat.beat_id,
+1537:                     "narration_index": narration_index,
+1538:                     "purpose": beat.purpose,
+1539:                     "query": primary_query,
+1540:                     "query_variants": query_variants,
+1541:                     "selected_via": selected_via,
+1542:                     "asset_id": selected_asset.asset_id,
+1543:                     "source_name": selected_asset.source_name,
+1544:                     "source_url": selected_asset.source_url,
+1545:                     "license_name": selected_asset.license_name,
+1546:                     "commercial_use_allowed": (
+1547:                         selected_asset
+1548:                         .commercial_use_allowed
+1549:                     ),
+1550:                 }
+1551:             )
+1552: 
+1553:         if (
+1554:             len(beat_render_assets)
+1555:             != len(visual_beats)
+1556:         ):
+1557:             raise RuntimeError(
+1558:                 "Visual beat/media timeline mismatch."
+1559:             )
+1560: 
+1561:         ####################################################
+1562:         # 7. Temporary renderer compatibility
+1563:         #
+1564:         # The existing renderer still accepts one image
+1565:         # object per narration scene. For this integration
+1566:         # test we pass the strongest authorized IMAGE from
+1567:         # each group.
+1568:         #
+1569:         # The next renderer patch will consume the complete
+1570:         # media_groups structure and produce multiple cuts.
+1571:         ####################################################
+1572: 
+1573:         render_assets = []
+1574: 
+1575:         for index, group in enumerate(
+1576:             media_groups,
+1577:             start=1,
+1578:         ):
+1579: 
+1580:             image_asset = next(
+1581:                 (
+1582:                     asset
+1583:                     for asset in group
+1584:                     if asset.asset_type
+1585:                     == "image"
+
+========================================================================
+MATCH: 'beat_render_assets' @ LINE 1554
+========================================================================
+1536:                     "beat_id": beat.beat_id,
+1537:                     "narration_index": narration_index,
+1538:                     "purpose": beat.purpose,
+1539:                     "query": primary_query,
+1540:                     "query_variants": query_variants,
+1541:                     "selected_via": selected_via,
+1542:                     "asset_id": selected_asset.asset_id,
+1543:                     "source_name": selected_asset.source_name,
+1544:                     "source_url": selected_asset.source_url,
+1545:                     "license_name": selected_asset.license_name,
+1546:                     "commercial_use_allowed": (
+1547:                         selected_asset
+1548:                         .commercial_use_allowed
+1549:                     ),
+1550:                 }
+1551:             )
+1552: 
+1553:         if (
+1554:             len(beat_render_assets)
+1555:             != len(visual_beats)
+1556:         ):
+1557:             raise RuntimeError(
+1558:                 "Visual beat/media timeline mismatch."
+1559:             )
+1560: 
+1561:         ####################################################
+1562:         # 7. Temporary renderer compatibility
+1563:         #
+1564:         # The existing renderer still accepts one image
+1565:         # object per narration scene. For this integration
+1566:         # test we pass the strongest authorized IMAGE from
+1567:         # each group.
+1568:         #
+1569:         # The next renderer patch will consume the complete
+1570:         # media_groups structure and produce multiple cuts.
+1571:         ####################################################
+1572: 
+1573:         render_assets = []
+1574: 
+1575:         for index, group in enumerate(
+1576:             media_groups,
+1577:             start=1,
+1578:         ):
+1579: 
+1580:             image_asset = next(
+1581:                 (
+1582:                     asset
+1583:                     for asset in group
+1584:                     if asset.asset_type
+1585:                     == "image"
+1586:                 ),
+1587:                 None,
+1588:             )
+1589: 
+1590:             if image_asset is None:
+1591:                 raise RuntimeError(
+1592:                     "Scene "
+1593:                     f"{index} has no image-compatible "
+1594:                     "asset for the current renderer."
+1595:                 )
+1596: 
+1597:             render_assets.append(
+1598:                 image_asset
+1599:             )
+1600: 
+1601:         ####################################################
+1602:         # 8. Build production package
+1603:         ####################################################
+1604: 
+1605:         package = await self.package_builder.build(
+1606:             content=generated,
+1607:             scenes=storyboard,
+1608:             images=render_assets,
+1609:             trend=trend,
+
+========================================================================
+MATCH: 'beat_render_assets' @ LINE 1667
+========================================================================
+1649:             if isinstance(asset, dict):
+1650:                 for key in (
+1651:                     "image_path",
+1652:                     "file_path",
+1653:                     "local_path",
+1654:                     "path",
+1655:                     "source_url",
+1656:                     "asset_id",
+1657:                 ):
+1658:                     value = asset.get(key)
+1659: 
+1660:                     if value:
+1661:                         return str(value).strip().lower()
+1662: 
+1663:             return str(asset).strip().lower()
+1664: 
+1665:         block5_identities = [
+1666:             _block5_asset_identity(asset)
+1667:             for asset in beat_render_assets
+1668:         ]
+1669: 
+1670:         if (
+1671:             not block5_identities
+1672:             or len(block5_identities)
+1673:             != len(visual_beat_dicts)
+1674:         ):
+1675:             raise RuntimeError(
+1676:                 "Visual QA rejected semantic sequence: "
+1677:                 "beat/image coverage mismatch."
+1678:             )
+1679: 
+1680:         block5_counts = {}
+1681: 
+1682:         for identity in block5_identities:
+1683:             if not identity:
+1684:                 raise RuntimeError(
+1685:                     "Visual QA rejected semantic sequence: "
+1686:                     "unidentifiable authorized asset."
+1687:                 )
+1688: 
+1689:             block5_counts[identity] = (
+1690:                 block5_counts.get(identity, 0)
+1691:                 + 1
+1692:             )
+1693: 
+1694:         block5_distinct_assets = len(
+1695:             block5_counts
+1696:         )
+1697: 
+1698:         block5_largest_share = (
+1699:             max(block5_counts.values())
+1700:             / len(block5_identities)
+1701:         )
+1702: 
+1703:         block5_max_repeat_run = 1
+1704:         block5_current_repeat_run = 1
+1705: 
+1706:         for block5_index in range(
+1707:             1,
+1708:             len(block5_identities),
+1709:         ):
+1710:             if (
+1711:                 block5_identities[block5_index]
+1712:                 == block5_identities[
+1713:                     block5_index - 1
+1714:                 ]
+1715:             ):
+1716:                 block5_current_repeat_run += 1
+1717:                 block5_max_repeat_run = max(
+1718:                     block5_max_repeat_run,
+1719:                     block5_current_repeat_run,
+1720:                 )
+1721:             else:
+1722:                 block5_current_repeat_run = 1
+
+========================================================================
+MATCH: 'beat_render_assets' @ LINE 1784
+========================================================================
+1766:             "largest_asset_share": round(
+1767:                 block5_largest_share,
+1768:                 4,
+1769:             ),
+1770:             "max_consecutive_identical": (
+1771:                 block5_max_repeat_run
+1772:             ),
+1773:             "quality_gate": "passed",
+1774:         }
+1775: 
+1776:         # BLOCK5_VISUAL_QA_END
+1777: 
+1778:         video = await self.renderer.render(
+1779:             content=generated,
+1780:             scenes=storyboard,
+1781:             images=render_assets,
+1782:             production_package=package,
+1783:             visual_beats=visual_beat_dicts,
+1784:             beat_images=beat_render_assets,
+1785:         )
+1786: 
+1787:         ####################################################
+1788:         # 10. Return production evidence
+1789:         ####################################################
+1790: 
+1791:         return {
+1792:             "generated": generated,
+1793:             "content_validation": validation,
+1794:             "storyboard": storyboard,
+1795:             "licensed_media": [
+1796:                 [
+1797:                     {
+1798:                         "asset_id": asset.asset_id,
+1799:                         "asset_type": asset.asset_type,
+1800:                         "file_path": asset.file_path,
+1801:                         "source_url": asset.source_url,
+1802:                         "source_name": asset.source_name,
+1803:                         "creator": asset.creator,
+1804:                         "license_name": asset.license_name,
+1805:                         "license_url": asset.license_url,
+1806:                         "attribution_required": (
+1807:                             asset.attribution_required
+1808:                         ),
+1809:                         "commercial_use_allowed": (
+1810:                             asset.commercial_use_allowed
+1811:                         ),
+1812:                         "relevance_score": (
+1813:                             asset.relevance_score
+1814:                         ),
+1815:                         "content_id": asset.content_id,
+1816:                     }
+1817:                     for asset in group
+1818:                 ]
+1819:                 for group in media_groups
+1820:             ],
+1821:             "production_package": package,
+1822:             "visual_beats": visual_beat_dicts,
+1823:             "beat_media": beat_media_evidence,
+1824:             "semantic_media_metrics": {
+1825:                 "enrichment_budget": self.MAX_SEMANTIC_MEDIA_ENRICHMENTS,
+1826:                 "enrichment_attempts": semantic_enrichment_attempts,
+1827:                 "enrichment_successes": semantic_enrichment_successes,
+1828:                 "fallback_count": semantic_fallback_count,
+1829:                 "total_beats": len(visual_beats),
+1830:                 "visual_quality": block5_visual_metrics,
+1831:             },
+1832:             "video": video,
+1833:             "status": "success",
+1834:         }
+1835: 
+1836: 
+1837: 
+1838: 
+1839: 
+
+========================================================================
+MATCH: 'Temporary renderer compatibility' @ LINE 1562
+========================================================================
+1544:                     "source_url": selected_asset.source_url,
+1545:                     "license_name": selected_asset.license_name,
+1546:                     "commercial_use_allowed": (
+1547:                         selected_asset
+1548:                         .commercial_use_allowed
+1549:                     ),
+1550:                 }
+1551:             )
+1552: 
+1553:         if (
+1554:             len(beat_render_assets)
+1555:             != len(visual_beats)
+1556:         ):
+1557:             raise RuntimeError(
+1558:                 "Visual beat/media timeline mismatch."
+1559:             )
+1560: 
+1561:         ####################################################
+1562:         # 7. Temporary renderer compatibility
+1563:         #
+1564:         # The existing renderer still accepts one image
+1565:         # object per narration scene. For this integration
+1566:         # test we pass the strongest authorized IMAGE from
+1567:         # each group.
+1568:         #
+1569:         # The next renderer patch will consume the complete
+1570:         # media_groups structure and produce multiple cuts.
+1571:         ####################################################
+1572: 
+1573:         render_assets = []
+1574: 
+1575:         for index, group in enumerate(
+1576:             media_groups,
+1577:             start=1,
+1578:         ):
+1579: 
+1580:             image_asset = next(
+1581:                 (
+1582:                     asset
+1583:                     for asset in group
+1584:                     if asset.asset_type
+1585:                     == "image"
+1586:                 ),
+1587:                 None,
+1588:             )
+1589: 
+1590:             if image_asset is None:
+1591:                 raise RuntimeError(
+1592:                     "Scene "
+1593:                     f"{index} has no image-compatible "
+1594:                     "asset for the current renderer."
+1595:                 )
+1596: 
+1597:             render_assets.append(
+1598:                 image_asset
+1599:             )
+1600: 
+1601:         ####################################################
+1602:         # 8. Build production package
+1603:         ####################################################
+1604: 
+1605:         package = await self.package_builder.build(
+1606:             content=generated,
+1607:             scenes=storyboard,
+1608:             images=render_assets,
+1609:             trend=trend,
+1610:         )
+1611: 
+1612:         ####################################################
+1613:         # 9. Render
+1614:         ####################################################
+1615: 
+1616:         # BLOCK5_VISUAL_QA_BEGIN
+1617:         #
+
+========================================================================
+MATCH: 'package = await self.package_builder.build' @ LINE 1605
+========================================================================
+1587:                 None,
+1588:             )
+1589: 
+1590:             if image_asset is None:
+1591:                 raise RuntimeError(
+1592:                     "Scene "
+1593:                     f"{index} has no image-compatible "
+1594:                     "asset for the current renderer."
+1595:                 )
+1596: 
+1597:             render_assets.append(
+1598:                 image_asset
+1599:             )
+1600: 
+1601:         ####################################################
+1602:         # 8. Build production package
+1603:         ####################################################
+1604: 
+1605:         package = await self.package_builder.build(
+1606:             content=generated,
+1607:             scenes=storyboard,
+1608:             images=render_assets,
+1609:             trend=trend,
+1610:         )
+1611: 
+1612:         ####################################################
+1613:         # 9. Render
+1614:         ####################################################
+1615: 
+1616:         # BLOCK5_VISUAL_QA_BEGIN
+1617:         #
+1618:         # The previous Stage2B implementation could legally
+1619:         # resolve many semantic beats to the same authorized
+1620:         # fallback image. That produced a technically valid
+1621:         # 12-cut video which visually behaved like a slideshow.
+1622:         #
+1623:         # Rights authorization has already happened upstream.
+1624:         # This gate does not authorize media and does not weaken
+1625:         # any rights/evidence requirement. It only evaluates the
+1626:         # final authorized beat sequence before expensive render.
+1627: 
+1628:         def _block5_asset_identity(asset):
+1629:             if asset is None:
+1630:                 return ""
+1631: 
+1632:             for attribute in (
+1633:                 "image_path",
+1634:                 "file_path",
+1635:                 "local_path",
+1636:                 "path",
+1637:                 "source_url",
+1638:                 "asset_id",
+1639:             ):
+1640:                 value = getattr(
+1641:                     asset,
+1642:                     attribute,
+1643:                     None,
+1644:                 )
+1645: 
+1646:                 if value:
+1647:                     return str(value).strip().lower()
+1648: 
+1649:             if isinstance(asset, dict):
+1650:                 for key in (
+1651:                     "image_path",
+1652:                     "file_path",
+1653:                     "local_path",
+1654:                     "path",
+1655:                     "source_url",
+1656:                     "asset_id",
+1657:                 ):
+1658:                     value = asset.get(key)
+1659: 
+1660:                     if value:
+
+========================================================================
+MATCH: 'video = await self.renderer.render' @ LINE 1778
+========================================================================
+1760:             "distinct_assets": (
+1761:                 block5_distinct_assets
+1762:             ),
+1763:             "total_beats": (
+1764:                 len(block5_identities)
+1765:             ),
+1766:             "largest_asset_share": round(
+1767:                 block5_largest_share,
+1768:                 4,
+1769:             ),
+1770:             "max_consecutive_identical": (
+1771:                 block5_max_repeat_run
+1772:             ),
+1773:             "quality_gate": "passed",
+1774:         }
+1775: 
+1776:         # BLOCK5_VISUAL_QA_END
+1777: 
+1778:         video = await self.renderer.render(
+1779:             content=generated,
+1780:             scenes=storyboard,
+1781:             images=render_assets,
+1782:             production_package=package,
+1783:             visual_beats=visual_beat_dicts,
+1784:             beat_images=beat_render_assets,
+1785:         )
+1786: 
+1787:         ####################################################
+1788:         # 10. Return production evidence
+1789:         ####################################################
+1790: 
+1791:         return {
+1792:             "generated": generated,
+1793:             "content_validation": validation,
+1794:             "storyboard": storyboard,
+1795:             "licensed_media": [
+1796:                 [
+1797:                     {
+1798:                         "asset_id": asset.asset_id,
+1799:                         "asset_type": asset.asset_type,
+1800:                         "file_path": asset.file_path,
+1801:                         "source_url": asset.source_url,
+1802:                         "source_name": asset.source_name,
+1803:                         "creator": asset.creator,
+1804:                         "license_name": asset.license_name,
+1805:                         "license_url": asset.license_url,
+1806:                         "attribution_required": (
+1807:                             asset.attribution_required
+1808:                         ),
+1809:                         "commercial_use_allowed": (
+1810:                             asset.commercial_use_allowed
+1811:                         ),
+1812:                         "relevance_score": (
+1813:                             asset.relevance_score
+1814:                         ),
+1815:                         "content_id": asset.content_id,
+1816:                     }
+1817:                     for asset in group
+1818:                 ]
+1819:                 for group in media_groups
+1820:             ],
+1821:             "production_package": package,
+1822:             "visual_beats": visual_beat_dicts,
+1823:             "beat_media": beat_media_evidence,
+1824:             "semantic_media_metrics": {
+1825:                 "enrichment_budget": self.MAX_SEMANTIC_MEDIA_ENRICHMENTS,
+1826:                 "enrichment_attempts": semantic_enrichment_attempts,
+1827:                 "enrichment_successes": semantic_enrichment_successes,
+1828:                 "fallback_count": semantic_fallback_count,
+1829:                 "total_beats": len(visual_beats),
+1830:                 "visual_quality": block5_visual_metrics,
+1831:             },
+1832:             "video": video,
+1833:             "status": "success",
+
+################################################################################
+# RENDERER: backend\services\video_renderer\renderer.py
+################################################################################
+TOTAL_LINES: 682
+
+========================================================================
+MATCH: 'from moviepy import' @ LINE 16
+========================================================================
+1: """
+2: Video Renderer
+3: 
+4: Responsible for creating the final MP4.
+5: 
+6: MoviePy 2.x compatible.
+7: """
+8: 
+9: from pathlib import Path
+10: 
+11: from backend.services.runtime.runtime_config import RuntimeConfig
+12: from backend.services.video_renderer.moviepy_runtime import (
+13:     configure_moviepy_ffmpeg,
+14: )
+15: 
+16: from moviepy import (
+17:     AudioFileClip,
+18:     CompositeVideoClip,
+19:     ImageClip,
+20:     concatenate_videoclips,
+21: )
+22: 
+23: from backend.models.generated_content import GeneratedContent
+24: from backend.services.storyboard.scene import Scene
+25: from backend.services.image_generation.models import GeneratedImage
+26: from backend.services.video.caption_aligner import CaptionAligner
+27: from backend.services.video_renderer.subtitle_renderer import SubtitleRenderer
+28: 
+29: 
+30: class VideoRenderer:
+31: 
+32:     WIDTH = 1080
+33:     HEIGHT = 1920
+34:     FPS = 30
+35: 
+36:     def __init__(
+37:         self,
+38:         runtime_config: RuntimeConfig | None = None,
+39:     ):
+40: 
+41:         config = (
+42:             runtime_config
+43:             if runtime_config is not None
+44:             else RuntimeConfig.from_environment()
+45:         )
+46: 
+47:         self.ffmpeg_executable = (
+48:             configure_moviepy_ffmpeg(
+49:                 config.ffmpeg_executable
+50:             )
+51:         )
+52: 
+53:         self.output_dir = (
+54:             Path(config.generated_dir)
+55:             / "videos"
+56:         )
+57: 
+58:         self.output_dir.mkdir(
+59:             parents=True,
+60:             exist_ok=True,
+61:         )
+62: 
+63:         self.subtitle_renderer = (
+64:             SubtitleRenderer()
+65:         )
+66: 
+67:         self.caption_aligner = (
+68:             CaptionAligner()
+69:         )
+70: 
+71:     def _cover_image_clip(
+72:         self,
+73:         image_path: Path,
+74:         duration: float,
+75:         zoom: float = 1.0,
+76:     ):
+
+========================================================================
+MATCH: 'async def render(' @ LINE 117
+========================================================================
+99: 
+100:         target_width = max(
+101:             self.WIDTH,
+102:             int(round(source_width * scale)),
+103:         )
+104: 
+105:         target_height = max(
+106:             self.HEIGHT,
+107:             int(round(source_height * scale)),
+108:         )
+109: 
+110:         return (
+111:             clip
+112:             .resized((target_width, target_height))
+113:             .with_duration(max(0.05, float(duration)))
+114:             .with_position(("center", "center"))
+115:         )
+116: 
+117:     async def render(
+118:         self,
+119:         content: GeneratedContent,
+120:         scenes: list[Scene],
+121:         images: list[GeneratedImage],
+122:         production_package: dict,
+123:         visual_beats: list[dict] | None = None,
+124:         beat_images: list[GeneratedImage] | None = None,
+125:     ) -> dict:
+126: 
+127:         if not scenes:
+128:             raise RuntimeError(
+129:                 "Storyboard contains no scenes."
+130:             )
+131: 
+132:         if not images:
+133:             raise RuntimeError(
+134:                 "Renderer received no authorized images."
+135:             )
+136: 
+137:         if len(images) != len(scenes):
+138:             raise RuntimeError(
+139:                 "Image/storyboard mismatch."
+140:             )
+141: 
+142:         # Stage 2A deliberately keeps the existing rights-safe
+143:         # one-authorized-image-per-story-stage acquisition rule.
+144:         # The renderer creates a denser editorial timeline from
+145:         # those authorized assets without requesting unverified
+146:         # media.
+147: 
+148:         voice = production_package["voice"]
+149: 
+150:         audio_path = Path(
+151:             voice["audio_path"]
+152:         )
+153: 
+154:         if not audio_path.exists():
+155:             raise FileNotFoundError(
+156:                 f"Audio not found: {audio_path}"
+157:             )
+158: 
+159:         audio = AudioFileClip(
+160:             str(audio_path)
+161:         )
+162: 
+163:         audio_duration = audio.duration
+164: 
+165:         if audio_duration <= 0:
+166:             audio.close()
+167: 
+168:             raise RuntimeError(
+169:                 "Narration has invalid duration."
+170:             )
+171: 
+172:         image_clips = []
+173:         subtitle_clips = []
+174: 
+175:         base_video = None
+176:         final_video = None
+177: 
+
+========================================================================
+MATCH: 'beat_images:' @ LINE 124
+========================================================================
+106:             self.HEIGHT,
+107:             int(round(source_height * scale)),
+108:         )
+109: 
+110:         return (
+111:             clip
+112:             .resized((target_width, target_height))
+113:             .with_duration(max(0.05, float(duration)))
+114:             .with_position(("center", "center"))
+115:         )
+116: 
+117:     async def render(
+118:         self,
+119:         content: GeneratedContent,
+120:         scenes: list[Scene],
+121:         images: list[GeneratedImage],
+122:         production_package: dict,
+123:         visual_beats: list[dict] | None = None,
+124:         beat_images: list[GeneratedImage] | None = None,
+125:     ) -> dict:
+126: 
+127:         if not scenes:
+128:             raise RuntimeError(
+129:                 "Storyboard contains no scenes."
+130:             )
+131: 
+132:         if not images:
+133:             raise RuntimeError(
+134:                 "Renderer received no authorized images."
+135:             )
+136: 
+137:         if len(images) != len(scenes):
+138:             raise RuntimeError(
+139:                 "Image/storyboard mismatch."
+140:             )
+141: 
+142:         # Stage 2A deliberately keeps the existing rights-safe
+143:         # one-authorized-image-per-story-stage acquisition rule.
+144:         # The renderer creates a denser editorial timeline from
+145:         # those authorized assets without requesting unverified
+146:         # media.
+147: 
+148:         voice = production_package["voice"]
+149: 
+150:         audio_path = Path(
+151:             voice["audio_path"]
+152:         )
+153: 
+154:         if not audio_path.exists():
+155:             raise FileNotFoundError(
+156:                 f"Audio not found: {audio_path}"
+157:             )
+158: 
+159:         audio = AudioFileClip(
+160:             str(audio_path)
+161:         )
+162: 
+163:         audio_duration = audio.duration
+164: 
+165:         if audio_duration <= 0:
+166:             audio.close()
+167: 
+168:             raise RuntimeError(
+169:                 "Narration has invalid duration."
+170:             )
+171: 
+172:         image_clips = []
+173:         subtitle_clips = []
+174: 
+175:         base_video = None
+176:         final_video = None
+177: 
+178:         caption_mode = "whisper"
+179: 
+180:         try:
+181: 
+182:             ##################################################
+183:             # Build synchronized image clips
+184:             ##################################################
+
+========================================================================
+MATCH: 'use_semantic_beats' @ LINE 195
+========================================================================
+177: 
+178:         caption_mode = "whisper"
+179: 
+180:         try:
+181: 
+182:             ##################################################
+183:             # Build synchronized image clips
+184:             ##################################################
+185: 
+186:             # Stage 2B semantic editorial timeline.
+187:             #
+188:             # Preferred path:
+189:             # one visual clip per semantic micro-beat.
+190:             #
+191:             # Fallback path:
+192:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+193:             # already-authorized story-stage images.
+194: 
+195:             use_semantic_beats = bool(
+196:                 visual_beats
+197:                 and beat_images
+198:                 and len(visual_beats)
+199:                 == len(beat_images)
+200:             )
+201: 
+202:             if use_semantic_beats:
+203: 
+204:                 # BLOCK5_RENDERER_QA_BEGIN
+205:                 #
+206:                 # Independent last-line defense. Even if a future
+207:                 # pipeline refactor bypasses the upstream gate,
+208:                 # Stage2B will not render a sequence dominated by
+209:                 # repeated physical images.
+210: 
+211:                 block5_paths = [
+212:                     str(
+213:                         Path(image.image_path)
+214:                         .resolve()
+215:                     ).lower()
+216:                     for image in beat_images
+217:                 ]
+218: 
+219:                 block5_path_counts = {}
+220: 
+221:                 for block5_path in block5_paths:
+222:                     block5_path_counts[
+223:                         block5_path
+224:                     ] = (
+225:                         block5_path_counts.get(
+226:                             block5_path,
+227:                             0,
+228:                         )
+229:                         + 1
+230:                     )
+231: 
+232:                 block5_renderer_distinct = len(
+233:                     block5_path_counts
+234:                 )
+235: 
+236:                 block5_renderer_run = 1
+237:                 block5_renderer_max_run = 1
+238: 
+239:                 for block5_index in range(
+240:                     1,
+241:                     len(block5_paths),
+242:                 ):
+243:                     if (
+244:                         block5_paths[block5_index]
+245:                         == block5_paths[
+246:                             block5_index - 1
+247:                         ]
+248:                     ):
+249:                         block5_renderer_run += 1
+250:                         block5_renderer_max_run = max(
+251:                             block5_renderer_max_run,
+252:                             block5_renderer_run,
+253:                         )
+254:                     else:
+255:                         block5_renderer_run = 1
+
+========================================================================
+MATCH: 'use_semantic_beats' @ LINE 202
+========================================================================
+184:             ##################################################
+185: 
+186:             # Stage 2B semantic editorial timeline.
+187:             #
+188:             # Preferred path:
+189:             # one visual clip per semantic micro-beat.
+190:             #
+191:             # Fallback path:
+192:             # Stage 2A 4/3/3/2 editorial rhythm using the four
+193:             # already-authorized story-stage images.
+194: 
+195:             use_semantic_beats = bool(
+196:                 visual_beats
+197:                 and beat_images
+198:                 and len(visual_beats)
+199:                 == len(beat_images)
+200:             )
+201: 
+202:             if use_semantic_beats:
+203: 
+204:                 # BLOCK5_RENDERER_QA_BEGIN
+205:                 #
+206:                 # Independent last-line defense. Even if a future
+207:                 # pipeline refactor bypasses the upstream gate,
+208:                 # Stage2B will not render a sequence dominated by
+209:                 # repeated physical images.
+210: 
+211:                 block5_paths = [
+212:                     str(
+213:                         Path(image.image_path)
+214:                         .resolve()
+215:                     ).lower()
+216:                     for image in beat_images
+217:                 ]
+218: 
+219:                 block5_path_counts = {}
+220: 
+221:                 for block5_path in block5_paths:
+222:                     block5_path_counts[
+223:                         block5_path
+224:                     ] = (
+225:                         block5_path_counts.get(
+226:                             block5_path,
+227:                             0,
+228:                         )
+229:                         + 1
+230:                     )
+231: 
+232:                 block5_renderer_distinct = len(
+233:                     block5_path_counts
+234:                 )
+235: 
+236:                 block5_renderer_run = 1
+237:                 block5_renderer_max_run = 1
+238: 
+239:                 for block5_index in range(
+240:                     1,
+241:                     len(block5_paths),
+242:                 ):
+243:                     if (
+244:                         block5_paths[block5_index]
+245:                         == block5_paths[
+246:                             block5_index - 1
+247:                         ]
+248:                     ):
+249:                         block5_renderer_run += 1
+250:                         block5_renderer_max_run = max(
+251:                             block5_renderer_max_run,
+252:                             block5_renderer_run,
+253:                         )
+254:                     else:
+255:                         block5_renderer_run = 1
+256: 
+257:                 block5_renderer_share = (
+258:                     max(
+259:                         block5_path_counts.values()
+260:                     )
+261:                     / len(block5_paths)
+262:                 )
+
+========================================================================
+MATCH: 'use_semantic_beats' @ LINE 653
+========================================================================
+635:             for clip in image_clips:
+636:                 clip.close()
+637: 
+638:             audio.close()
+639: 
+640:         return {
+641:             "status": "success",
+642:             "video_path": str(output),
+643:             "title": content.title,
+644:             "duration": audio_duration,
+645:             "resolution": (
+646:                 f"{self.WIDTH}x{self.HEIGHT}"
+647:             ),
+648:             "fps": self.FPS,
+649:             "captions": True,
+650:             "caption_mode": caption_mode,
+651:             "visual_engine": (
+652:                 "stage2b_semantic_microbeat"
+653:                 if use_semantic_beats
+654:                 else "stage2a_microshot_fallback"
+655:             ),
+656:             "visual_cut_count": len(image_clips),
+657:             "story_stage_count": len(scenes),
+658:             "average_visual_cut_seconds": round(
+659:                 audio_duration / max(1, len(image_clips)),
+660:                 3,
+661:             ),
+662:             "hook_visual_strategy": (
+663:                 "accelerated_first_three_beats"
+664:                 if use_semantic_beats
+665:                 else "stage2a_fallback"
+666:             ),
+667:             "semantic_beat_count": (
+668:                 len(visual_beats)
+669:                 if visual_beats
+670:                 else 0
+671:             ),
+672:             "semantic_media_enabled": (
+673:                 use_semantic_beats
+674:             ),
+675:             "editorial_pacing": (
+676:                 "hook_biased_dynamic"
+677:                 if use_semantic_beats
+678:                 else "stage2a_fallback"
+679:             ),
+680:             "caption_phrase_target_words": 3,
+681:             "visual_framing": "aspect_preserving_cover",
+682:         }
+
+========================================================================
+MATCH: 'use_semantic_beats' @ LINE 664
+========================================================================
+646:                 f"{self.WIDTH}x{self.HEIGHT}"
+647:             ),
+648:             "fps": self.FPS,
+649:             "captions": True,
+650:             "caption_mode": caption_mode,
+651:             "visual_engine": (
+652:                 "stage2b_semantic_microbeat"
+653:                 if use_semantic_beats
+654:                 else "stage2a_microshot_fallback"
+655:             ),
+656:             "visual_cut_count": len(image_clips),
+657:             "story_stage_count": len(scenes),
+658:             "average_visual_cut_seconds": round(
+659:                 audio_duration / max(1, len(image_clips)),
+660:                 3,
+661:             ),
+662:             "hook_visual_strategy": (
+663:                 "accelerated_first_three_beats"
+664:                 if use_semantic_beats
+665:                 else "stage2a_fallback"
+666:             ),
+667:             "semantic_beat_count": (
+668:                 len(visual_beats)
+669:                 if visual_beats
+670:                 else 0
+671:             ),
+672:             "semantic_media_enabled": (
+673:                 use_semantic_beats
+674:             ),
+675:             "editorial_pacing": (
+676:                 "hook_biased_dynamic"
+677:                 if use_semantic_beats
+678:                 else "stage2a_fallback"
+679:             ),
+680:             "caption_phrase_target_words": 3,
+681:             "visual_framing": "aspect_preserving_cover",
+682:         }
+
+========================================================================
+MATCH: 'use_semantic_beats' @ LINE 673
+========================================================================
+655:             ),
+656:             "visual_cut_count": len(image_clips),
+657:             "story_stage_count": len(scenes),
+658:             "average_visual_cut_seconds": round(
+659:                 audio_duration / max(1, len(image_clips)),
+660:                 3,
+661:             ),
+662:             "hook_visual_strategy": (
+663:                 "accelerated_first_three_beats"
+664:                 if use_semantic_beats
+665:                 else "stage2a_fallback"
+666:             ),
+667:             "semantic_beat_count": (
+668:                 len(visual_beats)
+669:                 if visual_beats
+670:                 else 0
+671:             ),
+672:             "semantic_media_enabled": (
+673:                 use_semantic_beats
+674:             ),
+675:             "editorial_pacing": (
+676:                 "hook_biased_dynamic"
+677:                 if use_semantic_beats
+678:                 else "stage2a_fallback"
+679:             ),
+680:             "caption_phrase_target_words": 3,
+681:             "visual_framing": "aspect_preserving_cover",
+682:         }
+
+========================================================================
+MATCH: 'use_semantic_beats' @ LINE 677
+========================================================================
+659:                 audio_duration / max(1, len(image_clips)),
+660:                 3,
+661:             ),
+662:             "hook_visual_strategy": (
+663:                 "accelerated_first_three_beats"
+664:                 if use_semantic_beats
+665:                 else "stage2a_fallback"
+666:             ),
+667:             "semantic_beat_count": (
+668:                 len(visual_beats)
+669:                 if visual_beats
+670:                 else 0
+671:             ),
+672:             "semantic_media_enabled": (
+673:                 use_semantic_beats
+674:             ),
+675:             "editorial_pacing": (
+676:                 "hook_biased_dynamic"
+677:                 if use_semantic_beats
+678:                 else "stage2a_fallback"
+679:             ),
+680:             "caption_phrase_target_words": 3,
+681:             "visual_framing": "aspect_preserving_cover",
+682:         }
+
+========================================================================
+MATCH: 'for beat_index' @ LINE 366
+========================================================================
+348: 
+349:                 if raw_total <= 0:
+350:                     raw_total = float(
+351:                         len(raw_durations)
+352:                     )
+353: 
+354:                     raw_durations = [
+355:                         1.0
+356:                         for _ in raw_durations
+357:                     ]
+358: 
+359:                 scaled_durations = [
+360:                     audio_duration
+361:                     * duration
+362:                     / raw_total
+363:                     for duration in raw_durations
+364:                 ]
+365: 
+366:                 for beat_index, (
+367:                     beat,
+368:                     image,
+369:                     cut_duration,
+370:                 ) in enumerate(
+371:                     zip(
+372:                         visual_beats,
+373:                         beat_images,
+374:                         scaled_durations,
+375:                     ),
+376:                     start=1,
+377:                 ):
+378: 
+379:                     image_path = Path(
+380:                         image.image_path
+381:                     )
+382: 
+383:                     if not image_path.exists():
+384:                         raise FileNotFoundError(
+385:                             "Beat image not found: "
+386:                             f"{image_path}"
+387:                         )
+388: 
+389:                     # Controlled alternating reframes keep static
+390:                     # licensed imagery alive without fabricating
+391:                     # content or modifying its meaning.
+392:                     # Restrained motion pattern:
+393:                     # enough movement to prevent slideshow feel
+394:                     # without turning every shot into an effect.
+395:                     zoom_pattern = (
+396:                         1.00,
+397:                         1.025,
+398:                         1.050,
+399:                         1.015,
+400:                         1.040,
+401:                     )
+402: 
+403:                     zoom = zoom_pattern[
+404:                         (beat_index - 1)
+405:                         % len(zoom_pattern)
+406:                     ]
+407: 
+408:                     clip = self._cover_image_clip(
+409:                         image_path=image_path,
+410:                         duration=cut_duration,
+411:                         zoom=zoom,
+412:                     )
+413: 
+414:                     image_clips.append(
+415:                         clip
+416:                     )
+417: 
+418:             else:
+419: 
+420:                 # Stage 2A fallback.
+421:                 cut_allocation = {
+422:                     1: 4,
+423:                     2: 3,
+424:                     3: 3,
+425:                     4: 2,
+426:                 }
+
+========================================================================
+MATCH: 'ImageClip(' @ LINE 83
+========================================================================
+65:         )
+66: 
+67:         self.caption_aligner = (
+68:             CaptionAligner()
+69:         )
+70: 
+71:     def _cover_image_clip(
+72:         self,
+73:         image_path: Path,
+74:         duration: float,
+75:         zoom: float = 1.0,
+76:     ):
+77:         """
+78:         Preserve source aspect ratio while filling the
+79:         vertical frame. Overscan is centered instead of
+80:         stretching the source image.
+81:         """
+82: 
+83:         clip = ImageClip(str(image_path))
+84: 
+85:         source_width, source_height = clip.size
+86: 
+87:         if source_width <= 0 or source_height <= 0:
+88:             clip.close()
+89:             raise RuntimeError(
+90:                 "Invalid source image dimensions."
+91:             )
+92: 
+93:         cover_scale = max(
+94:             self.WIDTH / float(source_width),
+95:             self.HEIGHT / float(source_height),
+96:         )
+97: 
+98:         scale = cover_scale * max(1.0, float(zoom))
+99: 
+100:         target_width = max(
+101:             self.WIDTH,
+102:             int(round(source_width * scale)),
+103:         )
+104: 
+105:         target_height = max(
+106:             self.HEIGHT,
+107:             int(round(source_height * scale)),
+108:         )
+109: 
+110:         return (
+111:             clip
+112:             .resized((target_width, target_height))
+113:             .with_duration(max(0.05, float(duration)))
+114:             .with_position(("center", "center"))
+115:         )
+116: 
+117:     async def render(
+118:         self,
+119:         content: GeneratedContent,
+120:         scenes: list[Scene],
+121:         images: list[GeneratedImage],
+122:         production_package: dict,
+123:         visual_beats: list[dict] | None = None,
+124:         beat_images: list[GeneratedImage] | None = None,
+125:     ) -> dict:
+126: 
+127:         if not scenes:
+128:             raise RuntimeError(
+129:                 "Storyboard contains no scenes."
+130:             )
+131: 
+132:         if not images:
+133:             raise RuntimeError(
+134:                 "Renderer received no authorized images."
+135:             )
+136: 
+137:         if len(images) != len(scenes):
+138:             raise RuntimeError(
+139:                 "Image/storyboard mismatch."
+140:             )
+141: 
+142:         # Stage 2A deliberately keeps the existing rights-safe
+143:         # one-authorized-image-per-story-stage acquisition rule.
+
+========================================================================
+MATCH: 'image_clips.append' @ LINE 414
+========================================================================
+396:                         1.00,
+397:                         1.025,
+398:                         1.050,
+399:                         1.015,
+400:                         1.040,
+401:                     )
+402: 
+403:                     zoom = zoom_pattern[
+404:                         (beat_index - 1)
+405:                         % len(zoom_pattern)
+406:                     ]
+407: 
+408:                     clip = self._cover_image_clip(
+409:                         image_path=image_path,
+410:                         duration=cut_duration,
+411:                         zoom=zoom,
+412:                     )
+413: 
+414:                     image_clips.append(
+415:                         clip
+416:                     )
+417: 
+418:             else:
+419: 
+420:                 # Stage 2A fallback.
+421:                 cut_allocation = {
+422:                     1: 4,
+423:                     2: 3,
+424:                     3: 3,
+425:                     4: 2,
+426:                 }
+427: 
+428:                 total_scene_duration = sum(
+429:                     max(
+430:                         float(scene.duration),
+431:                         0.01,
+432:                     )
+433:                     for scene in scenes
+434:                 )
+435: 
+436:                 for scene_index, (
+437:                     scene,
+438:                     image,
+439:                 ) in enumerate(
+440:                     zip(
+441:                         scenes,
+442:                         images,
+443:                     ),
+444:                     start=1,
+445:                 ):
+446: 
+447:                     image_path = Path(
+448:                         image.image_path
+449:                     )
+450: 
+451:                     if not image_path.exists():
+452:                         raise FileNotFoundError(
+453:                             f"Image not found: {image_path}"
+454:                         )
+455: 
+456:                     cuts = cut_allocation.get(
+457:                         scene_index,
+458:                         2,
+459:                     )
+460: 
+461:                     scene_share = (
+462:                         max(
+463:                             float(scene.duration),
+464:                             0.01,
+465:                         )
+466:                         / total_scene_duration
+467:                     )
+468: 
+469:                     stage_duration = (
+470:                         audio_duration
+471:                         * scene_share
+472:                     )
+473: 
+474:                     cut_duration = (
+
+========================================================================
+MATCH: 'image_clips.append' @ LINE 497
+========================================================================
+479:                     for local_cut in range(cuts):
+480: 
+481:                         zoom = (
+482:                             1.00
+483:                             if local_cut % 3 == 0
+484:                             else (
+485:                                 1.035
+486:                                 if local_cut % 3 == 1
+487:                                 else 1.065
+488:                             )
+489:                         )
+490: 
+491:                         clip = self._cover_image_clip(
+492:                             image_path=image_path,
+493:                             duration=cut_duration,
+494:                             zoom=zoom,
+495:                         )
+496: 
+497:                         image_clips.append(
+498:                             clip
+499:                         )
+500: 
+501:             ##################################################
+502:             # Combine micro-shot editorial timeline
+503:             ##################################################
+504: 
+505:             base_video = concatenate_videoclips(
+506:                 image_clips,
+507:                 method="compose",
+508:             )
+509: 
+510:             ##################################################
+511:             # Build speech-aligned subtitles
+512:             ##################################################
+513: 
+514:             try:
+515: 
+516:                 phrases = (
+517:                     await self.caption_aligner
+518:                     .align_phrases(
+519:                         str(audio_path)
+520:                     )
+521:                 )
+522: 
+523:                 for phrase in phrases:
+524: 
+525:                     subtitle = (
+526:                         self.subtitle_renderer
+527:                         .create_clip(
+528:                             text=phrase["text"],
+529:                             start_time=phrase[
+530:                                 "start_time"
+531:                             ],
+532:                             end_time=phrase[
+533:                                 "end_time"
+534:                             ],
+535:                         )
+536:                     )
+537: 
+538:                     subtitle_clips.append(
+539:                         subtitle
+540:                     )
+541: 
+542:             except Exception as exc:
+543: 
+544:                 caption_mode = "fallback"
+545: 
+546:                 print(
+547:                     "Whisper caption alignment "
+548:                     "failed. Using fallback "
+549:                     "captions."
+550:                 )
+551: 
+552:                 print(
+553:                     f"Alignment error: {exc}"
+554:                 )
+555: 
+556:                 ##################################################
+557:                 # Fallback proportional captions
+
+========================================================================
+MATCH: '_cover_image_clip' @ LINE 71
+========================================================================
+53:         self.output_dir = (
+54:             Path(config.generated_dir)
+55:             / "videos"
+56:         )
+57: 
+58:         self.output_dir.mkdir(
+59:             parents=True,
+60:             exist_ok=True,
+61:         )
+62: 
+63:         self.subtitle_renderer = (
+64:             SubtitleRenderer()
+65:         )
+66: 
+67:         self.caption_aligner = (
+68:             CaptionAligner()
+69:         )
+70: 
+71:     def _cover_image_clip(
+72:         self,
+73:         image_path: Path,
+74:         duration: float,
+75:         zoom: float = 1.0,
+76:     ):
+77:         """
+78:         Preserve source aspect ratio while filling the
+79:         vertical frame. Overscan is centered instead of
+80:         stretching the source image.
+81:         """
+82: 
+83:         clip = ImageClip(str(image_path))
+84: 
+85:         source_width, source_height = clip.size
+86: 
+87:         if source_width <= 0 or source_height <= 0:
+88:             clip.close()
+89:             raise RuntimeError(
+90:                 "Invalid source image dimensions."
+91:             )
+92: 
+93:         cover_scale = max(
+94:             self.WIDTH / float(source_width),
+95:             self.HEIGHT / float(source_height),
+96:         )
+97: 
+98:         scale = cover_scale * max(1.0, float(zoom))
+99: 
+100:         target_width = max(
+101:             self.WIDTH,
+102:             int(round(source_width * scale)),
+103:         )
+104: 
+105:         target_height = max(
+106:             self.HEIGHT,
+107:             int(round(source_height * scale)),
+108:         )
+109: 
+110:         return (
+111:             clip
+112:             .resized((target_width, target_height))
+113:             .with_duration(max(0.05, float(duration)))
+114:             .with_position(("center", "center"))
+115:         )
+116: 
+117:     async def render(
+118:         self,
+119:         content: GeneratedContent,
+120:         scenes: list[Scene],
+121:         images: list[GeneratedImage],
+122:         production_package: dict,
+123:         visual_beats: list[dict] | None = None,
+124:         beat_images: list[GeneratedImage] | None = None,
+125:     ) -> dict:
+126: 
+127:         if not scenes:
+128:             raise RuntimeError(
+129:                 "Storyboard contains no scenes."
+130:             )
+131: 
+
+========================================================================
+MATCH: '_cover_image_clip' @ LINE 408
+========================================================================
+390:                     # licensed imagery alive without fabricating
+391:                     # content or modifying its meaning.
+392:                     # Restrained motion pattern:
+393:                     # enough movement to prevent slideshow feel
+394:                     # without turning every shot into an effect.
+395:                     zoom_pattern = (
+396:                         1.00,
+397:                         1.025,
+398:                         1.050,
+399:                         1.015,
+400:                         1.040,
+401:                     )
+402: 
+403:                     zoom = zoom_pattern[
+404:                         (beat_index - 1)
+405:                         % len(zoom_pattern)
+406:                     ]
+407: 
+408:                     clip = self._cover_image_clip(
+409:                         image_path=image_path,
+410:                         duration=cut_duration,
+411:                         zoom=zoom,
+412:                     )
+413: 
+414:                     image_clips.append(
+415:                         clip
+416:                     )
+417: 
+418:             else:
+419: 
+420:                 # Stage 2A fallback.
+421:                 cut_allocation = {
+422:                     1: 4,
+423:                     2: 3,
+424:                     3: 3,
+425:                     4: 2,
+426:                 }
+427: 
+428:                 total_scene_duration = sum(
+429:                     max(
+430:                         float(scene.duration),
+431:                         0.01,
+432:                     )
+433:                     for scene in scenes
+434:                 )
+435: 
+436:                 for scene_index, (
+437:                     scene,
+438:                     image,
+439:                 ) in enumerate(
+440:                     zip(
+441:                         scenes,
+442:                         images,
+443:                     ),
+444:                     start=1,
+445:                 ):
+446: 
+447:                     image_path = Path(
+448:                         image.image_path
+449:                     )
+450: 
+451:                     if not image_path.exists():
+452:                         raise FileNotFoundError(
+453:                             f"Image not found: {image_path}"
+454:                         )
+455: 
+456:                     cuts = cut_allocation.get(
+457:                         scene_index,
+458:                         2,
+459:                     )
+460: 
+461:                     scene_share = (
+462:                         max(
+463:                             float(scene.duration),
+464:                             0.01,
+465:                         )
+466:                         / total_scene_duration
+467:                     )
+468: 
+
+========================================================================
+MATCH: '_cover_image_clip' @ LINE 491
+========================================================================
+473: 
+474:                     cut_duration = (
+475:                         stage_duration
+476:                         / cuts
+477:                     )
+478: 
+479:                     for local_cut in range(cuts):
+480: 
+481:                         zoom = (
+482:                             1.00
+483:                             if local_cut % 3 == 0
+484:                             else (
+485:                                 1.035
+486:                                 if local_cut % 3 == 1
+487:                                 else 1.065
+488:                             )
+489:                         )
+490: 
+491:                         clip = self._cover_image_clip(
+492:                             image_path=image_path,
+493:                             duration=cut_duration,
+494:                             zoom=zoom,
+495:                         )
+496: 
+497:                         image_clips.append(
+498:                             clip
+499:                         )
+500: 
+501:             ##################################################
+502:             # Combine micro-shot editorial timeline
+503:             ##################################################
+504: 
+505:             base_video = concatenate_videoclips(
+506:                 image_clips,
+507:                 method="compose",
+508:             )
+509: 
+510:             ##################################################
+511:             # Build speech-aligned subtitles
+512:             ##################################################
+513: 
+514:             try:
+515: 
+516:                 phrases = (
+517:                     await self.caption_aligner
+518:                     .align_phrases(
+519:                         str(audio_path)
+520:                     )
+521:                 )
+522: 
+523:                 for phrase in phrases:
+524: 
+525:                     subtitle = (
+526:                         self.subtitle_renderer
+527:                         .create_clip(
+528:                             text=phrase["text"],
+529:                             start_time=phrase[
+530:                                 "start_time"
+531:                             ],
+532:                             end_time=phrase[
+533:                                 "end_time"
+534:                             ],
+535:                         )
+536:                     )
+537: 
+538:                     subtitle_clips.append(
+539:                         subtitle
+540:                     )
+541: 
+542:             except Exception as exc:
+543: 
+544:                 caption_mode = "fallback"
+545: 
+546:                 print(
+547:                     "Whisper caption alignment "
+548:                     "failed. Using fallback "
+549:                     "captions."
+550:                 )
+551: 
+
+========================================================================
+MATCH: 'finally:' @ LINE 624
+========================================================================
+606: 
+607:             output = (
+608:                 self.output_dir
+609:                 / f"{safe_name}.mp4"
+610:             )
+611: 
+612:             ##################################################
+613:             # Render
+614:             ##################################################
+615: 
+616:             final_video.write_videofile(
+617:                 str(output),
+618:                 fps=self.FPS,
+619:                 codec="libx264",
+620:                 audio_codec="aac",
+621:                 logger=None,
+622:             )
+623: 
+624:         finally:
+625: 
+626:             if final_video is not None:
+627:                 final_video.close()
+628: 
+629:             if base_video is not None:
+630:                 base_video.close()
+631: 
+632:             for subtitle in subtitle_clips:
+633:                 subtitle.close()
+634: 
+635:             for clip in image_clips:
+636:                 clip.close()
+637: 
+638:             audio.close()
+639: 
+640:         return {
+641:             "status": "success",
+642:             "video_path": str(output),
+643:             "title": content.title,
+644:             "duration": audio_duration,
+645:             "resolution": (
+646:                 f"{self.WIDTH}x{self.HEIGHT}"
+647:             ),
+648:             "fps": self.FPS,
+649:             "captions": True,
+650:             "caption_mode": caption_mode,
+651:             "visual_engine": (
+652:                 "stage2b_semantic_microbeat"
+653:                 if use_semantic_beats
+654:                 else "stage2a_microshot_fallback"
+655:             ),
+656:             "visual_cut_count": len(image_clips),
+657:             "story_stage_count": len(scenes),
+658:             "average_visual_cut_seconds": round(
+659:                 audio_duration / max(1, len(image_clips)),
+660:                 3,
+661:             ),
+662:             "hook_visual_strategy": (
+663:                 "accelerated_first_three_beats"
+664:                 if use_semantic_beats
+665:                 else "stage2a_fallback"
+666:             ),
+667:             "semantic_beat_count": (
+668:                 len(visual_beats)
+669:                 if visual_beats
+670:                 else 0
+671:             ),
+672:             "semantic_media_enabled": (
+673:                 use_semantic_beats
+674:             ),
+675:             "editorial_pacing": (
+676:                 "hook_biased_dynamic"
+677:                 if use_semantic_beats
+678:                 else "stage2a_fallback"
+679:             ),
+680:             "caption_phrase_target_words": 3,
+681:             "visual_framing": "aspect_preserving_cover",
+682:         }
+
+========================================================================
+MATCH: 'for clip in image_clips' @ LINE 635
+========================================================================
+617:                 str(output),
+618:                 fps=self.FPS,
+619:                 codec="libx264",
+620:                 audio_codec="aac",
+621:                 logger=None,
+622:             )
+623: 
+624:         finally:
+625: 
+626:             if final_video is not None:
+627:                 final_video.close()
+628: 
+629:             if base_video is not None:
+630:                 base_video.close()
+631: 
+632:             for subtitle in subtitle_clips:
+633:                 subtitle.close()
+634: 
+635:             for clip in image_clips:
+636:                 clip.close()
+637: 
+638:             audio.close()
+639: 
+640:         return {
+641:             "status": "success",
+642:             "video_path": str(output),
+643:             "title": content.title,
+644:             "duration": audio_duration,
+645:             "resolution": (
+646:                 f"{self.WIDTH}x{self.HEIGHT}"
+647:             ),
+648:             "fps": self.FPS,
+649:             "captions": True,
+650:             "caption_mode": caption_mode,
+651:             "visual_engine": (
+652:                 "stage2b_semantic_microbeat"
+653:                 if use_semantic_beats
+654:                 else "stage2a_microshot_fallback"
+655:             ),
+656:             "visual_cut_count": len(image_clips),
+657:             "story_stage_count": len(scenes),
+658:             "average_visual_cut_seconds": round(
+659:                 audio_duration / max(1, len(image_clips)),
+660:                 3,
+661:             ),
+662:             "hook_visual_strategy": (
+663:                 "accelerated_first_three_beats"
+664:                 if use_semantic_beats
+665:                 else "stage2a_fallback"
+666:             ),
+667:             "semantic_beat_count": (
+668:                 len(visual_beats)
+669:                 if visual_beats
+670:                 else 0
+671:             ),
+672:             "semantic_media_enabled": (
+673:                 use_semantic_beats
+674:             ),
+675:             "editorial_pacing": (
+676:                 "hook_biased_dynamic"
+677:                 if use_semantic_beats
+678:                 else "stage2a_fallback"
+679:             ),
+680:             "caption_phrase_target_words": 3,
+681:             "visual_framing": "aspect_preserving_cover",
+682:         }
+
+================================================================================
+IMPORT TESTS
+================================================================================
+SourceClipIndexer import: PASS
+VideoRenderer import: PASS
+
+DIAGNOSTIC COMPLETE

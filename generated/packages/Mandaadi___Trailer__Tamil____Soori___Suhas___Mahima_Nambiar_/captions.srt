@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:13,711
+Mandaadi - Trailer (Tamil) | Soori | Suhas | Mahima Nambiar | GV Prakash | Mathimaran Pugazhendhi is getting attention, and the technology behind it is developing quickly as creators experiment with increasingly automated production tools.
+
+2
+00:00:13,711 --> 00:00:23,104
+Current AI video systems are improving image quality and motion consistency while helping creators turn ideas and scripts into visual content more efficiently.
+
+3
+00:00:23,104 --> 00:00:31,765
+AI tools can also assist with narration, captions, editing, and other production steps, bringing more of the video workflow into a connected automated process.
+
+4
+00:00:31,765 --> 00:00:41,215
+These improvements show how quickly AI-assisted video production is changing, although results still depend on the tools and material being used. What do you think?

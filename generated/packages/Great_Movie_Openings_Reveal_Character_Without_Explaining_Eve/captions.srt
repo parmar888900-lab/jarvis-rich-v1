@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:04,191
+Great movie openings grab you with visuals, hinting at who the characters are, not spelling it out.
+
+2
+00:00:04,191 --> 00:00:14,721
+In 'The Godfather,' a simple shot of Tom Hagen's back introduces his loyalty and the family's secrets. Filmmaking, or film production, is the process of creating a motion picture.
+
+3
+00:00:14,721 --> 00:00:20,782
+Subtle camera angles and lighting in 'Pulp Fiction' reveal the dark and unpredictable nature of characters.
+
+4
+00:00:20,782 --> 00:00:25,368
+These techniques engage viewers, making them piece together the story, deepening their connection to the film.

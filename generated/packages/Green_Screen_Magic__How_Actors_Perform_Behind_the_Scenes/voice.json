@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Green_Screen_Magic__How_Actors_Perform_Behind_the_Scenes\\Green_Screen_Magic__How_Actors_Perform_Behind_the_Scenes.wav",
+    "duration": 27.30666666666667,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Behind_the_Scenes_scene_001.wav",
+            "duration": 6.733786848072563,
+            "start_time": 0.0,
+            "end_time": 6.733786848072563,
+            "narration": "Imagine an actor performing a scene with a completely green background\u2014soon, they'll be standing in front of a breathtaking landscape."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Behind_the_Scenes_scene_002.wav",
+            "duration": 6.757006802721088,
+            "start_time": 6.733786848072563,
+            "end_time": 13.490793650793652,
+            "narration": "Chroma key technology makes the green disappear, replacing it with any setting you can imagine, from a dense forest to a bustling city."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Behind_the_Scenes_scene_003.wav",
+            "duration": 7.024036281179138,
+            "start_time": 13.490793650793652,
+            "end_time": 20.51482993197279,
+            "narration": "This technique is widely used in weather broadcasts, movies, and video games, seamlessly blending actors into any backdrop without practical effects."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Behind_the_Scenes_scene_004.wav",
+            "duration": 6.791836734693877,
+            "start_time": 20.51482993197279,
+            "end_time": 27.30666666666667,
+            "narration": "From live broadcasts to blockbuster films, green screens transform simple setups into cinematic wonders, thanks to chroma keying."
+        }
+    ],
+    "script": "Imagine an actor performing a scene with a completely green background\u2014soon, they'll be standing in front of a breathtaking landscape.\nChroma key technology makes the green disappear, replacing it with any setting you can imagine, from a dense forest to a bustling city.\nThis technique is widely used in weather broadcasts, movies, and video games, seamlessly blending actors into any backdrop without practical effects.\nFrom live broadcasts to blockbuster films, green screens transform simple setups into cinematic wonders, thanks to chroma keying."
+}

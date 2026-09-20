@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Inception_s_Mind_Bending_Visuals_Make_Complex_Ideas_Accessib\\Inception_s_Mind_Bending_Visuals_Make_Complex_Ideas_Accessib.wav",
+    "duration": 29.361632653061225,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Inception_s_Mind_Bending_Visuals_Make_Complex_Ideas_Accessib_scene_001.wav",
+            "duration": 6.002358276643991,
+            "start_time": 0.0,
+            "end_time": 6.002358276643991,
+            "narration": "Inception's dream levels twist reality into a surreal maze, making complex subconscious concepts tangible."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Inception_s_Mind_Bending_Visuals_Make_Complex_Ideas_Accessib_scene_002.wav",
+            "duration": 8.266303854875284,
+            "start_time": 6.002358276643991,
+            "end_time": 14.268662131519275,
+            "narration": "Using meticulously crafted set pieces and innovative visual techniques, Nolan translates abstract ideas into visceral, interactive experiences."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Inception_s_Mind_Bending_Visuals_Make_Complex_Ideas_Accessib_scene_003.wav",
+            "duration": 6.640907029478458,
+            "start_time": 14.268662131519275,
+            "end_time": 20.909569160997734,
+            "narration": "Each level of the dream constructs a new reality, allowing viewers to experience the film's philosophical musings firsthand."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Inception_s_Mind_Bending_Visuals_Make_Complex_Ideas_Accessib_scene_004.wav",
+            "duration": 8.452063492063493,
+            "start_time": 20.909569160997734,
+            "end_time": 29.36163265306123,
+            "narration": "By embedding these ideas within a gripping heist narrative, Inception not only entertains but also challenges the audience to ponder the nature of perception and consciousness."
+        }
+    ],
+    "script": "Inception's dream levels twist reality into a surreal maze, making complex subconscious concepts tangible.\nUsing meticulously crafted set pieces and innovative visual techniques, Nolan translates abstract ideas into visceral, interactive experiences.\nEach level of the dream constructs a new reality, allowing viewers to experience the film's philosophical musings firsthand.\nBy embedding these ideas within a gripping heist narrative, Inception not only entertains but also challenges the audience to ponder the nature of perception and consciousness."
+}

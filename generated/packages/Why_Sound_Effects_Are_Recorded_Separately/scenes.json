@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Sound effects in movies are recorded separately to ensure clarity and flexibility during editing.",
+        "image_prompt": "Sound effects in movies are recorded separately to ensure clarity and flexibility during editing.",
+        "duration": 5.340589569160998,
+        "start_time": 0.0,
+        "end_time": 5.340589569160998
+    },
+    {
+        "narration": "This method allows filmmakers to match the exact moment and intensity of effects with visual scenes. Filmmaking, or film production, is the process of creating a motion picture.",
+        "image_prompt": "This method allows filmmakers to match the exact moment and intensity of effects with visual scenes. Filmmaking, or film production, is the process of creating a motion picture.",
+        "duration": 9.113832199546485,
+        "start_time": 5.340589569160998,
+        "end_time": 14.454421768707483
+    },
+    {
+        "narration": "Separate recording also helps in creating a seamless audio-visual experience, enhancing the overall quality. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later.",
+        "image_prompt": "Separate recording also helps in creating a seamless audio-visual experience, enhancing the overall quality. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later.",
+        "duration": 14.698231292517006,
+        "start_time": 14.454421768707483,
+        "end_time": 29.15265306122449
+    },
+    {
+        "narration": "By mastering sound effects before finalizing visuals, editors can make precise adjustments, improving the final product.",
+        "image_prompt": "By mastering sound effects before finalizing visuals, editors can make precise adjustments, improving the final product.",
+        "duration": 6.060408163265306,
+        "start_time": 29.15265306122449,
+        "end_time": 35.2130612244898
+    }
+]

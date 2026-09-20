@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Inception__Visualizing_Complex_Ideas\\Inception__Visualizing_Complex_Ideas.wav",
+    "duration": 36.69913832199546,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Inception__Visualizing_Complex_Ideas_scene_001.wav",
+            "duration": 9.044172335600907,
+            "start_time": 0.0,
+            "end_time": 9.044172335600907,
+            "narration": "Inception uses nested dream layers to explore subconscious manipulation, making abstract concepts tangible through visual metaphors and intricate set designs."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Inception__Visualizing_Complex_Ideas_scene_002.wav",
+            "duration": 8.25469387755102,
+            "start_time": 9.044172335600907,
+            "end_time": 17.298866213151925,
+            "narration": "Nolan's choreography and detail create a believable dream world, engaging the audience and challenging them to navigate the film's multi-layered narrative."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Inception__Visualizing_Complex_Ideas_scene_003.wav",
+            "duration": 9.798820861678005,
+            "start_time": 17.298866213151925,
+            "end_time": 27.097687074829928,
+            "narration": "By layering visual metaphors and symbolic imagery, Nolan effectively communicates the complexity of the subconscious mind, making it accessible and thought-provoking."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Inception__Visualizing_Complex_Ideas_scene_004.wav",
+            "duration": 9.601451247165533,
+            "start_time": 27.097687074829928,
+            "end_time": 36.69913832199546,
+            "narration": "The film's use of layered dreams and complex narrative structures enhances the visual storytelling, ensuring that even the most intricate ideas feel grounded and understandable."
+        }
+    ],
+    "script": "Inception uses nested dream layers to explore subconscious manipulation, making abstract concepts tangible through visual metaphors and intricate set designs.\nNolan's choreography and detail create a believable dream world, engaging the audience and challenging them to navigate the film's multi-layered narrative.\nBy layering visual metaphors and symbolic imagery, Nolan effectively communicates the complexity of the subconscious mind, making it accessible and thought-provoking.\nThe film's use of layered dreams and complex narrative structures enhances the visual storytelling, ensuring that even the most intricate ideas feel grounded and understandable."
+}

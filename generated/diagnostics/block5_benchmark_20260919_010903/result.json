@@ -1,0 +1,14 @@
+{
+  "success": false,
+  "topic": "Why movie sound effects are often recorded separately",
+  "content_id": "benchmark_44afd033df55",
+  "pipeline_class": "VideoPipeline",
+  "pipeline_module": "backend.services.pipelines.video_pipeline",
+  "trend_class": "dict",
+  "trend_module": "builtins",
+  "output": null,
+  "elapsed_seconds": null,
+  "exception_type": "ValueError",
+  "exception": "no signature found for builtin type <class 'dict'>",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\hp\\jarvis.ai\\generated\\diagnostics\\block5_benchmark_20260919_010903\\run_block5_benchmark.py\", line 615, in <module>\n    asyncio.run(\n    ~~~~~~~~~~~^\n        main()\n        ^^^^^^\n    )\n    ^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\asyncio\\runners.py\", line 196, in run\n    return runner.run(main)\n           ~~~~~~~~~~^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\asyncio\\runners.py\", line 119, in run\n    return self._loop.run_until_complete(task)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\asyncio\\base_events.py\", line 725, in run_until_complete\n    return future.result()\n           ~~~~~~~~~~~~~^^\n  File \"C:\\Users\\hp\\jarvis.ai\\generated\\diagnostics\\block5_benchmark_20260919_010903\\run_block5_benchmark.py\", line 282, in main\n    signature = inspect.signature(\n        Trend\n    )\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\inspect.py\", line 3389, in signature\n    return Signature.from_callable(obj, follow_wrapped=follow_wrapped,\n           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                                   globals=globals, locals=locals, eval_str=eval_str)\n                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\inspect.py\", line 3112, in from_callable\n    return _signature_from_callable(obj, sigcls=cls,\n                                    follow_wrapper_chains=follow_wrapped,\n                                    globals=globals, locals=locals, eval_str=eval_str)\n  File \"C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\Lib\\inspect.py\", line 2683, in _signature_from_callable\n    raise ValueError(\n        'no signature found for builtin type {!r}'.format(obj))\nValueError: no signature found for builtin type <class 'dict'>\n"
+}

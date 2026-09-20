@@ -1,4 +1,4 @@
-﻿"""YouTube reconciliation for uncertain privacy publication."""
+"""YouTube reconciliation for uncertain privacy publication."""
 
 import asyncio
 

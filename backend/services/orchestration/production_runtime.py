@@ -1,4 +1,4 @@
-﻿"""Shared runtime state for production execution."""
+"""Shared runtime state for production execution."""
 
 import asyncio
 

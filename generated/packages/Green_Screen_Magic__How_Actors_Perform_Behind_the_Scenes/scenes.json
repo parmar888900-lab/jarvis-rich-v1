@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Imagine an actor performing a scene with a completely green background\u2014soon, they'll be standing in front of a breathtaking landscape.",
+        "image_prompt": "Imagine an actor performing a scene with a completely green background\u2014soon, they'll be standing in front of a breathtaking landscape.",
+        "duration": 6.733786848072563,
+        "start_time": 0.0,
+        "end_time": 6.733786848072563
+    },
+    {
+        "narration": "Chroma key technology makes the green disappear, replacing it with any setting you can imagine, from a dense forest to a bustling city.",
+        "image_prompt": "Chroma key technology makes the green disappear, replacing it with any setting you can imagine, from a dense forest to a bustling city.",
+        "duration": 6.757006802721088,
+        "start_time": 6.733786848072563,
+        "end_time": 13.490793650793652
+    },
+    {
+        "narration": "This technique is widely used in weather broadcasts, movies, and video games, seamlessly blending actors into any backdrop without practical effects.",
+        "image_prompt": "This technique is widely used in weather broadcasts, movies, and video games, seamlessly blending actors into any backdrop without practical effects.",
+        "duration": 7.024036281179138,
+        "start_time": 13.490793650793652,
+        "end_time": 20.51482993197279
+    },
+    {
+        "narration": "From live broadcasts to blockbuster films, green screens transform simple setups into cinematic wonders, thanks to chroma keying.",
+        "image_prompt": "From live broadcasts to blockbuster films, green screens transform simple setups into cinematic wonders, thanks to chroma keying.",
+        "duration": 6.791836734693877,
+        "start_time": 20.51482993197279,
+        "end_time": 27.30666666666667
+    }
+]

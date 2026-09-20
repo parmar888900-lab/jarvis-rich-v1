@@ -1,4 +1,4 @@
-﻿"""Goal-aware production strategy.
+"""Goal-aware production strategy.
 
 Converts evaluated Jarvis goals into bounded strategic guidance for
 production decisions. This layer does not schedule production, mutate

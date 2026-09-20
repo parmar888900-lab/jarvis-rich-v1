@@ -1,4 +1,4 @@
-﻿"""Runtime service for goal-aware production strategy."""
+"""Runtime service for goal-aware production strategy."""
 
 from __future__ import annotations
 

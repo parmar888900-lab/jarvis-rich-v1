@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Why_Great_Movie_Openings_Reveal_Character_Without_Explaining\\Why_Great_Movie_Openings_Reveal_Character_Without_Explaining.wav",
+    "duration": 38.26648526077098,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_Great_Movie_Openings_Reveal_Character_Without_Explaining_scene_001.wav",
+            "duration": 4.957460317460318,
+            "start_time": 0.0,
+            "end_time": 4.957460317460318,
+            "narration": "Great movie openings set the stage by subtly revealing character traits, not explaining everything."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_Great_Movie_Openings_Reveal_Character_Without_Explaining_scene_002.wav",
+            "duration": 8.70748299319728,
+            "start_time": 4.957460317460318,
+            "end_time": 13.664943310657598,
+            "narration": "For instance, a close-up of a character's hands sweating can hint at nervousness or fear. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_Great_Movie_Openings_Reveal_Character_Without_Explaining_scene_003.wav",
+            "duration": 20.64253968253968,
+            "start_time": 13.664943310657598,
+            "end_time": 34.30748299319728,
+            "narration": "Subtle visual cues build intrigue, making you curious about what's to come. It involves a number of distinct stages, including an initial story idea or commission, followed by screenwriting, casting, pre-production, shooting, sound recording, post-production, and screening the finished product before an audience, which may result in a film release distribution and exhibition."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_Great_Movie_Openings_Reveal_Character_Without_Explaining_scene_004.wav",
+            "duration": 3.959002267573696,
+            "start_time": 34.30748299319728,
+            "end_time": 38.26648526077098,
+            "narration": "By withholding full explanations, these openings keep you engaged and guessing."
+        }
+    ],
+    "script": "Great movie openings set the stage by subtly revealing character traits, not explaining everything.\nFor instance, a close-up of a character's hands sweating can hint at nervousness or fear. Filmmaking, or film production, is the process of creating a motion picture.\nSubtle visual cues build intrigue, making you curious about what's to come. It involves a number of distinct stages, including an initial story idea or commission, followed by screenwriting, casting, pre-production, shooting, sound recording, post-production, and screening the finished product before an audience, which may result in a film release distribution and exhibition.\nBy withholding full explanations, these openings keep you engaged and guessing."
+}

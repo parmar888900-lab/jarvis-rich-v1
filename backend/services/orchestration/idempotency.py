@@ -1,4 +1,4 @@
-﻿"""Idempotency primitives for side-effecting production operations."""
+"""Idempotency primitives for side-effecting production operations."""
 
 from dataclasses import dataclass
 from enum import Enum

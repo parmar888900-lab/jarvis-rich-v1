@@ -1,0 +1,25 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Piper_Production_Test\\Piper_Production_Test.wav",
+    "duration": 3.332063492063492,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Piper_Production_Test_scene_001.wav",
+            "duration": 1.172607709750567,
+            "start_time": 0.0,
+            "end_time": 1.172607709750567,
+            "narration": "Jarvis is online."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Piper_Production_Test_scene_002.wav",
+            "duration": 2.159455782312925,
+            "start_time": 1.172607709750567,
+            "end_time": 3.332063492063492,
+            "narration": "The production pipeline is ready for testing."
+        }
+    ],
+    "script": "Jarvis is online.\nThe production pipeline is ready for testing."
+}

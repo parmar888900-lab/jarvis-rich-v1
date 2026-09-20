@@ -1,13 +1,15 @@
-﻿"""Production orchestration API routes."""
+"""Production orchestration API routes."""
 
 import json
 
 from fastapi import (
     APIRouter,
+    Depends,
     HTTPException,
     Request,
 )
 
+from backend.services.remote_auth import require_remote_token
 from backend.database import async_session
 from backend.services.orchestration.production_orchestrator import (
     ProductionOrchestrator,
@@ -23,7 +25,9 @@ from backend.services.production_cycle_service import (
     ProductionCycleService,
 )
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(require_remote_token)],
+)
 
 cycle_service = ProductionCycleService()
 

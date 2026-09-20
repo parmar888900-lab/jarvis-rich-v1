@@ -1,4 +1,4 @@
-﻿"""Idempotent execution boundary for production side effects."""
+"""Idempotent execution boundary for production side effects."""
 
 import asyncio
 import json

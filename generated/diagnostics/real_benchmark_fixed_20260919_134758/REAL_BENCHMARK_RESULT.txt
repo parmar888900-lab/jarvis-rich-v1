@@ -1,0 +1,81 @@
+﻿========================================================
+ JARVIS REAL CONTROLLED BENCHMARK
+========================================================
+
+Topic: Why movie sound effects are often recorded separately
+Upload: DISABLED
+ExitCode: 2
+ElapsedMinutes: 0.27
+
+===== STDOUT =====
+====================================================================
+JARVIS CONTROLLED REFERENCE-QUALITY BENCHMARK
+====================================================================
+[INFO] Project root: C:\Users\hp\jarvis.ai
+[INFO] backend exists: True
+[INFO] Topic: Why movie sound effects are often recorded separately
+[INFO] Direct VideoPipeline: YES
+[INFO] Orchestrator: DISABLED
+[INFO] Publisher: DISABLED
+[INFO] YouTube upload: DISABLED
+
+[PASS] backend package import.
+[PASS] Real VideoPipeline imported.
+[PASS] VideoPipeline constructed.
+[INFO] run() parameter: trend
+[INFO] run() annotation: <class 'dict'>
+
+====================================================================
+STARTING REAL PIPELINE
+====================================================================
+
+
+====================================================================
+REAL PIPELINE STOPPED
+====================================================================
+[RESULT] ElapsedSeconds=13.70
+[RESULT] Type=RuntimeError
+[RESULT] Reason=Production topic has no content_id.
+
+===== DIAGNOSTIC TRACEBACK =====
+Traceback (most recent call last):
+  File "C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_fixed_20260919_134758\jarvis_controlled_benchmark.py", line 94, in <module>
+    output = asyncio.run(
+        pipeline.run(trend)
+    )
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 196, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\runners.py", line 119, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py", line 503, in run
+    raise RuntimeError(
+        "Production topic has no content_id."
+    )
+RuntimeError: Production topic has no content_id.
+
+[PASS] No orchestrator used.
+[PASS] No publisher used.
+[PASS] No upload requested.
+
+===== STDERR =====
+[NONE]
+
+===== BENCHMARK MP4 =====
+[NONE] No new or modified MP4 detected.
+
+===== SAFETY =====
+[PASS] No source modification performed by benchmark.
+[PASS] No production-state reset.
+[PASS] No orchestrator.
+[PASS] No publisher.
+[PASS] No YouTube upload.
+[PASS] V3 acquisition patch left installed.
+
+========================================================
+ BENCHMARK STOPPED AT A REAL PIPELINE BOUNDARY
+========================================================

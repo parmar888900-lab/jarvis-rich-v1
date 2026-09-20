@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Why_Sound_Effects_Are_Recorded_Separately\\Why_Sound_Effects_Are_Recorded_Separately.wav",
+    "duration": 35.2130612244898,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_Sound_Effects_Are_Recorded_Separately_scene_001.wav",
+            "duration": 5.340589569160998,
+            "start_time": 0.0,
+            "end_time": 5.340589569160998,
+            "narration": "Sound effects in movies are recorded separately to ensure clarity and flexibility during editing."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_Sound_Effects_Are_Recorded_Separately_scene_002.wav",
+            "duration": 9.113832199546485,
+            "start_time": 5.340589569160998,
+            "end_time": 14.454421768707483,
+            "narration": "This method allows filmmakers to match the exact moment and intensity of effects with visual scenes. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_Sound_Effects_Are_Recorded_Separately_scene_003.wav",
+            "duration": 14.698231292517006,
+            "start_time": 14.454421768707483,
+            "end_time": 29.15265306122449,
+            "narration": "Separate recording also helps in creating a seamless audio-visual experience, enhancing the overall quality. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_Sound_Effects_Are_Recorded_Separately_scene_004.wav",
+            "duration": 6.060408163265306,
+            "start_time": 29.15265306122449,
+            "end_time": 35.2130612244898,
+            "narration": "By mastering sound effects before finalizing visuals, editors can make precise adjustments, improving the final product."
+        }
+    ],
+    "script": "Sound effects in movies are recorded separately to ensure clarity and flexibility during editing.\nThis method allows filmmakers to match the exact moment and intensity of effects with visual scenes. Filmmaking, or film production, is the process of creating a motion picture.\nSeparate recording also helps in creating a seamless audio-visual experience, enhancing the overall quality. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later.\nBy mastering sound effects before finalizing visuals, editors can make precise adjustments, improving the final product."
+}

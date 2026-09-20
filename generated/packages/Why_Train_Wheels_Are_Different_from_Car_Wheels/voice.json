@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Why_Train_Wheels_Are_Different_from_Car_Wheels\\Why_Train_Wheels_Are_Different_from_Car_Wheels.wav",
+    "duration": 26.25015873015873,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_Train_Wheels_Are_Different_from_Car_Wheels_scene_001.wav",
+            "duration": 4.516281179138322,
+            "start_time": 0.0,
+            "end_time": 4.516281179138322,
+            "narration": "Train wheels are uniquely shaped to fit railway tracks, while car wheels are round for road use."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_Train_Wheels_Are_Different_from_Car_Wheels_scene_002.wav",
+            "duration": 10.541859410430838,
+            "start_time": 4.516281179138322,
+            "end_time": 15.05814058956916,
+            "narration": "The special design ensures smooth travel and prevents derailment, unlike car wheels that only need to handle bumps. A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_Train_Wheels_Are_Different_from_Car_Wheels_scene_003.wav",
+            "duration": 5.897868480725624,
+            "start_time": 15.05814058956916,
+            "end_time": 20.956009070294783,
+            "narration": "Both are made from metals and heat-treated, but train wheels have strict profiles to maintain efficiency and safety."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_Train_Wheels_Are_Different_from_Car_Wheels_scene_004.wav",
+            "duration": 5.294149659863946,
+            "start_time": 20.956009070294783,
+            "end_time": 26.25015873015873,
+            "narration": "Standard train wheels measure 920mm, but some systems use smaller sizes for urban transit."
+        }
+    ],
+    "script": "Train wheels are uniquely shaped to fit railway tracks, while car wheels are round for road use.\nThe special design ensures smooth travel and prevents derailment, unlike car wheels that only need to handle bumps. A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks.\nBoth are made from metals and heat-treated, but train wheels have strict profiles to maintain efficiency and safety.\nStandard train wheels measure 920mm, but some systems use smaller sizes for urban transit."
+}

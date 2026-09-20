@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Why_train_wheels_are_shaped_differently_from_car_wheels\\Why_train_wheels_are_shaped_differently_from_car_wheels.wav",
+    "duration": 35.59619047619048,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_train_wheels_are_shaped_differently_from_car_wheels_scene_001.wav",
+            "duration": 8.881632653061224,
+            "start_time": 0.0,
+            "end_time": 8.881632653061224,
+            "narration": "Train wheels are specially designed for smooth track adherence, reducing wear and tear. A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_train_wheels_are_shaped_differently_from_car_wheels_scene_002.wav",
+            "duration": 15.81278911564626,
+            "start_time": 8.881632653061224,
+            "end_time": 24.694421768707485,
+            "narration": "Standardized to 920mm, they fit with rail systems, maintaining safety and performance. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE)."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_train_wheels_are_shaped_differently_from_car_wheels_scene_003.wav",
+            "duration": 5.085170068027211,
+            "start_time": 24.694421768707485,
+            "end_time": 29.779591836734696,
+            "narration": "These wheels ensure efficient energy use and prevent derailments, critical for train operations."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_train_wheels_are_shaped_differently_from_car_wheels_scene_004.wav",
+            "duration": 5.8165986394557825,
+            "start_time": 29.779591836734696,
+            "end_time": 35.59619047619048,
+            "narration": "Check out real trains where you can see these wheels in action, promoting smoother rides and better efficiency."
+        }
+    ],
+    "script": "Train wheels are specially designed for smooth track adherence, reducing wear and tear. A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks.\nStandardized to 920mm, they fit with rail systems, maintaining safety and performance. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE).\nThese wheels ensure efficient energy use and prevent derailments, critical for train operations.\nCheck out real trains where you can see these wheels in action, promoting smoother rides and better efficiency."
+}

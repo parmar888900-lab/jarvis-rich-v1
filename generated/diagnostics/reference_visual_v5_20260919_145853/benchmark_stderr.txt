@@ -1,0 +1,5 @@
+Script length validation failed: 53 words.
+Initial content invalid (53 words). Regenerating.
+Script length validation failed: 54 words.
+Repair attempt 1 failed. Words=54, remaining terms=['perfect']
+Script length validation failed: 54 words.

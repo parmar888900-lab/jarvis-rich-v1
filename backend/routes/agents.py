@@ -4,13 +4,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.services.remote_auth import require_remote_token
 from backend.database import get_db
 from backend.models.agent import Agent
 from backend.models.schemas import AgentCreate, AgentResponse, AgentUpdate, ChatRequest, ChatResponse
 from backend.services.agent_service import AgentService
 from backend.services.llm_service import LLMService
 
-router = APIRouter()
+router = APIRouter(
+    dependencies=[Depends(require_remote_token)],
+)
 agent_service = AgentService()
 llm_service = LLMService()
 

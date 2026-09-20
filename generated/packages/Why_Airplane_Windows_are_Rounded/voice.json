@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Why_Airplane_Windows_are_Rounded\\Why_Airplane_Windows_are_Rounded.wav",
+    "duration": 28.88562358276644,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_Airplane_Windows_are_Rounded_scene_001.wav",
+            "duration": 4.121541950113379,
+            "start_time": 0.0,
+            "end_time": 4.121541950113379,
+            "narration": "Rounded airplane windows prevent sudden pressure changes from shattering them."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_Airplane_Windows_are_Rounded_scene_002.wav",
+            "duration": 7.650975056689342,
+            "start_time": 4.121541950113379,
+            "end_time": 11.77251700680272,
+            "narration": "Modern cabins are pressurized to maintain breathable air at high altitudes. An aircraft cabin is the section of an aircraft in which passengers travel."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_Airplane_Windows_are_Rounded_scene_003.wav",
+            "duration": 12.852244897959183,
+            "start_time": 11.77251700680272,
+            "end_time": 24.624761904761904,
+            "narration": "Square windows could crack under pressure differences, risking passenger safety. Most modern commercial aircraft are pressurized, as cruising altitudes are high enough such that the surrounding atmosphere is too thin for passengers and crew to breathe."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_Airplane_Windows_are_Rounded_scene_004.wav",
+            "duration": 4.260861678004535,
+            "start_time": 24.624761904761904,
+            "end_time": 28.88562358276644,
+            "narration": "Opt for rounded designs ensuring a smoother, safer flight experience."
+        }
+    ],
+    "script": "Rounded airplane windows prevent sudden pressure changes from shattering them.\nModern cabins are pressurized to maintain breathable air at high altitudes. An aircraft cabin is the section of an aircraft in which passengers travel.\nSquare windows could crack under pressure differences, risking passenger safety. Most modern commercial aircraft are pressurized, as cruising altitudes are high enough such that the surrounding atmosphere is too thin for passengers and crew to breathe.\nOpt for rounded designs ensuring a smoother, safer flight experience."
+}

@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Why_AI_generated_videos_are_becoming_more_realistic\\Why_AI_generated_videos_are_becoming_more_realistic.wav",
+    "duration": 10.948208616780045,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_AI_generated_videos_are_becoming_more_realistic_scene_001.wav",
+            "duration": 4.4117913832199545,
+            "start_time": 0.0,
+            "end_time": 4.4117913832199545,
+            "narration": "Here's what's happening with Why AI-generated videos are becoming more realistic."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_AI_generated_videos_are_becoming_more_realistic_scene_002.wav",
+            "duration": 2.020136054421769,
+            "start_time": 4.4117913832199545,
+            "end_time": 6.431927437641724,
+            "narration": "The story is gaining attention online."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_AI_generated_videos_are_becoming_more_realistic_scene_003.wav",
+            "duration": 2.6586848072562357,
+            "start_time": 6.431927437641724,
+            "end_time": 9.09061224489796,
+            "narration": "People are reacting for several reasons."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_AI_generated_videos_are_becoming_more_realistic_scene_004.wav",
+            "duration": 1.8575963718820863,
+            "start_time": 9.09061224489796,
+            "end_time": 10.948208616780047,
+            "narration": "Follow for more trending stories."
+        }
+    ],
+    "script": "Here's what's happening with Why AI-generated videos are becoming more realistic.\nThe story is gaining attention online.\nPeople are reacting for several reasons.\nFollow for more trending stories."
+}

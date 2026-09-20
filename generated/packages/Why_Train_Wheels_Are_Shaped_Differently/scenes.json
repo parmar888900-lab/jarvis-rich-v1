@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Train wheels are designed for efficiency and safety on tracks, not roads.",
+        "image_prompt": "Train wheels are designed for efficiency and safety on tracks, not roads.",
+        "duration": 3.7616326530612243,
+        "start_time": 0.0,
+        "end_time": 3.7616326530612243
+    },
+    {
+        "narration": "They have flanges to guide them on the rails, preventing derailments. A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks.",
+        "image_prompt": "They have flanges to guide them on the rails, preventing derailments. A train wheel or rail wheel is a type of wheel specially designed for use on railway tracks.",
+        "duration": 8.335963718820862,
+        "start_time": 3.7616326530612243,
+        "end_time": 12.097596371882087
+    },
+    {
+        "narration": "Standardized profiles ensure smooth interaction with tracks, reducing wear. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE).",
+        "image_prompt": "Standardized profiles ensure smooth interaction with tracks, reducing wear. The wheel acts as a rolling component, typically press fitted on to an axle and mounted directly on a railway carriage or locomotive, or indirectly on a bogie (CwthE) or truck (NAmE).",
+        "duration": 14.164172335600908,
+        "start_time": 12.097596371882087,
+        "end_time": 26.261768707482993
+    },
+    {
+        "narration": "Incorrect profiles increase resistance and risk of accidents.",
+        "image_prompt": "Incorrect profiles increase resistance and risk of accidents.",
+        "duration": 3.610702947845805,
+        "start_time": 26.261768707482993,
+        "end_time": 29.8724716553288
+    }
+]

@@ -1,0 +1,898 @@
+﻿======================================================================
+V6.3 MARVEL FIRST RENDER - EXACT CONTEXT
+======================================================================
+
+======================================================================
+CONTENT FORMAT CLASSIFIER
+======================================================================
+"""Reference-style content format classification for Jarvis Rich V1."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from backend.services.intelligence.reference_format_profiles import (
+    get_reference_profile,
+)
+
+
+@dataclass(slots=True)
+class ContentFormatDecision:
+    format_name: str
+    target_duration_min: float
+    target_duration_max: float
+    preferred_media: list[str]
+    narration_mode: str
+    pacing: str
+    reason: str
+    rights_gate_required: bool = False
+    reference_profile: dict | None = None
+
+
+class ContentFormatClassifier:
+    """Choose the correct production format for a topic."""
+
+    MOVIE_COMMENTARY_GENRES = {
+        "famous_movie_commentary",
+        "movie_facts",
+        "scene_breakdowns",
+        "movies_filmmaking",
+    }
+
+    EXPLAINER_GENRES = {
+        "science_engineering",
+        "technology",
+        "machines_manufacturing",
+        "space_aviation",
+        "interesting_products",
+        "luxury_money",
+    }
+
+    STORY_GENRES = {
+        "business_stories",
+        "history_inventions",
+        "human_performance",
+    }
+
+    def classify(
+        self,
+        *,
+        topic: str,
+        genre: str,
+        authorized_movie_source: bool = False,
+    ) -> ContentFormatDecision:
+
+        del topic
+        del authorized_movie_source
+
+        genre = str(genre).strip().lower()
+
+        # ----------------------------------------------------
+        # Resolve Jarvis's six reference-format identities.
+        # ----------------------------------------------------
+
+        profile = get_reference_profile(genre)
+
+        profile_dict = (
+            profile.to_dict()
+            if profile is not None
+            else None
+        )
+
+        # ----------------------------------------------------
+        # Famous movie commentary
+        #
+        # Keep the existing format_name because ContentGenerator
+        # has specialized evidence validation for this path.
+        # The reference profile still maps its viewing mechanics
+        # to movie_facts.
+        # ----------------------------------------------------
+
+        if genre == "famous_movie_commentary":
+
+            return ContentFormatDecision(
+                format_name="famous_movie_commentary",
+                target_duration_min=35.0,
+                target_duration_max=60.0,
+                preferred_media=[
+                    "authorized_movie_excerpt",
+                    "licensed_promotional_media",
+                    "licensed_image",
+                    "archive_media",
+                ],
+                narration_mode=(
+                    "original_commentary_voiceover"
+                ),
+                pacing=(
+                    profile.pacing_strategy
+                    if profile is not None
+                    else "cinematic_information_density"
+                ),
+                reason=(
+                    "Grounded famous-movie commentary using the "
+                    "movie-facts reference retention profile."
+                ),
+                rights_gate_required=True,
+                reference_profile=profile_dict,
+            )
+
+        # ----------------------------------------------------
+        # Movie facts / scene breakdowns / filmmaking
+        # ----------------------------------------------------
+
+        if genre in {
+            "movie_facts",
+            "scene_breakdowns",
+            "movies_filmmaking",
+        }:
+
+            return ContentFormatDecision(
+                format_name="cinematic_explainer",
+                target_duration_min=(
+                    profile.target_duration_min
+                    if profile is not None
+                    else 35.0
+                ),
+                target_duration_max=(
+                    profile.target_duration_max
+                    if profile is not None
+                    else 60.0
+                ),
+                preferred_media=(
+                    list(profile.preferred_media)
+                    if profile is not None
+                    else [
+                        "authorized_movie_excerpt",
+                        "licensed_promotional_media",
+                        "licensed_image",
+                        "archive_media",
+                    ]
+                ),
+                narration_mode="voiceover",
+                pacing=(
+                    profile.pacing_strategy
+                    if profile is not None
+                    else "cinematic"
+                ),
+                reason=(
+                    "Film explanation using the movie-facts "
+                    "reference retention profile."
+                ),
+                rights_gate_required=True,
+                reference_profile=profile_dict,
+            )
+
+        # ----------------------------------------------------
+        # Explicit six-format identities
+        # ----------------------------------------------------
+
+        if genre == "cinematic_movie_edit":
+
+            return ContentFormatDecision(
+                format_name="cinematic_movie_edit",
+                target_duration_min=profile.target_duration_min,
+                target_duration_max=profile.target_duration_max,
+                preferred_media=list(
+                    profile.preferred_media
+                ),
+                narration_mode="minimal_commentary",
+                pacing=profile.pacing_strategy,
+                reason=(
+                    "Cinematic movie-edit reference profile."
+                ),
+                rights_gate_required=True,
+                reference_profile=profile_dict,
+            )
+
+        if genre == "curiosity_story":
+
+            return ContentFormatDecision(
+                format_name="documentary_story",
+                target_duration_min=profile.target_duration_min,
+                target_duration_max=profile.target_duration_max,
+                preferred_media=list(
+                    profile.preferred_media
+                ),
+                narration_mode="voiceover",
+                pacing=profile.pacing_strategy,
+                reason=(
+                    "Curiosity-gap documentary reference profile."
+                ),
+                reference_profile=profile_dict,
+            )
+
+        if genre == "luxury_product":
+
+            return ContentFormatDecision(
+                format_name="visual_explainer",
+                target_duration_min=profile.target_duration_min,
+                target_duration_max=profile.target_duration_max,
+                preferred_media=list(
+                    profile.preferred_media
+                ),
+                narration_mode="voiceover",
+                pacing=profile.pacing_strategy,
+                reason=(
+                    "Luxury/product reference profile."
+                ),
+                reference_profile=profile_dict,
+            )
+
+        if genre == "science_explainer":
+
+            return ContentFormatDecision(
+                format_name="visual_explainer",
+                target_duration_min=profile.target_duration_min,
+                target_duration_max=profile.target_duration_max,
+                preferred_media=list(
+                    profile.preferred_media
+                ),
+                narration_mode="voiceover",
+                pacing=profile.pacing_strategy,
+                reason=(
+                    "Science/engineering visual-explanation "
+                    "reference profile."
+                ),
+                reference_profile=profile_dict,
+            )
+
+        if genre == "business_wealth":
+
+            return ContentFormatDecision(
+                format_name="documentary_story",
+                target_duration_min=profile.target_duration_min,
+                target_duration_max=profile.target_duration_max,
+                preferred_media=list(
+                    profile.preferred_media
+                ),
+                narration_mode="voiceover",
+                pacing=profile.pacing_strategy,
+                reason=(
+                    "Business/wealth causal-story reference profile."
+                ),
+                reference_profile=profile_dict,
+            )
+
+        # ----------------------------------------------------
+        # Existing genre aliases
+        # ----------------------------------------------------
+
+        if genre in self.EXPLAINER_GENRES:
+
+            return ContentFormatDecision(
+                format_name="visual_explainer",
+                target_duration_min=(
+                    profile.target_duration_min
+                    if profile is not None
+                    else 35.0
+                ),
+                target_duration_max=(
+                    profile.target_duration_max
+                    if profile is not None
+                    else 65.0
+                ),
+                preferred_media=(
+                    list(profile.preferred_media)
+                    if profile is not None
+                    else [
+                        "licensed_video",
+                        "licensed_image",
+                        "diagram",
+                        "archive_media",
+                    ]
+                ),
+                narration_mode="voiceover",
+                pacing=(
+                    profile.pacing_strategy
+                    if profile is not None
+                    else "information_density"
+                ),
+                reason=(
+                    "Reference-style visual explainer."
+                ),
+                reference_profile=profile_dict,
+            )
+
+        if genre in self.STORY_GENRES:
+
+            return ContentFormatDecision(
+                format_name="documentary_story",
+                target_duration_min=(
+                    profile.target_duration_min
+                    if profile is not None
+                    else 40.0
+                ),
+                target_duration_max=(
+                    profile.target_duration_max
+                    if profile is not None
+                    else 75.0
+                ),
+                preferred_media=(
+                    list(profile.preferred_media)
+                    if profile is not None
+                    else [
+                        "licensed_video",
+                        "archive_media",
+                        "licensed_image",
+                        "documents",
+                    ]
+                ),
+                narration_mode="voiceover",
+                pacing=(
+                    profile.pacing_strategy
+                    if profile is not None
+                    else "story_progression"
+                ),
+                reason=(
+                    "Reference-style documentary story."
+                ),
+                reference_profile=profile_dict,
+            )
+
+        # ----------------------------------------------------
+        # Conservative fallback
+        # ----------------------------------------------------
+
+        return ContentFormatDecision(
+            format_name="visual_explainer",
+            target_duration_min=35.0,
+            target_duration_max=60.0,
+            preferred_media=[
+                "licensed_video",
+                "licensed_image",
+            ],
+            narration_mode="voiceover",
+            pacing="information_density",
+            reason="Default Rich V1 reference format.",
+            reference_profile=None,
+        )
+
+
+======================================================================
+MOVIE TOPIC PARSER
+======================================================================
+"""Movie-title extraction for Rich V1 curated movie commentary."""
+
+from __future__ import annotations
+
+
+class MovieTopicParser:
+
+    KNOWN_MOVIES = [
+        "Doctor Strange",
+        "Avengers Endgame",
+        "Interstellar",
+        "The Dark Knight",
+        "Spider-Man No Way Home",
+        "Inception",
+        "Iron Man",
+        "Jurassic Park",
+        "The Matrix",
+        "Pirates of the Caribbean",
+    ]
+
+    @classmethod
+    def extract_movie_title(
+        cls,
+        topic: str,
+    ) -> str | None:
+
+        topic_lower = str(topic).lower()
+
+        for movie in cls.KNOWN_MOVIES:
+
+            if movie.lower() in topic_lower:
+                return movie
+
+        return None
+
+
+======================================================================
+MOVIE RESEARCH SERVICE
+======================================================================
+"""Angle-aware research for famous-movie commentary."""
+
+from __future__ import annotations
+
+import re
+
+from backend.services.research.knowledge_pack import (
+    KnowledgePack,
+)
+from backend.services.research.providers.wikipedia import (
+    WikipediaProvider,
+)
+
+
+class MovieResearchService:
+    """
+    Research the actual film and extract material relevant to the
+    commentary angle.
+
+    This service does not authorize footage.
+    """
+
+    MOVIE_PAGE_ALIASES = {
+        "Doctor Strange": "Doctor Strange (2016 film)",
+        "Avengers Endgame": "Avengers: Endgame",
+        "Interstellar": "Interstellar (film)",
+        "The Dark Knight": "The Dark Knight (film)",
+        "Spider-Man No Way Home": (
+            "Spider-Man: No Way Home"
+        ),
+        "Inception": "Inception",
+        "Iron Man": "Iron Man (2008 film)",
+        "Jurassic Park": "Jurassic Park (film)",
+        "The Matrix": "The Matrix",
+        "Pirates of the Caribbean": (
+            "Pirates of the Caribbean: "
+            "The Curse of the Black Pearl"
+        ),
+    }
+
+    ANGLE_ALIASES = {
+        "mirror dimension": {
+            "mirror",
+            "dimension",
+            "visual effects",
+            "effects",
+            "city",
+            "distortion",
+            "cgi",
+            "computer-generated",
+            "geometry",
+        },
+        "final battle": {
+            "battle",
+            "climax",
+            "final",
+            "production",
+            "visual effects",
+            "effects",
+        },
+        "docking scene": {
+            "docking",
+            "spacecraft",
+            "editing",
+            "music",
+            "production",
+        },
+        "bullet-time": {
+            "bullet",
+            "time",
+            "visual effects",
+            "camera",
+            "photography",
+        },
+    }
+
+    STOPWORDS = {
+        "why",
+        "how",
+        "the",
+        "this",
+        "that",
+        "these",
+        "those",
+        "scene",
+        "scenes",
+        "work",
+        "works",
+        "well",
+        "movie",
+        "film",
+        "was",
+        "were",
+        "are",
+        "and",
+        "from",
+        "with",
+        "into",
+    }
+
+    def __init__(self) -> None:
+        self.wikipedia = WikipediaProvider()
+
+    def research(
+        self,
+        *,
+        movie_title: str,
+        commentary_topic: str,
+    ) -> KnowledgePack:
+
+        pack = KnowledgePack(
+            topic=commentary_topic
+        )
+
+        page_title = (
+            self.MOVIE_PAGE_ALIASES.get(
+                movie_title,
+                movie_title,
+            )
+        )
+
+        page = self.wikipedia.wiki.page(
+            page_title
+        )
+
+        if not page.exists():
+            print(
+                "[MovieResearch] Movie page not found: "
+                f"{page_title}"
+            )
+            return pack
+
+        source = {
+            "title": page.title,
+            "content": page.summary[:3000],
+            "source": "Wikipedia",
+            "url": page.fullurl,
+            "confidence": 0.95,
+        }
+
+        pack.add_source(source)
+
+        full_text = str(
+            page.text or ""
+        ).strip()
+
+        angle_terms = self._angle_terms(
+            commentary_topic
+        )
+
+        relevant = self._extract_relevant_sentences(
+            full_text,
+            angle_terms,
+        )
+
+        ####################################################
+        # Always include film summary as context.
+        ####################################################
+
+        summary = str(
+            page.summary or ""
+        ).strip()
+
+        if summary:
+            pack.add_fact(
+                summary[:2500]
+            )
+
+        ####################################################
+        # Angle-specific evidence.
+        ####################################################
+
+        for sentence in relevant[:12]:
+            pack.add_fact(
+                sentence
+            )
+
+        combined_parts = []
+
+        if summary:
+            combined_parts.append(
+                summary[:2200]
+            )
+
+        combined_parts.extend(
+            relevant[:10]
+        )
+
+        if combined_parts:
+            pack.set_summary(
+                "\n\n".join(
+                    combined_parts
+                )[:7000]
+            )
+
+        pack.category = (
+            "Famous Movie Commentary"
+        )
+
+        ####################################################
+        # Higher confidence requires angle-specific evidence.
+        ####################################################
+
+        if relevant:
+            pack.score = 90.0
+        elif summary:
+            pack.score = 55.0
+        else:
+            pack.score = 0.0
+
+        return pack
+
+    def _angle_terms(
+        self,
+        topic: str,
+    ) -> set[str]:
+
+        lower = topic.lower()
+
+        terms: set[str] = set()
+
+        for trigger, aliases in (
+            self.ANGLE_ALIASES.items()
+        ):
+            if trigger in lower:
+                terms.update(
+                    aliases
+                )
+
+        words = re.findall(
+            r"[a-z0-9\-]+",
+            lower,
+        )
+
+        for word in words:
+
+            if (
+                len(word) < 4
+                or word in self.STOPWORDS
+            ):
+                continue
+
+            terms.add(word)
+
+        return terms
+
+    @staticmethod
+    def _extract_relevant_sentences(
+        text: str,
+        terms: set[str],
+    ) -> list[str]:
+
+        if not text.strip():
+            return []
+
+        sentences = [
+            sentence.strip()
+            for sentence in re.split(
+                r"(?<=[.!?])\s+",
+                " ".join(
+                    text.split()
+                ),
+            )
+            if sentence.strip()
+        ]
+
+        scored = []
+
+        for sentence in sentences:
+
+            lower = sentence.lower()
+
+            matches = sum(
+                1
+                for term in terms
+                if term in lower
+            )
+
+            if matches <= 0:
+                continue
+
+            scored.append(
+                (
+                    matches,
+                    len(sentence),
+                    sentence,
+                )
+            )
+
+        scored.sort(
+            key=lambda item: (
+                item[0],
+                item[1],
+            ),
+            reverse=True,
+        )
+
+        output = []
+        seen = set()
+
+        for _, _, sentence in scored:
+
+            key = sentence.lower()
+
+            if key in seen:
+                continue
+
+            seen.add(key)
+            output.append(sentence)
+
+        return output
+
+    @staticmethod
+    @staticmethod
+    def build_research_text(
+        pack: KnowledgePack,
+    ) -> str:
+        """
+        Build an explicit evidence pack for movie commentary.
+
+        Each research fact receives a stable evidence ID so the
+        script generator can cite exactly which facts support
+        each narration line.
+        """
+
+        evidence = []
+
+        for index, fact in enumerate(
+            pack.facts,
+            start=1,
+        ):
+
+            clean = str(
+                fact
+            ).strip()
+
+            if not clean:
+                continue
+
+            evidence.append(
+                f"[E{index}] {clean}"
+            )
+
+        return "\n\n".join(
+            evidence
+        )
+
+
+======================================================================
+YOUTUBE HANDLER - SELECTOR CALL
+======================================================================
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:10:from backend.services.analytics.youtube_performance_collector import (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:11:    YoutubePerformanceCollector,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:12:)
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:13:from backend.services.analytics.youtube_performance_evidence_service import (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:14:    YoutubePerformanceEvidenceService,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:15:)
+> C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:16:from backend.services.intelligence.evergreen_content_selector import EvergreenContentSelector
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:17:from backend.services.orchestration.daily_format_rotator import (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:18:    DailyFormatRotator,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:19:)
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:20:from backend.services.orchestration.goal_production_strategy_service import (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:21:    GoalProductionStrategyService,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:22:)
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:23:from backend.services.orchestration.idempotency import (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:24:    OperationType,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:25:    build_idempotency_key,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:26:)   C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:43:    """
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:44:    Handles YouTube automation tasks.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:45:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:46:    Responsibilities:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:47:        - Collect trends
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:48:        - Rank trends
+> C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:49:        - Select production-ready topics
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:50:        - Launch the VideoPipeline for create_video
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:51:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:52:    It should NEVER know how videos are built.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:53:    """
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:54:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:55:    name = "youtube"
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:56:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:57:    supported_tasks = frozenset(
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:58:        {
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:59:            "analyze_trends",   C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:67:        *,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:68:        performance_collector=None,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:69:        performance_evidence_service=None,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:70:        goal_strategy_service=None,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:71:        session_factory=None,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:72:    ):
+> C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:73:        self.selector = EvergreenContentSelector()
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:74:        self.format_rotator = DailyFormatRotator()
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:75:        self.pipeline = VideoPipeline()
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:76:        self.publisher = YoutubePublisher()
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:77:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:78:        self.performance_collector = (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:79:            performance_collector
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:80:            or YoutubePerformanceCollector(
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:81:                publisher=self.publisher
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:82:            )
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:83:        )   C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:140:    ]:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:141:        """
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:142:        Refresh channel analytics and build strategy evidence.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:143:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:144:        Analytics is an optimization signal, not a production
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:145:        dependency. Provider or persistence failures therefore
+> C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:146:        fail neutral and cannot block topic selection.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:147:        """
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:148:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:149:        try:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:150:            async with self.session_factory() as session:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:151:                collection = (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:152:                    await self.performance_collector.collect(
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:153:                        session,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:154:                        max_items=50,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:155:                    )
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:156:                )   C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:259:    ]:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:260:        """
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:261:        Build production strategy from active goals.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:262:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:263:        Goals are an optimization signal, not a production
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:264:        dependency. Goal persistence or evaluation failures
+> C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:265:        therefore fail neutral and cannot block topic selection.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:266:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:267:        Goal strategy does not control scheduler cadence.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:268:        """
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:269:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:270:        try:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:271:            async with self.session_factory() as session:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:272:                strategy = (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:273:                    await self.goal_strategy_service.build(
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:274:                        session
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:275:                    )   C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:389:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:390:    async def _analyze_trends(
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:391:        self,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:392:        command_id: str,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:393:    ) -> dict:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:394:        """
+> C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:395:        Select an evergreen production topic.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:396:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:397:        The method name remains for orchestration compatibility.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:398:        Rich V1 no longer depends on current trends for autonomous
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:399:        production.
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:400:        """
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:401: > C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:402:        content_id = (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:403:            command_id.split(
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:404:                ":",
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:405:                1,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:406:            )[0]
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:407:            if command_id
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:408:            else "unknown"
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:409:        )
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:410:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:411:        (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:412:            performance,   C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:416:        (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:417:            goal_strategy,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:418:            goal_strategy_status,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:419:        ) = await self._goal_strategy()
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:420:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:421:        slots = self.format_rotator.build_slots(
+> C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:422:            cursor=self.selector._format_cursor,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:423:            daily_target=1,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:424:        )
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:425: > C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:426:        locked_format = slots[0].format_name
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:427: > C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:428:        best_topic = self.selector.select( > C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:429:            content_id=content_id,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:430:            performance=performance,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:431:            goal_strategy=goal_strategy, > C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:432:            format_name=locked_format,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:433:        )
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:434:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:435:        if best_topic is None:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:436:            return {
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:437:                "agent": self.name,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:438:                "task": "analyze_trends",
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:439:                "command_id": command_id,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:440:                "content_strategy": (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:441:                    "evergreen_storytelling"
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:442:                ),   C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:501:                "status": "invalid_parameters",
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:502:                "error": (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:503:                    "trend.title is required."
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:504:                ),
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:505:            }
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:506:
+> C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:507:        result = await self.pipeline.run(
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:508:            trend
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:509:        )
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:510:
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:511:        return {
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:512:            "agent": self.name,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:513:            "task": "create_video",
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:514:            "command_id": command_id,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:515:            "trend": trend,
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:516:            "generated_content": (
+  C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:517:                result["generated"].to_dict()
+
+======================================================================
+PIPELINE - FORMAT + MOVIE RESEARCH
+======================================================================
+            "matched_beats":                 len(renderer_matches),              "matches":                 renderer_matches,         }       async def run(         self,         trend: dict,     ) -> dict:          ####################################################         # 1. Content identity         ####################################################          content_id = str(             trend.get(                 "content_id",                 "",             )         ).strip()          if not content_id:             raise RuntimeError(                 "Production topic has no content_id."             )          ####################################################         # 2. Choose production format         ####################################################          topic_title = str(             trend.get(                 "title",                 "",             )         ).strip()          genre = str(             trend.get(                 "genre",                 "",             )         ).strip()          format_decision = (             self.format_classifier.classify(                 topic=topic_title,                 genre=genre,                 authorized_movie_source=False,             )         )          trend["content_format"] = {             "format_name": format_decision.format_name,             "target_duration_min": format_decision.target_duration_min,             "target_duration_max": format_decision.target_duration_max,             "preferred_media": format_decision.preferred_media,             "narration_mode": format_decision.narration_mode,             "pacing": format_decision.pacing,             "rights_gate_required": format_decision.rights_gate_required,             "reference_profile": format_decision.reference_profile,         }          ####################################################         # 3. Research topic         ####################################################          if (             format_decision.format_name             == "famous_movie_commentary"         ):              movie_title = (                 MovieTopicParser.extract_movie_title(                     topic_title                 )             )              if not movie_title:                 raise RuntimeError(                     "Movie commentary topic has no recognized "                     f"movie title: {topic_title}"                 )              trend["movie_title"] = movie_title              knowledge_pack = await asyncio.to_thread(                     self.movie_research_service.research,                     movie_title=movie_title,                     commentary_topic=topic_title,                 )              research_text = (                 self.movie_research_service.build_research_text(                     knowledge_pack                 )             )          else:              knowledge_pack = await asyncio.to_thread(                     self.research_service.research,                     topic_title,                 )              research_text = (                 self.research_service.build_research_text(                     knowledge_pack                 )             )          if not research_text.strip():             raise RuntimeError(                 "Research returned no usable grounded "                 f"information for: {topic_title}"             )          trend["research"] = research_text         trend["knowledge"] = knowledge_pack.to_dict()          ####################################################         # 4. Generate content         ####################################################         generated = await self.generator.generate(             trend         )          if generated is None:             raise RuntimeError(                 "ContentGenerator returned None."             )          ####################################################         # 3. Validate generated content         ####################################################          validation = (             self.content_validator.validate(                 generated             )         )          ####################################################         # 4. Repair rejected content         ####################################################          if not validation["valid"]:
+
+======================================================================
+MOVIE-SPECIFIC PROVIDERS / RESOLVERS
+======================================================================
+C:\Users\hp\jarvis.ai\backend\services\content_generator.py:40:             == "famous_movie_commentary" C:\Users\hp\jarvis.ai\backend\services\content_generator.py:275:         if format_name == "famous_movie_commentary": C:\Users\hp\jarvis.ai\backend\services\content_generator.py:296:         if format_name == "famous_movie_commentary": C:\Users\hp\jarvis.ai\backend\services\content_generator.py:378:                     if format_name == "famous_movie_commentary" C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2436:         if format_name == "famous_movie_commentary": C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:29:         "famous_movie_commentary", C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:55:         authorized_movie_source: bool = False, C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:59:         del authorized_movie_source C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:84:         if genre == "famous_movie_commentary": C:\Users\hp\jarvis.ai\backend\services\intelligence\content_format_classifier.py:87:                 format_name="famous_movie_commentary", C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:19:         "famous_movie_commentary": [ C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:130:             "famous_movie_commentary", C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:136:             "famous_movie_commentary", C:\Users\hp\jarvis.ai\backend\services\intelligence\reference_format_profiles.py:536:     "famous_movie_commentary": "movie_facts", C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1567:                 authorized_movie_source=False, C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1588:             == "famous_movie_commentary" C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:56: class MovieMediaResolver: C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:117:                 "MovieMediaResolver received no beats." C:\Users\hp\jarvis.ai\backend\services\video\reference_profiles.py:363:     "famous_movie_commentary": "movie_facts", C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:11: from backend.services.video.movie_media_resolver import ( C:\Users\hp\jarvis.ai\backend\services\video\visual_beat_planner.py:350:             "famous_movie_commentary",
+
+======================================================================
+END
+======================================================================

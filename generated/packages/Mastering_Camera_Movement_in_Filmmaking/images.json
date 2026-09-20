@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Wall_Street_by_Paul_Strand,_1915.jpg",
+        "image_path": "generated\\packages\\Mastering_Camera_Movement_in_Filmmaking\\images\\scene_001.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Wall_Street_by_Paul_Strand,_1915.jpg",
+        "image_path": "generated\\packages\\Mastering_Camera_Movement_in_Filmmaking\\images\\scene_002.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Wall_Street_by_Paul_Strand,_1915.jpg",
+        "image_path": "generated\\packages\\Mastering_Camera_Movement_in_Filmmaking\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Wall_Street_by_Paul_Strand,_1915.jpg",
+        "image_path": "generated\\packages\\Mastering_Camera_Movement_in_Filmmaking\\images\\scene_004.jpg",
+        "width": null,
+        "height": null
+    }
+]

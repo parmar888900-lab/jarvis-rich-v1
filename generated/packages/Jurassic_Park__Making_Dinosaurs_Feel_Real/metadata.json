@@ -1,0 +1,34 @@
+{
+    "title": "Jurassic Park: Making Dinosaurs Feel Real",
+    "hashtags": [
+        "#JurassicPark",
+        "#DinosaurMovie",
+        "#StevenSpielberg"
+    ],
+    "scene_count": 4,
+    "duration": 31.451428571428572,
+    "created_by": "Jarvis Rich V1",
+    "metadata": {
+        "source": "How Jurassic Park made its dinosaurs feel believable",
+        "generator": "Jarvis Rich V1",
+        "content_format": "famous_movie_commentary",
+        "movie_title": "Jurassic Park",
+        "evidence_ids": [
+            [
+                "E4",
+                "E2"
+            ],
+            [
+                "E5",
+                "E10"
+            ],
+            [
+                "E10"
+            ],
+            [
+                "E11"
+            ]
+        ],
+        "word_count": 84
+    }
+}

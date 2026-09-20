@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Why_Industrial_Robots_Dominate_Car_Factories\\Why_Industrial_Robots_Dominate_Car_Factories.wav",
+    "duration": 36.78040816326531,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_Industrial_Robots_Dominate_Car_Factories_scene_001.wav",
+            "duration": 7.87156462585034,
+            "start_time": 0.0,
+            "end_time": 7.87156462585034,
+            "narration": "Imagine a car factory where robots work tirelessly, precision welding and assembling parts, 24/7 with no breaks."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_Industrial_Robots_Dominate_Car_Factories_scene_002.wav",
+            "duration": 10.27482993197279,
+            "start_time": 7.87156462585034,
+            "end_time": 18.14639455782313,
+            "narration": "With up to 4.7 million industrial robots in operation globally, these machines handle tasks with speed and accuracy. An industrial robot is a robot used for manufacturing."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_Industrial_Robots_Dominate_Car_Factories_scene_003.wav",
+            "duration": 12.527165532879819,
+            "start_time": 18.14639455782313,
+            "end_time": 30.67356009070295,
+            "narration": "From welding to packaging, robots boost efficiency and reduce human error, making them indispensable in modern manufacturing. Industrial robots are automated, programmable and capable of movement on three or more axes."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_Industrial_Robots_Dominate_Car_Factories_scene_004.wav",
+            "duration": 6.106848072562358,
+            "start_time": 30.67356009070295,
+            "end_time": 36.78040816326531,
+            "narration": "By automating labor-intensive tasks, they increase productivity and help car factories stay competitive."
+        }
+    ],
+    "script": "Imagine a car factory where robots work tirelessly, precision welding and assembling parts, 24/7 with no breaks.\nWith up to 4.7 million industrial robots in operation globally, these machines handle tasks with speed and accuracy. An industrial robot is a robot used for manufacturing.\nFrom welding to packaging, robots boost efficiency and reduce human error, making them indispensable in modern manufacturing. Industrial robots are automated, programmable and capable of movement on three or more axes.\nBy automating labor-intensive tasks, they increase productivity and help car factories stay competitive."
+}

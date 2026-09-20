@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Spider-Man_Far_From_Home_Venice_Set.jpg",
+        "image_path": "generated\\packages\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open\\images\\scene_001.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Spider-Man_Far_From_Home_Venice_Set.jpg",
+        "image_path": "generated\\packages\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open\\images\\scene_002.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Spider-Man_Far_From_Home_Venice_Set.jpg",
+        "image_path": "generated\\packages\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Spider-Man_Far_From_Home_Venice_Set.jpg",
+        "image_path": "generated\\packages\\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open\\images\\scene_004.jpg",
+        "width": null,
+        "height": null
+    }
+]

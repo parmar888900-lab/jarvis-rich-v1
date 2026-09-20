@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "image_path": "generated\\packages\\Why_Sound_Effects_Are_Recorded_Separately\\images\\scene_001.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "image_path": "generated\\packages\\Why_Sound_Effects_Are_Recorded_Separately\\images\\scene_002.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "image_path": "generated\\packages\\Why_Sound_Effects_Are_Recorded_Separately\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "image_path": "generated\\packages\\Why_Sound_Effects_Are_Recorded_Separately\\images\\scene_004.jpg",
+        "width": null,
+        "height": null
+    }
+]

@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Yeshanagula___The_Paradise___Nani___Keerthy_Suresh___Anirudh\\Yeshanagula___The_Paradise___Nani___Keerthy_Suresh___Anirudh.wav",
+    "duration": 26.482358276643993,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Yeshanagula___The_Paradise___Nani___Keerthy_Suresh___Anirudh_scene_001.wav",
+            "duration": 5.5147392290249435,
+            "start_time": 0.0,
+            "end_time": 5.5147392290249435,
+            "narration": "Get ready to groove to the energetic beats of Yeshanagula from The Paradise starring Nani and Keerthy Suresh!"
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Yeshanagula___The_Paradise___Nani___Keerthy_Suresh___Anirudh_scene_002.wav",
+            "duration": 5.979138321995465,
+            "start_time": 5.5147392290249435,
+            "end_time": 11.493877551020407,
+            "narration": "This highly anticipated single is out now and features the talented Anirudh Ravichander, who has showcased his musical talent."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Yeshanagula___The_Paradise___Nani___Keerthy_Suresh___Anirudh_scene_003.wav",
+            "duration": 7.4071655328798185,
+            "start_time": 11.493877551020407,
+            "end_time": 18.901043083900227,
+            "narration": "The Paradise's Yeshanagula has been making waves on social media, with fans enjoying its catchy tune and impressive dance moves."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Yeshanagula___The_Paradise___Nani___Keerthy_Suresh___Anirudh_scene_004.wav",
+            "duration": 7.581315192743764,
+            "start_time": 18.901043083900227,
+            "end_time": 26.482358276643993,
+            "narration": "Don't miss out on the fun and watch the power-packed BTS video featuring Nani and Keerthy Suresh, and get ready to dance along to Yeshanagula!"
+        }
+    ],
+    "script": "Get ready to groove to the energetic beats of Yeshanagula from The Paradise starring Nani and Keerthy Suresh!\nThis highly anticipated single is out now and features the talented Anirudh Ravichander, who has showcased his musical talent.\nThe Paradise's Yeshanagula has been making waves on social media, with fans enjoying its catchy tune and impressive dance moves.\nDon't miss out on the fun and watch the power-packed BTS video featuring Nani and Keerthy Suresh, and get ready to dance along to Yeshanagula!"
+}

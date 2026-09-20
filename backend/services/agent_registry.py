@@ -8,6 +8,7 @@ import logging
 
 from backend.services.agent_handlers import BUILTIN_HANDLERS
 from backend.services.agent_handlers.base import BaseAgentHandler
+from backend.services.agent_handlers.system import SystemAgentHandler
 
 logger = logging.getLogger("jarvis.commander.registry")
 
@@ -63,4 +64,9 @@ def build_default_registry() -> AgentRegistry:
     registry = AgentRegistry()
     for handler_cls in BUILTIN_HANDLERS:
         registry.register_class(handler_cls)
+
+    registry.register_class(
+        SystemAgentHandler
+    )
+
     return registry

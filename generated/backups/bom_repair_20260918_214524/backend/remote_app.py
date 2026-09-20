@@ -1,0 +1,716 @@
+﻿"""Network-facing authenticated remote-control API for Jarvis."""
+
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
+from backend.routes import remote
+
+
+app = FastAPI(
+    title="Jarvis Remote",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
+
+app.include_router(remote.router)
+
+
+@app.get("/health")
+async def remote_health():
+    return {
+        "status": "ok",
+        "service": "jarvis_remote",
+    }
+
+
+@app.get("/", response_class=HTMLResponse)
+async def remote_dashboard():
+    """Serve the local Jarvis remote-control dashboard."""
+
+    return HTMLResponse(
+        content=r"""<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1,
+                 viewport-fit=cover"
+    >
+    <meta name="theme-color" content="#0b0d10">
+
+    <title>Jarvis Remote</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            background: #0b0d10;
+            color: #f5f7fa;
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            padding:
+                max(24px, env(safe-area-inset-top))
+                max(18px, env(safe-area-inset-right))
+                max(24px, env(safe-area-inset-bottom))
+                max(18px, env(safe-area-inset-left));
+        }
+
+        main {
+            width: min(720px, 100%);
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            margin-top: 6px;
+            color: #9aa4b2;
+        }
+
+        .card {
+            margin-top: 22px;
+            padding: 18px;
+            border: 1px solid #29313d;
+            border-radius: 18px;
+            background: #12161c;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input,
+        textarea,
+        button {
+            width: 100%;
+            font: inherit;
+        }
+
+        input,
+        textarea {
+            padding: 14px;
+            color: #f5f7fa;
+            background: #0b0d10;
+            border: 1px solid #394454;
+            border-radius: 12px;
+            outline: none;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: #7e8da3;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 14px;
+            border: 0;
+            border-radius: 12px;
+            background: #f5f7fa;
+            color: #0b0d10;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: wait;
+        }
+
+        .secondary {
+            background: #242b35;
+            color: #f5f7fa;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-top: 18px;
+            color: #aeb7c4;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #6c7480;
+        }
+
+        .dot.online {
+            background: #4fd17b;
+        }
+
+        .dot.error {
+            background: #ff6868;
+        }
+
+        pre {
+            min-height: 110px;
+            margin: 0;
+            padding: 14px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            border-radius: 12px;
+            background: #090b0e;
+            color: #dce3ec;
+        }
+
+        .note {
+            margin-top: 8px;
+            color: #818b99;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        @media (max-width: 520px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<main>
+    <h1>Jarvis Remote</h1>
+    <div class="subtitle">
+        Authenticated control interface
+    </div>
+
+    <div class="status">
+        <span id="dot" class="dot"></span>
+        <span id="connection">Checking Jarvis...</span>
+    </div>
+
+    <section class="card">
+        <label for="token">Remote token</label>
+
+        <input
+            id="token"
+            type="password"
+            autocomplete="off"
+            placeholder="Paste your Jarvis remote token"
+        >
+
+        <div class="row">
+            <button id="saveToken" class="secondary">
+                Save on this iPad
+            </button>
+
+            <button id="forgetToken" class="secondary">
+                Forget token
+            </button>
+        </div>
+
+        <div class="note">
+            The token is stored only in this browser's local storage.
+            It is not embedded in this page.
+        </div>
+    </section>
+
+    <section class="card">
+        <label for="command">Command</label>
+
+        <textarea
+            id="command"
+            placeholder="Example: analyze today's trends"
+        ></textarea>
+
+        <input
+            id="voiceCapture"
+            type="file"
+            accept="audio/*"
+            capture
+            hidden
+        >
+
+        <div class="row">
+            <button id="mic" class="secondary">
+                🎤 Speak
+            </button>
+
+            <button id="send">
+                Send to Jarvis
+            </button>
+        </div>
+
+        <button id="speakToggle" class="secondary">
+            Spoken replies: ON
+        </button>
+
+        <div class="note" id="voiceNote">
+            Tap Speak, say one command, and Jarvis will send it automatically.
+        </div>
+    </section>
+
+    <section class="card">
+        <label>Jarvis response</label>
+        <pre id="output">Ready.</pre>
+    </section>
+</main>
+
+<script>
+    const tokenInput = document.getElementById("token");
+    const commandInput = document.getElementById("command");
+    const output = document.getElementById("output");
+    const sendButton = document.getElementById("send");
+    const micButton = document.getElementById("mic");
+    const voiceCapture = document.getElementById("voiceCapture");
+    const speakToggle = document.getElementById("speakToggle");
+    const voiceNote = document.getElementById("voiceNote");
+    const dot = document.getElementById("dot");
+    const connection = document.getElementById("connection");
+
+    const TOKEN_KEY = "jarvis_remote_token";
+    const SPEAK_KEY = "jarvis_spoken_replies";
+
+    let spokenReplies =
+        localStorage.getItem(SPEAK_KEY) !== "false";
+
+    tokenInput.value = localStorage.getItem(TOKEN_KEY) || "";
+
+    function updateSpeakButton() {
+        speakToggle.textContent =
+            "Spoken replies: " +
+            (spokenReplies ? "ON" : "OFF");
+    }
+
+    updateSpeakButton();
+
+    function getSpokenReply(data) {
+        if (
+            data &&
+            data.result &&
+            typeof data.result.message === "string" &&
+            data.result.message.trim()
+        ) {
+            return data.result.message.trim();
+        }
+
+        if (
+            data &&
+            typeof data.message === "string" &&
+            data.message.trim()
+        ) {
+            return data.message.trim();
+        }
+
+        if (
+            data &&
+            data.status === "completed"
+        ) {
+            return "Command completed successfully.";
+        }
+
+        if (
+            data &&
+            data.status === "confirmation_required"
+        ) {
+            return "This command requires confirmation.";
+        }
+
+        if (
+            data &&
+            typeof data.reason === "string" &&
+            data.reason
+        ) {
+            return "Command not completed. " +
+                data.reason.replaceAll("_", " ");
+        }
+
+        return "Jarvis returned a response.";
+    }
+
+    function speakReply(text) {
+        if (
+            !spokenReplies ||
+            !text ||
+            !("speechSynthesis" in window)
+        ) {
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+
+        const utterance =
+            new SpeechSynthesisUtterance(text);
+
+        utterance.lang =
+            navigator.language || "en-US";
+
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        window.speechSynthesis.speak(
+            utterance
+        );
+    }
+
+    function setConnection(state, text) {
+        dot.className = "dot";
+
+        if (state) {
+            dot.classList.add(state);
+        }
+
+        connection.textContent = text;
+    }
+
+    async function checkHealth() {
+        try {
+            const response = await fetch("/health", {
+                cache: "no-store"
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    "HTTP " + response.status
+                );
+            }
+
+            const data = await response.json();
+
+            if (data.status === "ok") {
+                setConnection("online", "Jarvis connected");
+                return;
+            }
+
+            throw new Error("Unexpected health response");
+        } catch (error) {
+            setConnection("error", "Jarvis unavailable");
+        }
+    }
+
+    document
+        .getElementById("saveToken")
+        .addEventListener("click", () => {
+            const token = tokenInput.value.trim();
+
+            if (!token) {
+                output.textContent =
+                    "Enter the remote token first.";
+                return;
+            }
+
+            localStorage.setItem(TOKEN_KEY, token);
+            output.textContent =
+                "Token saved on this device.";
+        });
+
+    document
+        .getElementById("forgetToken")
+        .addEventListener("click", () => {
+            localStorage.removeItem(TOKEN_KEY);
+            tokenInput.value = "";
+            output.textContent =
+                "Saved token removed.";
+        });
+
+    speakToggle.addEventListener(
+        "click",
+        () => {
+            spokenReplies = !spokenReplies;
+
+            localStorage.setItem(
+                SPEAK_KEY,
+                spokenReplies
+                    ? "true"
+                    : "false"
+            );
+
+            updateSpeakButton();
+
+            if (spokenReplies) {
+                speakReply(
+                    "Spoken replies enabled."
+                );
+            }
+        }
+    );
+
+    sendButton.addEventListener("click", async () => {
+        const token = tokenInput.value.trim();
+        const command = commandInput.value.trim();
+
+        if (!token) {
+            output.textContent =
+                "Remote token is required.";
+            return;
+        }
+
+        if (!command) {
+            output.textContent =
+                "Enter a command first.";
+            return;
+        }
+
+        sendButton.disabled = true;
+        sendButton.textContent = "Working...";
+        output.textContent = "Sending command...";
+
+        try {
+            const response = await fetch(
+                "/remote/command",
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization":
+                            "Bearer " + token,
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body: JSON.stringify({
+                        command: command
+                    })
+                }
+            );
+
+            let data;
+
+            try {
+                data = await response.json();
+            } catch {
+                data = {
+                    status: "error",
+                    reason:
+                        "Jarvis returned a non-JSON response."
+                };
+            }
+
+            output.textContent =
+                JSON.stringify(data, null, 2);
+
+            speakReply(
+                getSpokenReply(data)
+            );
+
+            if (response.status === 401) {
+                setConnection(
+                    "error",
+                    "Authentication rejected"
+                );
+            } else if (response.ok) {
+                setConnection(
+                    "online",
+                    "Jarvis connected"
+                );
+            }
+        } catch (error) {
+            output.textContent =
+                "Connection failed: " + error.message;
+
+            setConnection(
+                "error",
+                "Jarvis unavailable"
+            );
+        } finally {
+            sendButton.disabled = false;
+            sendButton.textContent = "Send to Jarvis";
+        }
+    });
+
+    commandInput.addEventListener(
+        "keydown",
+        (event) => {
+            if (
+                event.key === "Enter" &&
+                (event.ctrlKey || event.metaKey)
+            ) {
+                sendButton.click();
+            }
+        }
+    );
+
+    function setVoiceBusy(busy) {
+        micButton.disabled = busy;
+
+        micButton.textContent =
+            busy
+                ? "Processing voice..."
+                : "🎤 Speak";
+    }
+
+    async function sendVoiceRecording(file) {
+        const token = tokenInput.value.trim();
+
+        if (!token) {
+            output.textContent =
+                "Remote token is required.";
+
+            return;
+        }
+
+        if (!file) {
+            return;
+        }
+
+        setVoiceBusy(true);
+
+        voiceNote.textContent =
+            "Sending recording to Whisper...";
+
+        output.textContent =
+            "Transcribing voice command...";
+
+        try {
+            const response = await fetch(
+                "/remote/voice",
+                {
+                    method: "POST",
+                    headers: {
+                        "Authorization":
+                            "Bearer " + token,
+                        "Content-Type":
+                            file.type ||
+                            "application/octet-stream"
+                    },
+                    body: file
+                }
+            );
+
+            let data;
+
+            try {
+                data = await response.json();
+            } catch {
+                data = {
+                    status: "error",
+                    reason:
+                        "Jarvis returned a non-JSON response."
+                };
+            }
+
+            if (
+                typeof data.transcript === "string" &&
+                data.transcript.trim()
+            ) {
+                commandInput.value =
+                    data.transcript.trim();
+
+                voiceNote.textContent =
+                    'Heard: "' +
+                    data.transcript.trim() +
+                    '"';
+            } else {
+                voiceNote.textContent =
+                    "No spoken command detected.";
+            }
+
+            output.textContent =
+                JSON.stringify(
+                    data,
+                    null,
+                    2
+                );
+
+            speakReply(
+                getSpokenReply(data)
+            );
+
+            if (response.status === 401) {
+                setConnection(
+                    "error",
+                    "Authentication rejected"
+                );
+            } else if (response.ok) {
+                setConnection(
+                    "online",
+                    "Jarvis connected"
+                );
+            }
+
+        } catch (error) {
+            output.textContent =
+                "Voice command failed: " +
+                error.message;
+
+            voiceNote.textContent =
+                "Voice command failed.";
+
+            setConnection(
+                "error",
+                "Jarvis unavailable"
+            );
+
+        } finally {
+            setVoiceBusy(false);
+
+            /*
+             * Reset the input so recording the same
+             * kind of file twice still triggers change.
+             */
+            voiceCapture.value = "";
+        }
+    }
+
+    micButton.addEventListener(
+        "click",
+        () => {
+            const token =
+                tokenInput.value.trim();
+
+            if (!token) {
+                output.textContent =
+                    "Remote token is required.";
+                return;
+            }
+
+            voiceNote.textContent =
+                "Record one command, then finish the recording.";
+
+            voiceCapture.click();
+        }
+    );
+
+    voiceCapture.addEventListener(
+        "change",
+        () => {
+            const file =
+                voiceCapture.files &&
+                voiceCapture.files[0];
+
+            if (file) {
+                sendVoiceRecording(file);
+            }
+        }
+    );
+
+    checkHealth();
+</script>
+</body>
+</html>"""
+    )

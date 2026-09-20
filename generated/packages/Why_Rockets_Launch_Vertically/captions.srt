@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:03,901
+To reach space, rockets must overcome Earth's gravity, starting vertically.
+
+2
+00:00:03,901 --> 00:00:11,192
+Launching straight up minimizes fuel use by avoiding lateral speeds needed for horizontal travel. A rocket (from Italian: rocchetto, lit.
+
+3
+00:00:11,192 --> 00:00:24,393
+Vertical ascent allows rockets to quickly achieve orbital velocity without wasting fuel on lateral movement. ''bobbin/spool'', and so named for its shape) is an elongated flying vehicle that uses a rocket engine to accelerate without using any surrounding air.
+
+4
+00:00:24,393 --> 00:00:28,944
+Once vertical ascent is complete, rockets can safely tilt and navigate their trajectories.

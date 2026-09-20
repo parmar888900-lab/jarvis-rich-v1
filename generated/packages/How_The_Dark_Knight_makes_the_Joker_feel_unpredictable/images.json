@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Khanhoo_Joker.jpg",
+        "image_path": "generated\\packages\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable\\images\\scene_001.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:LG_IMAX_Sydney_Premiere_of_The_Dark_Knight_Rises.jpg",
+        "image_path": "generated\\packages\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable\\images\\scene_002.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Geoffrey_Rush_(6216191075).jpg",
+        "image_path": "generated\\packages\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:LG_IMAX_Sydney_Premiere_of_The_Dark_Knight_Rises.jpg",
+        "image_path": "generated\\packages\\How_The_Dark_Knight_makes_the_Joker_feel_unpredictable\\images\\scene_004.jpg",
+        "width": null,
+        "height": null
+    }
+]

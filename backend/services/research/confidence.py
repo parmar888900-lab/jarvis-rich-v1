@@ -1,4 +1,4 @@
-﻿"""Deterministic research confidence scoring."""
+"""Deterministic research confidence scoring."""
 
 import re
 

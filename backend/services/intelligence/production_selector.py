@@ -1,4 +1,4 @@
-﻿"""Production topic selection for YouTube automation."""
+"""Production topic selection for YouTube automation."""
 
 from __future__ import annotations
 

@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Green_Screen_Magic__How_Actors_Perform_on_Empty_Stages\\Green_Screen_Magic__How_Actors_Perform_on_Empty_Stages.wav",
+    "duration": 26.01795918367347,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_on_Empty_Stages_scene_001.wav",
+            "duration": 6.513197278911565,
+            "start_time": 0.0,
+            "end_time": 6.513197278911565,
+            "narration": "Imagine an actor stepping onto a magical green stage, but what you see is just a backdrop waiting to be transformed."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_on_Empty_Stages_scene_002.wav",
+            "duration": 7.87156462585034,
+            "start_time": 6.513197278911565,
+            "end_time": 14.384761904761906,
+            "narration": "Chroma key compositing separates the actor from the green screen, allowing filmmakers to replace the background with anything from outer space to a bustling city."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_on_Empty_Stages_scene_003.wav",
+            "duration": 7.151746031746032,
+            "start_time": 14.384761904761906,
+            "end_time": 21.536507936507938,
+            "narration": "This technique, used in news, movies, and video games, turns a simple green screen into an endless creative canvas."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_on_Empty_Stages_scene_004.wav",
+            "duration": 4.481451247165533,
+            "start_time": 21.536507936507938,
+            "end_time": 26.017959183673472,
+            "narration": "The result? Scenes come to life with stunning visual effects, making the impossible, possible."
+        }
+    ],
+    "script": "Imagine an actor stepping onto a magical green stage, but what you see is just a backdrop waiting to be transformed.\nChroma key compositing separates the actor from the green screen, allowing filmmakers to replace the background with anything from outer space to a bustling city.\nThis technique, used in news, movies, and video games, turns a simple green screen into an endless creative canvas.\nThe result? Scenes come to life with stunning visual effects, making the impossible, possible."
+}

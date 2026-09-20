@@ -1,0 +1,4 @@
+In filmmaking, green screens transform scenes, letting you blend any background seamlessly.
+Chroma keying, or green screen, uses a specific color to make objects disappear, replacing them with other visuals. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).
+It's widely used in weather forecasts and video games, making it easier to add dynamic backgrounds and environments.
+For example, a weather presenter stands in front of a green screen, while viewers see a colorful map behind them.

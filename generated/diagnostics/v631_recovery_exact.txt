@@ -1,0 +1,601 @@
+﻿  380:                 ),
+  381:                 "word_count": sum(
+  382:                     len(line.split())
+  383:                     for line in lines
+  384:                 ),
+  385:             },
+  386:         )
+  387: 
+  388:     ########################################################
+  389:     # Content repair
+  390:     ########################################################
+  391: 
+  392:     async def _recover_movie_generation_length(
+  393:         self,
+  394:         *,
+  395:         data: dict,
+  396:         topic: str,
+  397:         movie_title: str,
+  398:         research: str,
+  399:     ) -> dict | None:
+  400:         """
+  401:         Recover short grounded movie-facts scripts.
+  402: 
+  403:         The research string may contain grounded facts without
+  404:         explicit evidence labels. Recovery therefore creates a
+  405:         deterministic local evidence contract from those facts.
+  406: 
+  407:         Validation remains fail-closed.
+  408:         """
+  409: 
+  410:         if not self._is_structurally_valid_content(
+  411:             data
+  412:         ):
+  413:             return None
+  414: 
+  415:         current_words = self._word_count(
+  416:             data
+  417:         )
+  418: 
+  419:         if (
+  420:             self.MIN_WORDS
+  421:             <= current_words
+  422:             <= self.MAX_WORDS
+  423:         ):
+  424:             return data
+  425: 
+  426:         if current_words > self.MAX_WORDS:
+  427:             return None
+  428: 
+  429:         # -------------------------------------------------
+  430:         # Build deterministic evidence units.
+  431:         #
+  432:         # Existing labelled evidence is preserved when
+  433:         # available. Otherwise grounded research sentences
+  434:         # become E1, E2, ... locally for this recovery.
+  435:         # -------------------------------------------------
+  436: 
+  437:         labelled_matches = re.findall(
+  438:             r"\[(E\d+)\]\s*([^\n]+)",
+  439:             research,
+  440:             flags=re.IGNORECASE,
+  441:         )
+  442: 
+  443:         evidence_map = {}
+  444: 
+  445:         for evidence_id, text in labelled_matches:
+  446: 
+  447:             normalized = (
+  448:                 str(evidence_id)
+  449:                 .strip()
+  450:                 .upper()
+  451:             )
+  452: 
+  453:             cleaned = " ".join(
+  454:                 str(text).split()
+  455:             ).strip()
+  456: 
+  457:             if normalized and cleaned:
+  458:                 evidence_map[
+  459:                     normalized
+  460:                 ] = cleaned
+  461: 
+  462:         if not evidence_map:
+  463: 
+  464:             # Research supplied by EvergreenResearch currently
+  465:             # arrives as grounded prose rather than E-labelled
+  466:             # evidence. Split it conservatively into factual
+  467:             # sentence-sized evidence units.
+  468: 
+  469:             raw_sentences = re.split(
+  470:                 r"(?<=[.!?])\s+",
+  471:                 str(research),
+  472:             )
+  473: 
+  474:             evidence_units = []
+  475: 
+  476:             banned_fragments = (
+  477:                 '"topic"',
+  478:                 '"summary"',
+  479:                 '"facts"',
+  480:                 '"keywords"',
+  481:                 '"sources"',
+  482:                 '"score"',
+  483:                 '"category"',
+  484:                 '"url"',
+  485:                 '"confidence"',
+  486:             )
+  487: 
+  488:             for sentence in raw_sentences:
+  489: 
+  490:                 cleaned = " ".join(
+  491:                     sentence.split()
+  492:                 ).strip()
+  493: 
+  494:                 if not cleaned:
+  495:                     continue
+  496: 
+  497:                 lower = cleaned.lower()
+  498: 
+  499:                 if any(
+  500:                     fragment in lower
+  501:                     for fragment in banned_fragments
+  502:                 ):
+  503:                     # JSON/key scaffolding is not evidence.
+  504:                     # Content following a key can still appear
+  505:                     # in later sentence units.
+  506:                     continue
+  507: 
+  508:                 words = cleaned.split()
+  509: 
+  510:                 if len(words) < 5:
+  511:                     continue
+  512: 
+  513:                 if cleaned in evidence_units:
+  514:                     continue
+  515: 
+  516:                 evidence_units.append(
+  517:                     cleaned
+  518:                 )
+  519: 
+  520:                 if len(evidence_units) >= 12:
+  521:                     break
+  522: 
+  523:             # If the serialized research format caused the
+  524:             # conservative pass to reject everything, perform
+  525:             # one bounded textual extraction rather than
+  526:             # inventing evidence.
+  527:             if not evidence_units:
+  528: 
+  529:                 candidate_text = re.sub(
+  530:                     r'https?://\S+',
+  531:                     ' ',
+  532:                     str(research),
+  533:                 )
+  534: 
+  535:                 candidate_text = re.sub(
+  536:                     r'["{}\[\],:]',
+  537:                     ' ',
+  538:                     candidate_text,
+  539:                 )
+  540: 
+  541:                 candidate_text = " ".join(
+  542:                     candidate_text.split()
+  543:                 )
+  544: 
+  545:                 raw_sentences = re.split(
+  546:                     r"(?<=[.!?])\s+",
+  547:                     candidate_text,
+  548:                 )
+  549: 
+  550:                 for sentence in raw_sentences:
+  551: 
+  552:                     cleaned = " ".join(
+  553:                         sentence.split()
+  554:                     ).strip()
+  555: 
+  556:                     if len(
+  557:                         cleaned.split()
+  558:                     ) < 5:
+  559:                         continue
+  560: 
+  561:                     if cleaned in evidence_units:
+  562:                         continue
+  563: 
+  564:                     evidence_units.append(
+  565:                         cleaned
+  566:                     )
+  567: 
+  568:                     if len(evidence_units) >= 12:
+  569:                         break
+  570: 
+  571:             for index, text in enumerate(
+  572:                 evidence_units,
+  573:                 start=1,
+  574:             ):
+  575:                 evidence_map[
+  576:                     f"E{index}"
+  577:                 ] = text
+  578: 
+  579:         if not evidence_map:
+  580:             logger.warning(
+  581:                 "Movie length recovery blocked: "
+  582:                 "no grounded evidence units could be derived."
+  583:             )
+  584:             return None
+  585: 
+  586:         allowed_evidence_ids = list(
+  587:             evidence_map.keys()
+  588:         )
+  589: 
+  590:         allowed_evidence_set = set(
+  591:             allowed_evidence_ids
+  592:         )
+  593: 
+  594:         allowed_evidence_text = ", ".join(
+  595:             allowed_evidence_ids
+  596:         )
+  597: 
+  598:         evidence_packet = "\n".join(
+  599:             f"[{evidence_id}] {text}"
+  600:             for evidence_id, text
+  601:             in evidence_map.items()
+  602:         )
+  603: 
+  604:         current_candidate = data
+  605: 
+  606:         # Rich V1 sprint: one decisive grounded recovery attempt.
+  607:         # The normal generation + regeneration have already run.
+  608:         # Keep every existing structural, length, evidence, and
+  609:         # claim-evidence validation gate below unchanged.
+  610:         for attempt in range(1, 2):
+  611: 
+  612:             candidate_words = self._word_count(
+  613:                 current_candidate
+  614:             )
+  615: 
+  616:             current_json = json.dumps(
+  617:                 current_candidate,
+  618:                 indent=2,
+  619:             )
+  620: 
+  621:             missing_words = max(
+  622:                 0,
+  623:                 85 - candidate_words,
+  624:             )
+  625: 
+  626:             if attempt == 1:
+  627:                 correction = f"""
+  628: The current narration has {candidate_words} words and
+  629: is too short.
+  630: 
+  631: Rewrite the ENTIRE narration, not just the ending.
+  632: 
+  633: HARD LENGTH CONTRACT:
+  634: - exactly four narration lines
+  635: - line 1: 22-24 words
+  636: - line 2: 22-24 words
+  637: - line 3: 22-24 words
+  638: - line 4: 22-24 words
+  639: - target 88-96 narration words total
+  640: - absolute accepted range remains 85-100 words
+  641: - no line may exceed 29 words
+  642: 
+  643: The current script needs approximately
+  644: {missing_words} additional useful words.
+  645: 
+  646: Distribute added information across all four lines.
+  647: Do not simply append filler to the final line.
+  648: 
+  649: Before responding:
+  650: 1. Count each narration line separately.
+  651: 2. Ensure every line contains 22-24 words.
+  652: 3. Count all four narration lines together.
+  653: 4. Ensure the total is 88-96 words.
+  654: 5. If any count is wrong, rewrite before returning.
+  655: 
+  656: Every added claim must be directly supported by the
+  657: evidence packet below.
+  658: 
+  659: Do not invent facts.
+  660: Do not add generic praise.
+  661: Do not add a CTA.
+  662: Do not repeat the same fact in different wording.
+  663: """
+  664:             else:
+  665:                 correction = f"""
+  666: THIS IS RECOVERY ATTEMPT {attempt} OF 3.
+  667: 
+  668: The previous candidate failed validation.
+  669: 
+  670: It contains {candidate_words} narration words.
+  671: 
+  672: Return 85-100 narration words.
+  673: Use exactly four narration lines.
+  674: Aim for 21-25 words per line.
+  675: 
+  676: Count the words before responding.
+  677: Do not add filler.
+  678: Do not invent facts.
+  679: Use only the allowed evidence IDs.
+  680: """
+  681: 
+  682:             messages = [
+  683:                 {
+  684:                     "role": "system",
+  685:                     "content": f"""
+  686: You are repairing a grounded movie-facts
+  687: YouTube Short.
+  688: 
+  689: Return ONLY one JSON object.
+  690: 
+  691: Required keys:
+  692: "title"
+  693: "hashtags"
+  694: "script_lines"
+  695: "evidence_ids"
+  696: 
+  697: MANDATORY:
+  698: 
+  699: - exactly four script_lines
+  700: - exactly four evidence_ids lists
+  701: - target 22-24 words in EACH narration line
+  702: - target 88-96 narration words total
+  703: - absolute accepted range: 85-100 narration words
+  704: - no narration line over 29 words
+  705: - count each line and the total before responding
+  706: - natural spoken vertical-video narration
+  707: - line 1 creates the information gap
+  708: - line 2 gives only necessary context
+  709: - line 3 gives the strongest supported mechanism,
+  710:   example, action, contrast, number, or consequence
+  711: - line 4 resolves the opening gap
+  712: - every line adds new information
+  713: - no generic CTA
+  714: - no filler
+  715: - no invented facts
+  716: - evidence labels never appear inside narration
+  717: 
+  718: The ONLY legal evidence IDs are:
+  719: 
+  720: {allowed_evidence_text}
+  721: 
+  722: Every narration line must cite at least one legal
+  723: evidence ID.
+  724: 
+  725: Never create another ID.
+  726: 
+  727: {correction}
+  728: """,
+  729:                 },
+  730:                 {
+  731:                     "role": "user",
+  732:                     "content": f"""
+  733: MOVIE:
+  734: {movie_title}
+  735: 
+  736: TOPIC:
+  737: {topic}
+  738: 
+  739: CURRENT SCRIPT:
+  740: {current_json}
+  741: 
+  742: GROUNDED EVIDENCE PACKET:
+  743: {evidence_packet}
+  744: 
+  745: Produce the corrected script.
+  746: 
+  747: Return JSON only.
+  748: """,
+  749:                 },
+  750:             ]
+  751: 
+  752:             raw = await self.llm.chat(
+  753:                 messages,
+  754:                 json_mode=True,
+  755:             )
+  756: 
+  757:             recovered = self._extract_json(
+  758:                 raw
+  759:             )
+  760: 
+  761:             if not isinstance(
+  762:                 recovered,
+  763:                 dict,
+  764:             ):
+  765:                 logger.warning(
+  766:                     "Movie recovery attempt %s "
+  767:                     "returned invalid JSON.",
+  768:                     attempt,
+  769:                 )
+  770:                 continue
+  771: 
+  772:             if not self._is_structurally_valid_content(
+  773:                 recovered
+  774:             ):
+  775:                 logger.warning(
+  776:                     "Movie recovery attempt %s "
+  777:                     "failed structural validation.",
+  778:                     attempt,
+  779:                 )
+  780: 
+  781:                 current_candidate = recovered
+  782:                 continue
+  783: 
+  784:             recovered_words = self._word_count(
+  785:                 recovered
+  786:             )
+  787: 
+  788:             if not (
+  789:                 self.MIN_WORDS
+  790:                 <= recovered_words
+  791:                 <= self.MAX_WORDS
+  792:             ):
+  793:                 logger.warning(
+  794:                     "Movie recovery attempt %s "
+  795:                     "failed length validation: %s words.",
+  796:                     attempt,
+  797:                     recovered_words,
+  798:                 )
+  799: 
+  800:                 current_candidate = recovered
+  801:                 continue
+  802: 
+  803:             recovered_lines = [
+  804:                 str(line).strip()
+  805:                 for line in recovered.get(
+  806:                     "script_lines",
+  807:                     []
+  808:                 )
+  809:             ]
+  810: 
+  811:             if len(recovered_lines) != 4:
+  812:                 logger.warning(
+  813:                     "Movie recovery attempt %s "
+  814:                     "did not return four lines.",
+  815:                     attempt,
+  816:                 )
+  817: 
+  818:                 current_candidate = recovered
+  819:                 continue
+  820: 
+  821:             if any(
+  822:                 len(line.split()) > 29
+  823:                 for line in recovered_lines
+  824:             ):
+  825:                 logger.warning(
+  826:                     "Movie recovery attempt %s "
+  827:                     "contains a line over 29 words.",
+  828:                     attempt,
+  829:                 )
+  830: 
+  831:                 current_candidate = recovered
+  832:                 continue
+  833: 
+  834:             raw_ids = recovered.get(
+  835:                 "evidence_ids",
+  836:                 [],
+  837:             )
+  838: 
+  839:             if (
+  840:                 not isinstance(raw_ids, list)
+  841:                 or len(raw_ids) != 4
+  842:             ):
+  843:                 logger.warning(
+  844:                     "Movie recovery attempt %s "
+  845:                     "returned invalid evidence structure.",
+  846:                     attempt,
+  847:                 )
+  848: 
+  849:                 current_candidate = recovered
+  850:                 continue
+  851: 
+  852:             sanitized = []
+  853:             unknown = []
+  854: 
+  855:             for line_ids in raw_ids:
+  856: 
+  857:                 if not isinstance(
+  858:                     line_ids,
+  859:                     list,
+  860:                 ):
+  861:                     unknown.append(
+  862:                         "<invalid-list>"
+  863:                     )
+  864:                     sanitized.append([])
+  865:                     continue
+  866: 
+  867:                 clean_line = []
+  868: 
+  869:                 for evidence_id in line_ids:
+  870: 
+  871:                     normalized = (
+  872:                         str(evidence_id)
+  873:                         .strip()
+  874:                         .upper()
+  875:                     )
+  876: 
+  877:                     if (
+  878:                         normalized
+  879:                         in allowed_evidence_set
+  880:                     ):
+  881:                         if (
+  882:                             normalized
+  883:                             not in clean_line
+  884:                         ):
+  885:                             clean_line.append(
+  886:                                 normalized
+  887:                             )
+  888:                     else:
+  889:                         unknown.append(
+  890:                             normalized
+  891:                         )
+  892: 
+  893:                 sanitized.append(
+  894:                     clean_line
+  895:                 )
+  896: 
+  897:             if unknown:
+  898:                 logger.warning(
+  899:                     "Movie recovery attempt %s "
+  900:                     "rejected unknown evidence IDs: %s",
+  901:                     attempt,
+  902:                     sorted(set(unknown)),
+  903:                 )
+  904: 
+  905:                 recovered[
+  906:                     "evidence_ids"
+  907:                 ] = sanitized
+  908: 
+  909:                 current_candidate = recovered
+  910:                 continue
+  911: 
+  912:             if any(
+  913:                 not ids
+  914:                 for ids in sanitized
+  915:             ):
+  916:                 logger.warning(
+  917:                     "Movie recovery attempt %s "
+  918:                     "left a line without evidence.",
+  919:                     attempt,
+  920:                 )
+  921: 
+  922:                 recovered[
+  923:                     "evidence_ids"
+  924:                 ] = sanitized
+  925: 
+  926:                 current_candidate = recovered
+  927:                 continue
+  928: 
+  929:             recovered[
+  930:                 "evidence_ids"
+  931:             ] = sanitized
+  932: 
+  933:             # IMPORTANT:
+  934:             # Validate against the SAME deterministic labelled
+  935:             # evidence packet supplied to the recovery model.
+  936:             validation = (
+  937:                 self.claim_evidence_validator.validate(
+  938:                     script_lines=recovered_lines,
+  939:                     evidence_ids=sanitized,
+  940:                     research=evidence_packet,
+  941:                 )
+  942:             )
+  943: 
+  944:             if not validation.valid:
+  945:                 logger.warning(
+  946:                     "Movie recovery attempt %s "
+  947:                     "failed claim-evidence validation: %s",
+  948:                     attempt,
+  949:                     validation.issues,
+  950:                 )
+  951: 
+  952:                 current_candidate = recovered
+  953:                 continue
+  954: 
+  955:             if any(
+  956:                 re.search(
+  957:                     r"\[E\d+\]",
+  958:                     line,
+  959:                     flags=re.IGNORECASE,
+  960:                 )
+  961:                 for line in recovered_lines
+  962:             ):
+  963:                 logger.warning(
+  964:                     "Movie recovery attempt %s "
+  965:                     "rejected evidence-label leakage.",
+  966:                     attempt,
+  967:                 )
+  968: 
+  969:                 current_candidate = recovered
+  970:                 continue
+  971: 
+  972:             logger.info(
+  973:                 "Movie evidence-aware length recovery "
+  974:                 "succeeded on attempt %s: %s words.",
+  975:                 attempt,
+  976:                 recovered_words,
+  977:             )
+  978: 
+  979:             return recovered
+  980: 

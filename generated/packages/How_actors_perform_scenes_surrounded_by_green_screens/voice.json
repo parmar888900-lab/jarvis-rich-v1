@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\How_actors_perform_scenes_surrounded_by_green_screens\\How_actors_perform_scenes_surrounded_by_green_screens.wav",
+    "duration": 34.47002267573696,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\How_actors_perform_scenes_surrounded_by_green_screens_scene_001.wav",
+            "duration": 16.69514739229025,
+            "start_time": 0.0,
+            "end_time": 16.69514739229025,
+            "narration": "Actors perform in front of green or blue screens, focusing on their roles while backgrounds are added later. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range)."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\How_actors_perform_scenes_surrounded_by_green_screens_scene_002.wav",
+            "duration": 5.50312925170068,
+            "start_time": 16.69514739229025,
+            "end_time": 22.19827664399093,
+            "narration": "This technique, chroma keying, allows filmmakers to transform scenes with CGI maps or stunning beaches."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\How_actors_perform_scenes_surrounded_by_green_screens_scene_003.wav",
+            "duration": 6.0836281179138325,
+            "start_time": 22.19827664399093,
+            "end_time": 28.281904761904762,
+            "narration": "In weather forecasts, presenters use green screens to appear in front of dynamic weather maps, enhancing the broadcast."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\How_actors_perform_scenes_surrounded_by_green_screens_scene_004.wav",
+            "duration": 6.188117913832199,
+            "start_time": 28.281904761904762,
+            "end_time": 34.47002267573696,
+            "narration": "Common in movies and video games, chroma keying enables seamless integration of actors into various environments."
+        }
+    ],
+    "script": "Actors perform in front of green or blue screens, focusing on their roles while backgrounds are added later. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).\nThis technique, chroma keying, allows filmmakers to transform scenes with CGI maps or stunning beaches.\nIn weather forecasts, presenters use green screens to appear in front of dynamic weather maps, enhancing the broadcast.\nCommon in movies and video games, chroma keying enables seamless integration of actors into various environments."
+}

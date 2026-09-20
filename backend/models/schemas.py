@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class AgentBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: str = Field(default="", max_length=500)
-    model: str = Field(default="llama3.2")
+    model: str = Field(default="qwen2.5:7b")
     system_prompt: str = Field(default="You are JARVIS, a helpful local AI assistant.")
 
 

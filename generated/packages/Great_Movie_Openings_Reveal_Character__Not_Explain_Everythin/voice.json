@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Great_Movie_Openings_Reveal_Character__Not_Explain_Everythin\\Great_Movie_Openings_Reveal_Character__Not_Explain_Everythin.wav",
+    "duration": 36.548208616780045,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Great_Movie_Openings_Reveal_Character__Not_Explain_Everythin_scene_001.wav",
+            "duration": 3.912562358276644,
+            "start_time": 0.0,
+            "end_time": 3.912562358276644,
+            "narration": "Great movie openings immediately hook us with character depth, not exposition."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Great_Movie_Openings_Reveal_Character__Not_Explain_Everythin_scene_002.wav",
+            "duration": 7.209795918367347,
+            "start_time": 3.912562358276644,
+            "end_time": 11.122358276643991,
+            "narration": "Inception-like, they suggest who we'll meet without spelling it out. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Great_Movie_Openings_Reveal_Character__Not_Explain_Everythin_scene_003.wav",
+            "duration": 21.524897959183672,
+            "start_time": 11.122358276643991,
+            "end_time": 32.64725623582766,
+            "narration": "By showing, not telling, filmmakers keep us guessing and engaged. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Great_Movie_Openings_Reveal_Character__Not_Explain_Everythin_scene_004.wav",
+            "duration": 3.900952380952381,
+            "start_time": 32.64725623582766,
+            "end_time": 36.548208616780045,
+            "narration": "Like a mystery, we're drawn in, eager to see how the story unfolds."
+        }
+    ],
+    "script": "Great movie openings immediately hook us with character depth, not exposition.\nInception-like, they suggest who we'll meet without spelling it out. Filmmaking, or film production, is the process of creating a motion picture.\nBy showing, not telling, filmmakers keep us guessing and engaged. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries.\nLike a mystery, we're drawn in, eager to see how the story unfolds."
+}

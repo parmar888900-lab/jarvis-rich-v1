@@ -1,0 +1,46 @@
+﻿========================================================
+ JARVIS REAL CONTROLLED BENCHMARK
+========================================================
+
+ContentId: benchmark_20260919_135134
+Topic: Why movie sound effects are often recorded separately
+Upload: DISABLED
+ExitCode: 2
+ElapsedMinutes: 0.13
+
+===== STDOUT =====
+====================================================================
+JARVIS CONTROLLED REFERENCE-QUALITY BENCHMARK
+====================================================================
+[INFO] Project root: C:\Users\hp\jarvis.ai
+[INFO] Topic: Why movie sound effects are often recorded separately
+[INFO] Content ID: benchmark_20260919_135134
+[INFO] Direct VideoPipeline: YES
+[INFO] Orchestrator: DISABLED
+[INFO] Publisher: DISABLED
+[INFO] YouTube upload: DISABLED
+
+[PASS] backend package import.
+[PASS] Real VideoPipeline imported.
+[PASS] VideoPipeline constructed.
+[PASS] Mandatory content_id supplied.
+
+====================================================================
+STARTING REAL PIPELINE
+====================================================================
+
+[EvergreenResearch] MISS -> Why movie sound effects are often recorded separately
+
+===== STDERR =====
+[NONE]
+
+===== BENCHMARK MP4 =====
+
+===== SAFETY =====
+[PASS] V3 source left installed.
+[PASS] No source modification.
+[PASS] No daily-state reset.
+[PASS] No orchestrator.
+[PASS] No publisher.
+[PASS] No YouTube upload.
+

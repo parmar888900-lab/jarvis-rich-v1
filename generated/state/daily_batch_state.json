@@ -1,0 +1,58 @@
+{
+  "date": "2026-09-19",
+  "successful": 0,
+  "attempted": 5,
+  "results": [
+    {
+      "timestamp": "2026-09-19T06:09:49.017044+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "HTTPError"
+      }
+    },
+    {
+      "timestamp": "2026-09-19T06:16:54.953062+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-19T18:28:57.735105+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    },
+    {
+      "timestamp": "2026-09-19T18:29:39.440974+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RemoteProtocolError"
+      }
+    },
+    {
+      "timestamp": "2026-09-19T22:14:13.603232+00:00",
+      "status": "scheduler_failed",
+      "result": {
+        "status": "scheduler_failed",
+        "reason": "production_cycle_failed",
+        "attempts": 1,
+        "error_type": "RuntimeError"
+      }
+    }
+  ],
+  "cooldown_until": null
+}

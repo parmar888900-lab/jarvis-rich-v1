@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Actors perform scenes on green screen stages, facing an invisible backdrop. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).",
+        "image_prompt": "Actors perform scenes on green screen stages, facing an invisible backdrop. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).",
+        "duration": 15.394829931972788,
+        "start_time": 0.0,
+        "end_time": 15.394829931972788
+    },
+    {
+        "narration": "Chroma keying technology makes their images transparent, allowing any background to be added later.",
+        "image_prompt": "Chroma keying technology makes their images transparent, allowing any background to be added later.",
+        "duration": 4.96907029478458,
+        "start_time": 15.394829931972788,
+        "end_time": 20.36390022675737
+    },
+    {
+        "narration": "Common in weather forecasts and film, this technique lets actors interact naturally with virtual scenery.",
+        "image_prompt": "Common in weather forecasts and film, this technique lets actors interact naturally with virtual scenery.",
+        "duration": 5.944308390022676,
+        "start_time": 20.36390022675737,
+        "end_time": 26.308208616780046
+    },
+    {
+        "narration": "Enabling dynamic scenes without physical sets, chroma keying is a powerful tool in modern filmmaking.",
+        "image_prompt": "Enabling dynamic scenes without physical sets, chroma keying is a powerful tool in modern filmmaking.",
+        "duration": 5.108390022675737,
+        "start_time": 26.308208616780046,
+        "end_time": 31.416598639455785
+    }
+]

@@ -1,0 +1,542 @@
+{
+  "success": true,
+  "topic": "Why movie sound effects are often recorded separately",
+  "content_id": "benchmark_b77e2005f145",
+  "elapsed_seconds": 987.94,
+  "pipeline_result": {
+    "generated": "GeneratedContent(title='Why movie sound effects are often recorded separately', hashtags=['#SoundDesign', '#MovieMaking', '#FoleyArtist'], script_lines=[\"Movie sound effects are recorded separately to align precisely with actors' dialogue, enhancing realism in the final edit.\", 'This allows for flexible adjustments, enabling sound effects to be easily changed without re-recording entire scenes. Sound design is the art and practice of creating auditory elements of media.', \"For example, Jurassic Park's T-Rex roar was recorded separately and later synchronized with the actor's movements. Sound design commonly involves performing (see e.g.\", 'Separate recording ensures sound effects are well-timed and match visual action, making the movie sound lifelike.'], metadata={'source': 'Why movie sound effects are often recorded separately', 'generator': 'Jarvis Rich V1', 'premise_audit': {'score': 80, 'strong': True, 'reasons': ['curiosity_gap', 'mechanism_or_consequence', 'specific_premise_length', 'question_structure'], 'reference_format': 'movie_facts', 'advisory_only': True}, 'content_format': 'cinematic_explainer', 'movie_title': '', 'evidence_ids': [], 'word_count': 86, 'repaired': True, 'repair_attempt': 1, 'repair_issues': [{'type': 'high_risk_claim', 'pattern': '\\\\bperfect(?:ed|ly)?\\\\b', 'matches': ['perfectly']}]})",
+    "content_validation": {
+      "valid": true,
+      "issues": []
+    },
+    "storyboard": [
+      "Scene(narration=\"Movie sound effects are recorded separately to align precisely with actors' dialogue, enhancing realism in the final edit.\", image_prompt=\"Movie sound effects are recorded separately to align precisely with actors' dialogue, enhancing realism in the final edit.\", duration=6.362267573696145, start_time=0.0, end_time=6.362267573696145)",
+      "Scene(narration='This allows for flexible adjustments, enabling sound effects to be easily changed without re-recording entire scenes. Sound design is the art and practice of creating auditory elements of media.', image_prompt='This allows for flexible adjustments, enabling sound effects to be easily changed without re-recording entire scenes. Sound design is the art and practice of creating auditory elements of media.', duration=9.85687074829932, start_time=6.362267573696145, end_time=16.219138321995466)",
+      "Scene(narration=\"For example, Jurassic Park's T-Rex roar was recorded separately and later synchronized with the actor's movements. Sound design commonly involves performing (see e.g.\", image_prompt=\"For example, Jurassic Park's T-Rex roar was recorded separately and later synchronized with the actor's movements. Sound design commonly involves performing (see e.g.\", duration=9.380861678004536, start_time=16.219138321995466, end_time=25.6)",
+      "Scene(narration='Separate recording ensures sound effects are well-timed and match visual action, making the movie sound lifelike.', image_prompt='Separate recording ensures sound effects are well-timed and match visual action, making the movie sound lifelike.', duration=5.61922902494331, start_time=25.6, end_time=31.21922902494331)"
+    ],
+    "licensed_media": [
+      [
+        {
+          "asset_id": "b76e890989d14076bf49f01fed05b960",
+          "asset_type": "image",
+          "file_path": "generated\\licensed_media\\benchmark_b77e2005f145\\6ca3a7d40349.jpg",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+          "source_name": "Wikimedia Commons",
+          "creator": "Yemi festus",
+          "license_name": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "attribution_required": true,
+          "commercial_use_allowed": true,
+          "relevance_score": 82.0,
+          "content_id": "benchmark_b77e2005f145"
+        }
+      ],
+      [
+        {
+          "asset_id": "de538a0a16f1411ba0b726582fd167aa",
+          "asset_type": "image",
+          "file_path": "generated\\licensed_media\\benchmark_b77e2005f145\\a703ae93b37a.jpg",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+          "source_name": "Wikimedia Commons",
+          "creator": "Yemi festus",
+          "license_name": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "attribution_required": true,
+          "commercial_use_allowed": true,
+          "relevance_score": 82.0,
+          "content_id": "benchmark_b77e2005f145"
+        }
+      ],
+      [
+        {
+          "asset_id": "37f6bef166f34d9b9f80b4babc653233",
+          "asset_type": "image",
+          "file_path": "generated\\licensed_media\\benchmark_b77e2005f145\\8b1881c493e4.jpg",
+          "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+          "source_name": "Wikimedia Commons",
+          "creator": "Yemi festus",
+          "license_name": "CC BY-SA 4.0",
+          "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+          "attribution_required": true,
+          "commercial_use_allowed": true,
+          "relevance_score": 82.0,
+          "content_id": "benchmark_b77e2005f145"
+        }
+      ],
+      [
+        {
+          "asset_id": "101c6e175c034d06b0a83885f4ac1cc7",
+          "asset_type": "image",
+          "file_path": "generated\\licensed_media\\benchmark_b77e2005f145\\ec4f3821cdaf.jpg",
+          "source_url": "https://commons.wikimedia.org/wiki/File:CZE-22-Czechoslovak_National_Bank-50_Korun_(1929).jpg",
+          "source_name": "Wikimedia Commons",
+          "creator": "National Museum of American History",
+          "license_name": "Public domain",
+          "license_url": null,
+          "attribution_required": false,
+          "commercial_use_allowed": true,
+          "relevance_score": 78.0,
+          "content_id": "benchmark_b77e2005f145"
+        }
+      ]
+    ],
+    "production_package": {
+      "package_dir": "generated\\packages\\Why_movie_sound_effects_are_often_recorded_separately",
+      "metadata": {
+        "title": "Why movie sound effects are often recorded separately",
+        "hashtags": [
+          "#SoundDesign",
+          "#MovieMaking",
+          "#FoleyArtist"
+        ],
+        "scene_count": 4,
+        "duration": 31.21922902494331,
+        "created_by": "Jarvis Rich V1",
+        "metadata": {
+          "source": "Why movie sound effects are often recorded separately",
+          "generator": "Jarvis Rich V1",
+          "premise_audit": {
+            "score": 80,
+            "strong": true,
+            "reasons": [
+              "curiosity_gap",
+              "mechanism_or_consequence",
+              "specific_premise_length",
+              "question_structure"
+            ],
+            "reference_format": "movie_facts",
+            "advisory_only": true
+          },
+          "content_format": "cinematic_explainer",
+          "movie_title": "",
+          "evidence_ids": [],
+          "word_count": 86,
+          "repaired": true,
+          "repair_attempt": 1,
+          "repair_issues": [
+            {
+              "type": "high_risk_claim",
+              "pattern": "\\bperfect(?:ed|ly)?\\b",
+              "matches": [
+                "perfectly"
+              ]
+            }
+          ]
+        }
+      },
+      "voice": {
+        "status": "success",
+        "audio_path": "generated\\packages\\Why_movie_sound_effects_are_often_recorded_separately\\Why_movie_sound_effects_are_often_recorded_separately.wav",
+        "duration": 31.21922902494331,
+        "provider": "piper",
+        "scenes": [
+          {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_movie_sound_effects_are_often_recorded_separately_scene_001.wav",
+            "duration": 6.362267573696145,
+            "start_time": 0.0,
+            "end_time": 6.362267573696145,
+            "narration": "Movie sound effects are recorded separately to align precisely with actors' dialogue, enhancing realism in the final edit."
+          },
+          {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_movie_sound_effects_are_often_recorded_separately_scene_002.wav",
+            "duration": 9.85687074829932,
+            "start_time": 6.362267573696145,
+            "end_time": 16.219138321995466,
+            "narration": "This allows for flexible adjustments, enabling sound effects to be easily changed without re-recording entire scenes. Sound design is the art and practice of creating auditory elements of media."
+          },
+          {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_movie_sound_effects_are_often_recorded_separately_scene_003.wav",
+            "duration": 9.380861678004536,
+            "start_time": 16.219138321995466,
+            "end_time": 25.6,
+            "narration": "For example, Jurassic Park's T-Rex roar was recorded separately and later synchronized with the actor's movements. Sound design commonly involves performing (see e.g."
+          },
+          {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_movie_sound_effects_are_often_recorded_separately_scene_004.wav",
+            "duration": 5.61922902494331,
+            "start_time": 25.6,
+            "end_time": 31.21922902494331,
+            "narration": "Separate recording ensures sound effects are well-timed and match visual action, making the movie sound lifelike."
+          }
+        ],
+        "script": "Movie sound effects are recorded separately to align precisely with actors' dialogue, enhancing realism in the final edit.\nThis allows for flexible adjustments, enabling sound effects to be easily changed without re-recording entire scenes. Sound design is the art and practice of creating auditory elements of media.\nFor example, Jurassic Park's T-Rex roar was recorded separately and later synchronized with the actor's movements. Sound design commonly involves performing (see e.g.\nSeparate recording ensures sound effects are well-timed and match visual action, making the movie sound lifelike."
+      },
+      "images": [
+        {
+          "scene": 1,
+          "provider": "Wikimedia Commons",
+          "prompt": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+          "image_path": "generated\\packages\\Why_movie_sound_effects_are_often_recorded_separately\\images\\scene_001.jpg",
+          "width": null,
+          "height": null
+        },
+        {
+          "scene": 2,
+          "provider": "Wikimedia Commons",
+          "prompt": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+          "image_path": "generated\\packages\\Why_movie_sound_effects_are_often_recorded_separately\\images\\scene_002.jpg",
+          "width": null,
+          "height": null
+        },
+        {
+          "scene": 3,
+          "provider": "Wikimedia Commons",
+          "prompt": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+          "image_path": "generated\\packages\\Why_movie_sound_effects_are_often_recorded_separately\\images\\scene_003.jpg",
+          "width": null,
+          "height": null
+        },
+        {
+          "scene": 4,
+          "provider": "Wikimedia Commons",
+          "prompt": "https://commons.wikimedia.org/wiki/File:CZE-22-Czechoslovak_National_Bank-50_Korun_(1929).jpg",
+          "image_path": "generated\\packages\\Why_movie_sound_effects_are_often_recorded_separately\\images\\scene_004.jpg",
+          "width": null,
+          "height": null
+        }
+      ],
+      "scene_count": 4,
+      "duration": 31.21922902494331,
+      "script": "Movie sound effects are recorded separately to align precisely with actors' dialogue, enhancing realism in the final edit.\nThis allows for flexible adjustments, enabling sound effects to be easily changed without re-recording entire scenes. Sound design is the art and practice of creating auditory elements of media.\nFor example, Jurassic Park's T-Rex roar was recorded separately and later synchronized with the actor's movements. Sound design commonly involves performing (see e.g.\nSeparate recording ensures sound effects are well-timed and match visual action, making the movie sound lifelike."
+    },
+    "visual_beats": [
+      {
+        "beat_id": "n1_b1",
+        "narration_index": 1,
+        "purpose": "hook_subject",
+        "search_query": "movie sound effects often",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "high"
+      },
+      {
+        "beat_id": "n1_b2",
+        "narration_index": 1,
+        "purpose": "hook_detail",
+        "search_query": "movie sound effects recorded",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "high"
+      },
+      {
+        "beat_id": "n1_b3",
+        "narration_index": 1,
+        "purpose": "hook_detail",
+        "search_query": "movie sound effects",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "high"
+      },
+      {
+        "beat_id": "n1_b4",
+        "narration_index": 1,
+        "purpose": "hook_detail",
+        "search_query": "movie sound",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "high"
+      },
+      {
+        "beat_id": "n2_b1",
+        "narration_index": 2,
+        "purpose": "explanation",
+        "search_query": "allows flexible adjustments enabling",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "normal"
+      },
+      {
+        "beat_id": "n2_b2",
+        "narration_index": 2,
+        "purpose": "supporting_detail",
+        "search_query": "allows flexible adjustments",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "normal"
+      },
+      {
+        "beat_id": "n2_b3",
+        "narration_index": 2,
+        "purpose": "supporting_detail",
+        "search_query": "allows flexible",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "normal"
+      },
+      {
+        "beat_id": "n3_b1",
+        "narration_index": 3,
+        "purpose": "explanation",
+        "search_query": "example jurassic park rex",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "normal"
+      },
+      {
+        "beat_id": "n3_b2",
+        "narration_index": 3,
+        "purpose": "supporting_detail",
+        "search_query": "example jurassic park",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "normal"
+      },
+      {
+        "beat_id": "n3_b3",
+        "narration_index": 3,
+        "purpose": "supporting_detail",
+        "search_query": "example jurassic",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "normal"
+      },
+      {
+        "beat_id": "n4_b1",
+        "narration_index": 4,
+        "purpose": "payoff",
+        "search_query": "separate recording ensures sound",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "normal"
+      },
+      {
+        "beat_id": "n4_b2",
+        "narration_index": 4,
+        "purpose": "closing_visual",
+        "search_query": "separate recording ensures",
+        "preferred_media": [
+          "licensed_video",
+          "licensed_image",
+          "diagram"
+        ],
+        "target_duration": 2.0,
+        "emphasis": "normal"
+      }
+    ],
+    "beat_media": [
+      {
+        "beat_id": "n1_b1",
+        "narration_index": 1,
+        "purpose": "hook_subject",
+        "query": "movie sound effects often",
+        "selected_via": "stage_fallback",
+        "asset_id": "b76e890989d14076bf49f01fed05b960",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n1_b2",
+        "narration_index": 1,
+        "purpose": "hook_detail",
+        "query": "movie sound effects recorded",
+        "selected_via": "stage_fallback",
+        "asset_id": "b76e890989d14076bf49f01fed05b960",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n1_b3",
+        "narration_index": 1,
+        "purpose": "hook_detail",
+        "query": "movie sound effects",
+        "selected_via": "semantic_query",
+        "asset_id": "e2b6e035fd1344fc90bfd8e02f6e6714",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n1_b4",
+        "narration_index": 1,
+        "purpose": "hook_detail",
+        "query": "movie sound",
+        "selected_via": "stage_fallback",
+        "asset_id": "b76e890989d14076bf49f01fed05b960",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n2_b1",
+        "narration_index": 2,
+        "purpose": "explanation",
+        "query": "allows flexible adjustments enabling",
+        "selected_via": "stage_fallback",
+        "asset_id": "de538a0a16f1411ba0b726582fd167aa",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n2_b2",
+        "narration_index": 2,
+        "purpose": "supporting_detail",
+        "query": "allows flexible adjustments",
+        "selected_via": "stage_fallback",
+        "asset_id": "de538a0a16f1411ba0b726582fd167aa",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n2_b3",
+        "narration_index": 2,
+        "purpose": "supporting_detail",
+        "query": "allows flexible",
+        "selected_via": "stage_fallback",
+        "asset_id": "de538a0a16f1411ba0b726582fd167aa",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n3_b1",
+        "narration_index": 3,
+        "purpose": "explanation",
+        "query": "example jurassic park rex",
+        "selected_via": "stage_fallback",
+        "asset_id": "37f6bef166f34d9b9f80b4babc653233",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n3_b2",
+        "narration_index": 3,
+        "purpose": "supporting_detail",
+        "query": "example jurassic park",
+        "selected_via": "stage_fallback",
+        "asset_id": "37f6bef166f34d9b9f80b4babc653233",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n3_b3",
+        "narration_index": 3,
+        "purpose": "supporting_detail",
+        "query": "example jurassic",
+        "selected_via": "stage_fallback",
+        "asset_id": "37f6bef166f34d9b9f80b4babc653233",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:Movie_production.jpg",
+        "license_name": "CC BY-SA 4.0",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n4_b1",
+        "narration_index": 4,
+        "purpose": "payoff",
+        "query": "separate recording ensures sound",
+        "selected_via": "stage_fallback",
+        "asset_id": "101c6e175c034d06b0a83885f4ac1cc7",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:CZE-22-Czechoslovak_National_Bank-50_Korun_(1929).jpg",
+        "license_name": "Public domain",
+        "commercial_use_allowed": true
+      },
+      {
+        "beat_id": "n4_b2",
+        "narration_index": 4,
+        "purpose": "closing_visual",
+        "query": "separate recording ensures",
+        "selected_via": "stage_fallback",
+        "asset_id": "101c6e175c034d06b0a83885f4ac1cc7",
+        "source_name": "Wikimedia Commons",
+        "source_url": "https://commons.wikimedia.org/wiki/File:CZE-22-Czechoslovak_National_Bank-50_Korun_(1929).jpg",
+        "license_name": "Public domain",
+        "commercial_use_allowed": true
+      }
+    ],
+    "semantic_media_metrics": {
+      "enrichment_budget": 6,
+      "enrichment_attempts": 6,
+      "enrichment_successes": 1,
+      "fallback_count": 11,
+      "total_beats": 12
+    },
+    "video": {
+      "status": "success",
+      "video_path": "generated\\videos\\Why_movie_sound_effects_are_often_recorded_separately.mp4",
+      "title": "Why movie sound effects are often recorded separately",
+      "duration": 31.22,
+      "resolution": "1080x1920",
+      "fps": 30,
+      "captions": true,
+      "caption_mode": "whisper",
+      "visual_engine": "stage2b_semantic_microbeat",
+      "visual_cut_count": 12,
+      "story_stage_count": 4,
+      "average_visual_cut_seconds": 2.602,
+      "hook_visual_strategy": "accelerated_first_three_beats",
+      "semantic_beat_count": 12,
+      "semantic_media_enabled": true,
+      "editorial_pacing": "hook_biased_dynamic",
+      "caption_phrase_target_words": 3,
+      "visual_framing": "aspect_preserving_cover"
+    },
+    "status": "success"
+  },
+  "video_path": "C:\\Users\\hp\\jarvis.ai\\generated\\videos\\Why_movie_sound_effects_are_often_recorded_separately.mp4",
+  "video_bytes": 3597902
+}

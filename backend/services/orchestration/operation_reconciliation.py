@@ -1,4 +1,4 @@
-﻿"""Provider reconciliation primitives for production side effects."""
+"""Provider reconciliation primitives for production side effects."""
 
 from dataclasses import dataclass
 from enum import Enum

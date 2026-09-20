@@ -1,4 +1,4 @@
-﻿"""API route modules."""
+"""API route modules."""
 
 from backend.routes import (
     agents,

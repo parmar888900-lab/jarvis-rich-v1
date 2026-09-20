@@ -1,0 +1,501 @@
+=== V5 RENDER PATH DISCOVERY ===
+Generated: 2026-09-19T16:21:55.9049102-06:00
+
+=== V5 BENCHMARK SCRIPT ===
+import asyncio
+import json
+import os
+import sys
+import time
+import traceback
+from pathlib import Path
+
+ROOT = Path.cwd().resolve()
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(
+        0,
+        str(ROOT),
+    )
+
+os.chdir(ROOT)
+
+TOPIC = (
+    "Why movie sound effects are often "
+    "recorded separately"
+)
+
+CONTENT_ID = "reference_visual_v5_20260919_145853"
+
+print("=" * 68)
+print("JARVIS REFERENCE VISUAL V5 REAL BENCHMARK")
+print("=" * 68)
+print(f"[INFO] Content ID: {CONTENT_ID}")
+print(f"[INFO] Topic: {TOPIC}")
+print("[INFO] Upload: DISABLED")
+print("[INFO] Publisher: DISABLED")
+print("[INFO] Orchestrator: DISABLED")
+print()
+
+started = time.monotonic()
+
+try:
+    from backend.services.pipelines.video_pipeline import VideoPipeline
+
+    pipeline = VideoPipeline()
+
+    print(
+        "[PASS] Real VideoPipeline constructed."
+    )
+
+    trend = {
+        "content_id": CONTENT_ID,
+        "topic": TOPIC,
+        "title": TOPIC,
+        "query": TOPIC,
+        "source": (
+            "reference_visual_v5_benchmark"
+        ),
+        "format": "movie_facts",
+        "content_format": "movie_facts",
+        "category": "movie_facts",
+        "genre": "film",
+    }
+
+    print()
+    print(
+        "===== REAL PIPELINE START ====="
+    )
+    print()
+
+    output = asyncio.run(
+        pipeline.run(trend)
+    )
+
+    elapsed = (
+        time.monotonic()
+        - started
+    )
+
+    print()
+    print(
+        "===== REAL PIPELINE SUCCESS ====="
+    )
+
+    print(
+        f"[RESULT] ElapsedSeconds="
+        f"{elapsed:.2f}"
+    )
+
+    print(
+        f"[RESULT] ReturnType="
+        f"{type(output).__name__}"
+    )
+
+    if hasattr(
+        output,
+        "model_dump",
+    ):
+        value = output.model_dump()
+
+    elif hasattr(
+        output,
+        "dict",
+    ):
+        value = output.dict()
+
+    elif isinstance(
+        output,
+        (
+            dict,
+            list,
+            str,
+            int,
+            float,
+            bool,
+            type(None),
+        ),
+    ):
+        value = output
+
+    else:
+        value = {
+            "repr": repr(output)
+        }
+
+    print(
+        "[RESULT_JSON] "
+        + json.dumps(
+            value,
+            ensure_ascii=False,
+            default=str,
+        )
+    )
+
+    print(
+        "[PASS] No orchestrator used."
+    )
+
+    print(
+        "[PASS] No publisher used."
+    )
+
+    print(
+        "[PASS] No upload requested."
+    )
+
+    raise SystemExit(0)
+
+except SystemExit:
+    raise
+
+except Exception as exc:
+
+    elapsed = (
+        time.monotonic()
+        - started
+    )
+
+    print()
+    print(
+        "===== REAL PIPELINE STOPPED ====="
+    )
+
+    print(
+        f"[RESULT] ElapsedSeconds="
+        f"{elapsed:.2f}"
+    )
+
+    print(
+        f"[RESULT] Type="
+        f"{type(exc).__name__}"
+    )
+
+    print(
+        f"[RESULT] Reason={exc}"
+    )
+
+    print()
+    print(
+        "===== TRACEBACK ====="
+    )
+
+    print(
+        "".join(
+            traceback.format_exception(
+                type(exc),
+                exc,
+                exc.__traceback__,
+            )
+        )
+    )
+
+    print(
+        "[PASS] No orchestrator used."
+    )
+
+    print(
+        "[PASS] No publisher used."
+    )
+
+    print(
+        "[PASS] No upload requested."
+    )
+
+    raise SystemExit(2)
+
+=== CURRENT PIPELINE ENTRY POINTS ===
+31: from backend.services.video.production_package import (
+35: from backend.services.video_renderer.renderer import VideoRenderer
+52:     REFERENCE_VISUAL_V5 = True
+76:         self.renderer = VideoRenderer()
+190:         REFERENCE_VISUAL_V5
+480:         REFERENCE_VISUAL_V5
+656:         REFERENCE_VISUAL_V5
+896:     async def run(
+951:             "reference_profile": format_decision.reference_profile,
+1562:         # 7. Temporary renderer compatibility
+1564:         # The existing renderer still accepts one image
+1569:         # The next renderer patch will consume the complete
+1594:                     "asset for the current renderer."
+1778:         video = await self.renderer.render(
+1782:             production_package=package,
+1821:             "production_package": package,
+
+=== CURRENT / RECENT RENDER SCRIPTS ===
+2026-09-15 17:44:17 | render_narrative_movie_proof_v15.py
+2026-09-14 21:08:12 | render_narrative_movie_proof_v15_before_prerender_stop.py
+2026-09-14 20:16:22 | render_narrative_movie_proof_v15_before_v15_1_ending_fix.py
+2026-09-14 20:16:22 | render_narrative_movie_proof_v15_before_v15_1_ending_chronology.py
+2026-09-14 20:06:07 | render_narrative_movie_proof_v15_before_installer_v2.py
+2026-09-14 20:06:07 | render_narrative_movie_proof_v15_before_safe_install.py
+2026-09-14 19:27:10 | render_narrative_movie_proof_v14.py
+2026-09-14 19:27:10 | render_narrative_movie_proof_v14_frozen_20260914_200607.py
+2026-09-14 18:59:03 | render_narrative_movie_proof_v14_before_continuity_patch.py
+2026-09-14 18:09:09 | render_narrative_movie_proof_v14_before_ollama_patch_v2.py
+2026-09-14 18:09:09 | render_narrative_movie_proof_v14_before_patch.py
+2026-09-14 18:09:09 | render_narrative_movie_proof_v14_before_ollama_patch.py
+2026-09-14 18:09:09 | render_narrative_movie_proof_v13.py
+2026-09-14 17:30:34 | render_narrative_movie_proof_v12.py
+2026-09-14 16:50:00 | render_narrative_movie_proof_v11.py
+2026-09-14 00:29:42 | render_narrative_movie_proof_v10.py
+2026-09-13 22:54:54 | render_narrative_movie_proof_v9.py
+2026-09-13 22:23:25 | render_narrative_movie_proof_v8.py
+2026-09-13 21:59:05 | render_narrative_movie_proof_v7.py
+2026-09-13 21:28:48 | render_narrative_movie_proof_v6.py
+2026-09-13 20:58:47 | render_narrative_movie_proof_v5.py
+2026-09-13 20:31:34 | render_narrative_movie_proof_v4.py
+2026-09-13 11:29:17 | render_semantic_movie_proof_v3_1.py
+2026-09-12 23:40:33 | render_semantic_movie_proof_v3.py
+2026-09-12 23:09:55 | render_modern_movie_reference_proof_v2.py
+
+=== SCRIPTS REFERENCING VIDEO PIPELINE ===
+C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:30: from backend.services.pipelines import VideoPipeline
+C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:50: - Launch the VideoPipeline for create_video
+C:\Users\hp\jarvis.ai\backend\services\agent_handlers\youtube.py:75: self.pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\backend\services\intelligence\evergreen_content_selector.py:82: "Why movie sound effects are often recorded separately",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:38: class VideoPipeline:
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:52: REFERENCE_VISUAL_V5 = True
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:190: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:480: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:656: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\backend\services\pipelines\__init__.py:1: from .video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\backend\services\pipelines\__init__.py:4: "VideoPipeline",
+C:\Users\hp\jarvis.ai\generated\benchmarks\block4_20260918_231855\run_benchmark.py:21: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\benchmarks\block4_20260918_231855\run_benchmark.py:204: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\benchmarks\block4_20260918_231855\run_benchmark.py:230: "VideoPipeline.run has unsupported required "
+C:\Users\hp\jarvis.ai\generated\benchmarks\block4_fixed_20260918_232907\run_benchmark.py:16: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\benchmarks\block4_fixed_20260918_232907\run_benchmark.py:131: # Exact VideoPipeline.run contract:
+C:\Users\hp\jarvis.ai\generated\benchmarks\block4_fixed_20260918_232907\run_benchmark.py:170: "[INFO] Calling VideoPipeline.run(trend).",
+C:\Users\hp\jarvis.ai\generated\benchmarks\block4_fixed_20260918_232907\run_benchmark.py:186: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\benchmarks\block5_visual_20260919_003302\run.py:142: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\benchmarks\block5_visual_20260919_003302\run.py:145: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\benchmarks\block5_visual_20260919_004201\run.py:142: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\benchmarks\block5_visual_20260919_004201\run.py:145: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\benchmarks\block5_visual_20260919_005222\block5_runner.py:14: TOPIC = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\benchmarks\block5_visual_20260919_005222\block5_runner.py:141: "[INFO] Importing VideoPipeline...",
+C:\Users\hp\jarvis.ai\generated\benchmarks\block5_visual_20260919_005222\block5_runner.py:146: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\benchmarks\block5_visual_20260919_005222\block5_runner.py:149: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\benchmarks\definitive_20260919_000358\run.py:76: topic = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\benchmarks\definitive_20260919_000358\run.py:110: print("[STEP] Importing VideoPipeline...", flush=True)
+C:\Users\hp\jarvis.ai\generated\benchmarks\definitive_20260919_000358\run.py:112: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\benchmarks\definitive_20260919_000358\run.py:116: print("[STEP] Constructing VideoPipeline...", flush=True)
+C:\Users\hp\jarvis.ai\generated\benchmarks\definitive_20260919_000358\run.py:118: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\benchmarks\movie_facts_fixed_20260918_234142\run_benchmark.py:16: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\benchmarks\movie_facts_fixed_20260918_234142\run_benchmark.py:183: "[INFO] Calling VideoPipeline.run(trend).",
+C:\Users\hp\jarvis.ai\generated\benchmarks\movie_facts_fixed_20260918_234142\run_benchmark.py:205: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\benchmarks\recovery_v2_20260918_234610\run_benchmark.py:16: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\benchmarks\recovery_v2_20260918_234610\run_benchmark.py:183: "[INFO] Calling VideoPipeline.run(trend).",
+C:\Users\hp\jarvis.ai\generated\benchmarks\recovery_v2_20260918_234610\run_benchmark.py:205: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\benchmarks\v3_real_render_20260918_235457\run.py:15: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\benchmarks\v3_real_render_20260918_235457\run.py:136: "[INFO] Starting VideoPipeline.run(trend).",
+C:\Users\hp\jarvis.ai\generated\benchmarks\v3_real_render_20260918_235457\run.py:155: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:128: pipeline_module, VideoPipeline = (
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:130: "VideoPipeline",
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:138: if VideoPipeline is None:
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:140: "Could not locate VideoPipeline."
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:145: ] = VideoPipeline.__name__
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:152: "Real VideoPipeline located."
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:217: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:373: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:377: "VideoPipeline no longer supports "
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:383: "VideoPipeline constructed."
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_benchmark_20260919_010903\run_block5_benchmark.py:394: "VideoPipeline.run not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_real_20260919_011022\run_real_benchmark.py:74: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_real_20260919_011022\run_real_benchmark.py:79: "Real VideoPipeline imported."
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_real_20260919_011022\run_real_benchmark.py:82: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_real_20260919_011022\run_real_benchmark.py:86: "VideoPipeline constructed."
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_real_20260919_011022\run_real_benchmark.py:101: "VideoPipeline.run has no input parameter."
+C:\Users\hp\jarvis.ai\generated\diagnostics\block5_real_20260919_011022\run_real_benchmark.py:312: "VideoPipeline.run returned."
+C:\Users\hp\jarvis.ai\generated\diagnostics\evidence_shape_20260919_004629\research_probe.py:11: TOPIC = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\diagnostics\evidence_shape_20260919_004629\research_probe.py:71: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\evidence_shape_20260919_004629\research_probe.py:74: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_20260919_134056\apply_master_visual_patch.py:88: "VideoPipeline constants anchor not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_20260919_134056\apply_master_visual_patch.py:238: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_20260919_134056\apply_master_visual_patch.py:245: "VideoPipeline class not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_20260919_134056\apply_master_visual_patch.py:266: "VideoPipeline.run not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_20260919_134056\verify_master_visual_patch.py:105: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_20260919_134056\verify_master_visual_patch.py:136: "Missing VideoPipeline methods: "
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_real_20260919_134651\jarvis_real_visual_benchmark.py:9: TOPIC = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_real_20260919_134651\jarvis_real_visual_benchmark.py:25: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_real_20260919_134651\jarvis_real_visual_benchmark.py:27: print("[PASS] Real VideoPipeline imported.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_real_20260919_134651\jarvis_real_visual_benchmark.py:29: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_real_20260919_134651\jarvis_real_visual_benchmark.py:31: print("[PASS] VideoPipeline constructed.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_real_20260919_134651\jarvis_real_visual_benchmark.py:43: "VideoPipeline.run() exposes no input parameter."
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v2_20260919_134332\jarvis_master_visual_patch_v2.py:253: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v2_20260919_134332\jarvis_master_visual_patch_v2.py:260: "VideoPipeline class not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v2_20260919_134332\jarvis_master_visual_patch_v2.py:281: "VideoPipeline.run not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v2_20260919_134332\jarvis_master_visual_verify_v2.py:119: == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v2_20260919_134332\jarvis_master_visual_verify_v2.py:126: "VideoPipeline missing."
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v3_20260919_134502\jarvis_master_visual_patch_v3.py:253: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v3_20260919_134502\jarvis_master_visual_patch_v3.py:260: "VideoPipeline class not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v3_20260919_134502\jarvis_master_visual_patch_v3.py:281: "VideoPipeline.run not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v3_20260919_134502\jarvis_master_visual_verify_v3.py:95: # 2. FIND VIDEOPIPELINE CLASS
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v3_20260919_134502\jarvis_master_visual_verify_v3.py:107: == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_v3_20260919_134502\jarvis_master_visual_verify_v3.py:114: "VideoPipeline class missing."
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135134\jarvis_controlled_benchmark.py:23: TOPIC = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135134\jarvis_controlled_benchmark.py:32: print("[INFO] Direct VideoPipeline: YES")
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135134\jarvis_controlled_benchmark.py:41: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135134\jarvis_controlled_benchmark.py:44: print("[PASS] Real VideoPipeline imported.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135134\jarvis_controlled_benchmark.py:46: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135134\jarvis_controlled_benchmark.py:48: print("[PASS] VideoPipeline constructed.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135151\jarvis_controlled_benchmark.py:23: TOPIC = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135151\jarvis_controlled_benchmark.py:32: print("[INFO] Direct VideoPipeline: YES")
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135151\jarvis_controlled_benchmark.py:41: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135151\jarvis_controlled_benchmark.py:44: print("[PASS] Real VideoPipeline imported.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135151\jarvis_controlled_benchmark.py:46: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_20260919_135151\jarvis_controlled_benchmark.py:48: print("[PASS] VideoPipeline constructed.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_fixed_20260919_134758\jarvis_controlled_benchmark.py:29: TOPIC = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_fixed_20260919_134758\jarvis_controlled_benchmark.py:37: print("[INFO] Direct VideoPipeline: YES")
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_fixed_20260919_134758\jarvis_controlled_benchmark.py:46: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_fixed_20260919_134758\jarvis_controlled_benchmark.py:49: print("[PASS] Real VideoPipeline imported.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_fixed_20260919_134758\jarvis_controlled_benchmark.py:51: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_fixed_20260919_134758\jarvis_controlled_benchmark.py:53: print("[PASS] VideoPipeline constructed.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\real_benchmark_fixed_20260919_134758\jarvis_controlled_benchmark.py:65: "VideoPipeline.run() exposes no input parameter."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:31: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:38: "VideoPipeline class not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:90: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:375: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:552: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:835: # Re-indent inside VideoPipeline.
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:853: if "REFERENCE_VISUAL_V5 = True" not in patched:
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:868: + "    REFERENCE_VISUAL_V5 = True",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:882: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\install_reference_visual_v5.py:931: "REFERENCE_VISUAL_V5 = True",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\verify_reference_visual_v5.py:24: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\verify_reference_visual_v5.py:31: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\verify_reference_visual_v5.py:32: "REFERENCE_VISUAL_V5",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\verify_reference_visual_v5.py:46: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\verify_reference_visual_v5.py:67: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\verify_reference_visual_v5.py:118: VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\verify_reference_visual_v5.py:128: VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145611\verify_reference_visual_v5.py:138: VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:31: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:38: "VideoPipeline class not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:90: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:375: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:552: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:835: # Re-indent inside VideoPipeline.
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:853: if "REFERENCE_VISUAL_V5 = True" not in patched:
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:868: + "    REFERENCE_VISUAL_V5 = True",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:882: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\install_reference_visual_v5.py:931: "REFERENCE_VISUAL_V5 = True",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py:24: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py:31: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py:32: "REFERENCE_VISUAL_V5",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py:46: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py:67: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py:118: VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py:128: VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py:138: VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\benchmark_reference_visual_v5.py:24: CONTENT_ID = "reference_visual_v5_20260919_145853"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\benchmark_reference_visual_v5.py:39: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\benchmark_reference_visual_v5.py:41: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\benchmark_reference_visual_v5.py:44: "[PASS] Real VideoPipeline constructed."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\benchmark_reference_visual_v5.py:53: "reference_visual_v5_benchmark"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:31: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:38: "VideoPipeline class not found."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:90: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:381: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:558: REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:841: # Re-indent inside VideoPipeline.
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:859: if "REFERENCE_VISUAL_V5 = True" not in patched:
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:874: + "    REFERENCE_VISUAL_V5 = True",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:888: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:937: "REFERENCE_VISUAL_V5 = True",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:24: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:31: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:32: "REFERENCE_VISUAL_V5",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:46: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:67: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:118: VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:128: VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:138: VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\apply_semantic_visual_v4.py:56: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\apply_semantic_visual_v4.py:62: raise RuntimeError("VideoPipeline class not found.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\run_semantic_visual_v4_benchmark.py:16: TOPIC = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\run_semantic_visual_v4_benchmark.py:32: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\run_semantic_visual_v4_benchmark.py:34: print("[PASS] Real VideoPipeline imported.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\run_semantic_visual_v4_benchmark.py:36: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\run_semantic_visual_v4_benchmark.py:38: print("[PASS] VideoPipeline constructed.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\verify_semantic_visual_v4.py:35: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141826\verify_semantic_visual_v4.py:42: "VideoPipeline missing."
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141901\apply_semantic_visual_v4.py:56: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141901\apply_semantic_visual_v4.py:62: raise RuntimeError("VideoPipeline class not found.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141901\verify_semantic_visual_v4.py:35: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\semantic_visual_v4_20260919_141901\verify_semantic_visual_v4.py:42: "VideoPipeline missing."
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_classmethod_fix_20260919_142748\fix_v4_classmethod.py:18: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_classmethod_fix_20260919_142748\fix_v4_classmethod.py:24: raise RuntimeError("VideoPipeline class not found.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_classmethod_fix_20260919_142748\fix_v4_classmethod.py:76: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_classmethod_fix_20260919_142748\fix_v4_classmethod.py:103: "Unexpected classmethod(...) assignment exists in VideoPipeline."
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\repair_v4_decorators.py:23: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\repair_v4_decorators.py:29: raise RuntimeError("VideoPipeline class not found.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\repair_v4_decorators.py:98: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py:3: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py:14: raw = inspect.getattr_static(VideoPipeline, name)
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py:27: bound = getattr(VideoPipeline, name)
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py:45: queries = VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py:46: topic="Why movie sound effects are often recorded separately",
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py:71: score = VideoPipeline._master_metadata_score(
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py:74: topic="Why movie sound effects are often recorded separately",
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py:86: chosen = VideoPipeline._master_choose_asset(
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py:89: topic="Why movie sound effects are often recorded separately",
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\benchmark.py:16: TOPIC = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\benchmark.py:32: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\benchmark.py:34: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\benchmark.py:36: print("[PASS] Real VideoPipeline constructed.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\repair_decorators.py:22: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\repair_decorators.py:92: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\runtime_test.py:10: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\runtime_test.py:22: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\runtime_test.py:38: VideoPipeline,
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\runtime_test.py:58: queries = VideoPipeline._master_query_variants(
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\runtime_test.py:59: topic="Why movie sound effects are often recorded separately",
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\runtime_test.py:97: score = VideoPipeline._master_metadata_score(
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\runtime_test.py:100: topic="Why movie sound effects are often recorded separately",
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\runtime_test.py:112: chosen = VideoPipeline._master_choose_asset(
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_final_repair_20260919_143014\runtime_test.py:115: topic="Why movie sound effects are often recorded separately",
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_recovery_20260919_142032\run_v4_benchmark.py:16: TOPIC = "Why movie sound effects are often recorded separately"
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_recovery_20260919_142032\run_v4_benchmark.py:32: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_recovery_20260919_142032\run_v4_benchmark.py:34: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_recovery_20260919_142032\run_v4_benchmark.py:36: print("[PASS] Real VideoPipeline constructed.")
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_recovery_20260919_142032\verify_actual_v4.py:28: and node.name == "VideoPipeline"
+C:\Users\hp\jarvis.ai\generated\diagnostics\v4_recovery_20260919_142032\verify_actual_v4.py:35: "VideoPipeline missing."
+C:\Users\hp\jarvis.ai\test_autonomous_youtube_integration.py:140: class FakeVideoPipeline:
+C:\Users\hp\jarvis.ai\test_autonomous_youtube_integration.py:359: FakeVideoPipeline(
+C:\Users\hp\jarvis.ai\test_full_pipeline.py:3: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\test_full_pipeline.py:8: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\test_pipeline_content_gate.py:4: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\test_pipeline_content_gate.py:53: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\test_pipeline_repair.py:4: from backend.services.pipelines.video_pipeline import VideoPipeline
+C:\Users\hp\jarvis.ai\test_pipeline_repair.py:168: pipeline = VideoPipeline()
+C:\Users\hp\jarvis.ai\test_youtube_analysis_only.py:14: "VideoPipeline must not run during analyze_trends."
+C:\Users\hp\jarvis.ai\test_youtube_analysis_only.py:130: "VideoPipeline."
+C:\Users\hp\jarvis.ai\test_youtube_analyze_routing.py:19: "analyze_trends must never run VideoPipeline"
+C:\Users\hp\jarvis.ai\test_youtube_analyze_routing.py:175: "running VideoPipeline."
+C:\Users\hp\jarvis.ai\test_youtube_create_video_routing.py:116: "never reaches VideoPipeline."
+C:\Users\hp\jarvis.ai\test_youtube_http_create_video.py:241: "YouTube Agent -> VideoPipeline "
+
+=== RECENT GENERATED MP4 FILES ===
+2026-09-19 15:14:23 | 3.02 MB | C:\Users\hp\jarvis.ai\generated\videos\Why_movie_sound_effects_are_often_recorded_separately.mp4
+2026-09-18 16:31:47 | 2.41 MB | C:\Users\hp\jarvis.ai\generated\videos\Camera_Movement_in_Filmmaking.mp4
+2026-09-18 16:25:56 | 0.95 MB | C:\Users\hp\jarvis.ai\generated\videos\Why_blockbuster_movies_use_previsualization_before_filming.mp4
+2026-09-18 16:14:34 | 0.81 MB | C:\Users\hp\jarvis.ai\generated\videos\Green_Screen_Magic_in_Filmmaking.mp4
+2026-09-18 16:05:23 | 1.5 MB | C:\Users\hp\jarvis.ai\generated\videos\How_Filmmakers_Created_Doctor_Strange_s_Reality_Bending_Visu.mp4
+2026-09-18 15:28:05 | 1.11 MB | C:\Users\hp\jarvis.ai\generated\videos\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_Virtual.mp4
+2026-09-18 15:16:05 | 1.76 MB | C:\Users\hp\jarvis.ai\generated\videos\Spider_Man_No_Way_Home__The_Multiverse_Bursting_Open.mp4
+2026-09-18 15:06:50 | 1.27 MB | C:\Users\hp\jarvis.ai\generated\videos\Green_Screen_Magic__How_Actors_Perform_Behind_the_Scenes.mp4
+2026-09-18 15:03:05 | 2.22 MB | C:\Users\hp\jarvis.ai\generated\videos\How_Filmmakers_Use_Camera_Movement_to_Increase_Tension.mp4
+2026-09-18 14:56:20 | 1.53 MB | C:\Users\hp\jarvis.ai\generated\videos\Why_Great_Movie_Openings_Reveal_Character_Without_Explaining.mp4
+2026-09-18 14:45:00 | 1.16 MB | C:\Users\hp\jarvis.ai\generated\videos\Why_Filmmakers_Use_Green_Screens.mp4
+2026-09-18 14:09:08 | 2.33 MB | C:\Users\hp\jarvis.ai\generated\videos\Inception__Visualizing_Complex_Ideas.mp4
+2026-09-18 13:34:16 | 1.47 MB | C:\Users\hp\jarvis.ai\generated\videos\How_Movie_Sound_Designers_Create_Sounds_That_Do_Not_Exist.mp4
+2026-09-18 13:28:28 | 1.16 MB | C:\Users\hp\jarvis.ai\generated\videos\Jurassic_Park__Dinosaurs_That_Feel_Real.mp4
+2026-09-18 13:22:10 | 0.64 MB | C:\Users\hp\jarvis.ai\generated\videos\How_Editing_Changes_the_Emotional_Impact_of_a_Scene.mp4
+2026-09-18 13:09:52 | 1.16 MB | C:\Users\hp\jarvis.ai\generated\videos\Green_Screen_Magic__How_Actors_Perform_on_Empty_Stages.mp4
+2026-09-18 12:53:36 | 1.27 MB | C:\Users\hp\jarvis.ai\generated\videos\Green_Screen_Magic__Filmmaking_s_Colorful_Trick.mp4
+2026-09-18 12:49:51 | 2.37 MB | C:\Users\hp\jarvis.ai\generated\videos\Camera_Movement_in_Film__Building_Tension.mp4
+2026-09-18 12:33:06 | 1.51 MB | C:\Users\hp\jarvis.ai\generated\videos\The_Matrix__Revolutionizing_Action_Sequences_with_Bullet_Tim.mp4
+2026-09-18 12:23:51 | 1.17 MB | C:\Users\hp\jarvis.ai\generated\videos\Green_Screen_Secrets__How_Actors_Perform_with_Chroma_Key.mp4
+
+=== END ===

@@ -1,0 +1,29 @@
+{
+    "title": "Yeshanagula | The Paradise | Nani | Keerthy Suresh | Anirudh Ravichander | Srikanth Odela",
+    "hashtags": [
+        "#TheParadise",
+        "#Yeshanagula",
+        "#Nani",
+        "#KeerthySuresh",
+        "#AnirudhRavichander"
+    ],
+    "scene_count": 4,
+    "duration": 26.482358276643993,
+    "created_by": "Jarvis Rich V1",
+    "metadata": {
+        "source": "Yeshanagula | The Paradise | Nani | Keerthy Suresh | Anirudh Ravichander | Srikanth Odela",
+        "generator": "Jarvis Rich V1",
+        "word_count": 82,
+        "repaired": true,
+        "repair_attempt": 1,
+        "repair_issues": [
+            {
+                "type": "high_risk_claim",
+                "pattern": "\\bproven\\b",
+                "matches": [
+                    "proven"
+                ]
+            }
+        ]
+    }
+}

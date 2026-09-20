@@ -1,0 +1,39 @@
+{
+    "title": "The Matrix: Revolutionizing Action Sequences with Bullet Time",
+    "hashtags": [
+        "#TheMatrix",
+        "#BulletTime",
+        "#ActionRevolution",
+        "#VisualEffects"
+    ],
+    "scene_count": 4,
+    "duration": 30.197551020408163,
+    "created_by": "Jarvis Rich V1",
+    "metadata": {
+        "source": "Why The Matrix bullet-time sequence changed action movies",
+        "generator": "Jarvis Rich V1",
+        "content_format": "famous_movie_commentary",
+        "movie_title": "The Matrix",
+        "evidence_ids": [
+            [
+                "E2",
+                "E4",
+                "E12"
+            ],
+            [
+                "E4",
+                "E8",
+                "E11"
+            ],
+            [
+                "E4",
+                "E12"
+            ],
+            [
+                "E3",
+                "E7"
+            ]
+        ],
+        "word_count": 84
+    }
+}

@@ -1,0 +1,7 @@
+[PASS] Duplicate decorators repaired.
+[PASS] _master_choose_asset: exactly one @classmethod.
+[PASS] _master_metadata_score: exactly one @classmethod.
+[PASS] _master_query_variants: exactly one @classmethod.
+[PASS] V4 semantic logic preserved.
+[PASS] Rights gate preserved.
+[PASS] Block 5 preserved.

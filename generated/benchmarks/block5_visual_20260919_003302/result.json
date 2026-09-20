@@ -1,0 +1,9 @@
+{
+  "success": false,
+  "topic": "Why movie sound effects are often recorded separately",
+  "content_id": "benchmark_df5768635a9f",
+  "elapsed_seconds": 283.51,
+  "exception_type": "RuntimeError",
+  "exception": "Grounded content generation failed for topic: Why movie sound effects are often recorded separately",
+  "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\hp\\jarvis.ai\\generated\\benchmarks\\block5_visual_20260919_003302\\run.py\", line 157, in main\n    result = await pipeline.run(\n             ^^^^^^^^^^^^^^^^^^^\n        trend\n        ^^^^^\n    )\n    ^\n  File \"C:\\Users\\hp\\jarvis.ai\\backend\\services\\pipelines\\video_pipeline.py\", line 187, in run\n    generated = await self.generator.generate(\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        trend\n        ^^^^^\n    )\n    ^\n  File \"C:\\Users\\hp\\jarvis.ai\\backend\\services\\content_generator.py\", line 233, in generate\n    data = self._fallback(\n        topic=topic,\n        research=research,\n    )\n  File \"C:\\Users\\hp\\jarvis.ai\\backend\\services\\content_generator.py\", line 2634, in _fallback\n    raise RuntimeError(\n        f\"Grounded content generation failed for topic: {topic}\"\n    )\nRuntimeError: Grounded content generation failed for topic: Why movie sound effects are often recorded separately\n"
+}

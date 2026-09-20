@@ -67,3 +67,69 @@ secrets/
 *.youtube-token.json
 youtube_token.json
 youtube_client_secret.json
+
+# ============================================================
+# JARVIS / RICH V1 - LOCAL & GENERATED FILES
+# ============================================================
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*credentials*
+*secret*
+*apikey*
+*api_key*
+
+# Python environments / caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated Rich V1 media/output
+generated/licensed_media/
+generated/clip_index/
+generated/images/
+generated/videos/
+generated/audio/
+generated/renders/
+generated/cache/
+generated/temp/
+
+# Large media
+*.mp4
+*.mov
+*.mkv
+*.avi
+*.webm
+*.wav
+*.mp3
+
+# Logs / temporary
+*.log
+*.tmp
+*.temp
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Backups
+*.bak
+*.backup
+*.backup_*

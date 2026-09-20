@@ -1,4 +1,4 @@
-﻿"""Deterministic wake-phrase parsing for Jarvis voice input."""
+"""Deterministic wake-phrase parsing for Jarvis voice input."""
 
 from __future__ import annotations
 

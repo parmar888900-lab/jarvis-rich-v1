@@ -1,4 +1,4 @@
-﻿"""Trend opportunity scoring for Jarvis."""
+"""Trend opportunity scoring for Jarvis."""
 
 import math
 from datetime import datetime, timezone

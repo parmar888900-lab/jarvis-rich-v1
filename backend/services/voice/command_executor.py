@@ -1,4 +1,4 @@
-﻿"""Controlled execution boundary for Jarvis voice commands."""
+"""Controlled execution boundary for Jarvis voice commands."""
 
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ class VoiceCommandExecutor:
             ("youtube", "analyze_trends"),
             ("youtube", "create_video"),
             ("youtube", "upload_video"),
+            ("system", "get_status"),
             ("goal", "list_goals"),
             ("goal", "get_goal_status"),
             ("goal", "create_goal"),

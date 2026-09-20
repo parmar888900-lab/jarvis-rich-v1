@@ -1,0 +1,64 @@
+﻿========================================================
+ JARVIS SEMANTIC VISUAL V4
+========================================================
+
+[PASS] Semantic Visual V4 installed.
+[PASS] Foley-specific visual queries installed.
+[PASS] Literal beat relevance strengthened.
+[PASS] Generic social-media penalty installed.
+[PASS] Domain relevance bonus installed.
+[PASS] Semantic rejection threshold installed.
+[PASS] Duplicate avoidance preserved.
+[PASS] Rights authorization preserved.
+[PASS] Block 5 preserved.
+[PASS] Research grounding preserved.
+
+===== STRUCTURAL VERIFICATION =====
+[PASS] V4 AST verification.
+[PASS] V3 acquisition constants preserved.
+[PASS] V4 semantic helpers verified.
+[PASS] Foley-specific query logic verified.
+[PASS] Generic-media penalties verified.
+[PASS] Semantic threshold verified.
+[PASS] Duplicate controls preserved.
+[PASS] Rights gate preserved.
+[PASS] Block 5 preserved.
+[PASS] Research grounding preserved.
+
+===== FULL BACKEND COMPILE =====
+[PASS] Full backend compile.
+
+===== REAL NO-UPLOAD BENCHMARK =====
+ContentId: semantic_v4_20260919_141826
+====================================================================
+JARVIS SEMANTIC VISUAL V4 REAL BENCHMARK
+====================================================================
+[INFO] Topic: Why movie sound effects are often recorded separately
+[INFO] Content ID: semantic_v4_20260919_141826
+[INFO] Upload: DISABLED
+[INFO] Orchestrator: DISABLED
+[INFO] Publisher: DISABLED
+
+[PASS] Real VideoPipeline imported.
+[PASS] VideoPipeline constructed.
+[PASS] Mandatory content_id supplied.
+
+===== REAL PIPELINE START =====
+
+[EvergreenResearch] MISS -> Why movie sound effects are often recorded separately
+
+===== BENCHMARK STDERR =====
+[NONE]
+
+===== GENERATED MP4 =====
+
+===== FINAL STATUS =====
+[PASS] V4 source verification completed.
+[PASS] Full backend compile completed.
+[PASS] Rights/evidence gates preserved.
+[PASS] Wikimedia patch preserved.
+[PASS] Daily state not reset.
+[PASS] Publisher not invoked.
+[PASS] YouTube upload disabled.
+BenchmarkMinutes: 0.22
+

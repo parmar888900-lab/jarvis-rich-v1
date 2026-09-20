@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Camera movement can dramatically increase tension in a scene, making the viewer feel more engaged.",
+        "image_prompt": "Camera movement can dramatically increase tension in a scene, making the viewer feel more engaged.",
+        "duration": 5.073560090702948,
+        "start_time": 0.0,
+        "end_time": 5.073560090702948
+    },
+    {
+        "narration": "For example, a slow, deliberate pan across a dark room can hint at something ominous approaching. Filmmaking, or film production, is the process of creating a motion picture.",
+        "image_prompt": "For example, a slow, deliberate pan across a dark room can hint at something ominous approaching. Filmmaking, or film production, is the process of creating a motion picture.",
+        "duration": 9.079002267573696,
+        "start_time": 5.073560090702948,
+        "end_time": 14.152562358276644
+    },
+    {
+        "narration": "Quick cuts and handheld shots heighten suspense, as seen in tense thriller sequences. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later.",
+        "image_prompt": "Quick cuts and handheld shots heighten suspense, as seen in tense thriller sequences. The process is nonlinear, in that the filmmaker typically shoots the script out of sequence, repeats shots as needed, and puts them together through editing later.",
+        "duration": 12.399455782312925,
+        "start_time": 14.152562358276644,
+        "end_time": 26.552018140589567
+    },
+    {
+        "narration": "Master filmmakers use these techniques to keep audiences on the edge of their seats.",
+        "image_prompt": "Master filmmakers use these techniques to keep audiences on the edge of their seats.",
+        "duration": 4.214421768707483,
+        "start_time": 26.552018140589567,
+        "end_time": 30.76643990929705
+    }
+]

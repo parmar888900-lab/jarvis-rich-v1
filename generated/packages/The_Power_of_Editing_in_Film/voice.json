@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\The_Power_of_Editing_in_Film\\The_Power_of_Editing_in_Film.wav",
+    "duration": 37.70920634920635,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\The_Power_of_Editing_in_Film_scene_001.wav",
+            "duration": 3.215963718820862,
+            "start_time": 0.0,
+            "end_time": 3.215963718820862,
+            "narration": "Editing transforms a scene, enhancing emotions and storytelling."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\The_Power_of_Editing_in_Film_scene_002.wav",
+            "duration": 8.753922902494331,
+            "start_time": 3.215963718820862,
+            "end_time": 11.969886621315194,
+            "narration": "Through precision cuts and pacing, editors shape the audience's experience. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\The_Power_of_Editing_in_Film_scene_003.wav",
+            "duration": 22.070566893424036,
+            "start_time": 11.969886621315194,
+            "end_time": 34.04045351473923,
+            "narration": "A well-edited scene can heighten tension or evoke deep empathy. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\The_Power_of_Editing_in_Film_scene_004.wav",
+            "duration": 3.6687528344671203,
+            "start_time": 34.04045351473923,
+            "end_time": 37.70920634920635,
+            "narration": "This process is crucial in filmmaking, ensuring the narrative resonates."
+        }
+    ],
+    "script": "Editing transforms a scene, enhancing emotions and storytelling.\nThrough precision cuts and pacing, editors shape the audience's experience. Filmmaking, or film production, is the process of creating a motion picture.\nA well-edited scene can heighten tension or evoke deep empathy. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries.\nThis process is crucial in filmmaking, ensuring the narrative resonates."
+}

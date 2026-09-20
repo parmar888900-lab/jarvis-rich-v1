@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_Virtual\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_Virtual.wav",
+    "duration": 25.576780045351473,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_Virtual_scene_001.wav",
+            "duration": 6.373877551020408,
+            "start_time": 0.0,
+            "end_time": 6.373877551020408,
+            "narration": "Imagine an actor stepping onto a virtual set without leaving the studio \u2013 that's green screen magic!"
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_Virtual_scene_002.wav",
+            "duration": 6.327437641723356,
+            "start_time": 6.373877551020408,
+            "end_time": 12.701315192743763,
+            "narration": "In chroma key compositing, the actor stands in front of a green screen, which is later replaced with any background you can imagine."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_Virtual_scene_003.wav",
+            "duration": 6.826666666666667,
+            "start_time": 12.701315192743763,
+            "end_time": 19.52798185941043,
+            "narration": "This technique, widely used in film, TV, and gaming, allows seamless integration of real actors into any environment."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Green_Screen_Magic__How_Actors_Perform_Scenes_Behind_Virtual_scene_004.wav",
+            "duration": 6.048798185941043,
+            "start_time": 19.52798185941043,
+            "end_time": 25.576780045351473,
+            "narration": "From weather reports to epic battle scenes, chroma keying brings imagination to life, one green screen at a time."
+        }
+    ],
+    "script": "Imagine an actor stepping onto a virtual set without leaving the studio \u2013 that's green screen magic!\nIn chroma key compositing, the actor stands in front of a green screen, which is later replaced with any background you can imagine.\nThis technique, widely used in film, TV, and gaming, allows seamless integration of real actors into any environment.\nFrom weather reports to epic battle scenes, chroma keying brings imagination to life, one green screen at a time."
+}

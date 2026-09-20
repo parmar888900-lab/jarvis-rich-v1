@@ -12,6 +12,7 @@ from backend.models.command import (
 )
 from backend.services.agent_registry import AgentNotFoundError, TaskNotSupportedError
 from backend.services.commander import CommandValidationError, Commander
+from backend.services.remote_auth import require_remote_token
 
 router = APIRouter()
 commander = Commander()
@@ -29,6 +30,7 @@ commander = Commander()
 )
 async def submit_command(
     payload: CommandSubmitRequest,
+    _authenticated: None = Depends(require_remote_token),
     db: AsyncSession = Depends(get_db),
 ):
     """Accept a command, validate it, route to the target agent, and return a command ID."""
@@ -66,6 +68,7 @@ async def submit_command(
 @router.get("/command/{command_id}", response_model=CommandSchema)
 async def get_command_status(
     command_id: str,
+    _authenticated: None = Depends(require_remote_token),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve the full status and result of a previously submitted command."""

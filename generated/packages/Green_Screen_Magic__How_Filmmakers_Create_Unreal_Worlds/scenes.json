@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Imagine a world where actors can be placed anywhere \u2014 green screens make it possible!",
+        "image_prompt": "Imagine a world where actors can be placed anywhere \u2014 green screens make it possible!",
+        "duration": 5.7817687074829935,
+        "start_time": 0.0,
+        "end_time": 5.7817687074829935
+    },
+    {
+        "narration": "In live weather forecasts, presenters stand in front of CGI maps, thanks to chroma keying. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).",
+        "image_prompt": "In live weather forecasts, presenters stand in front of CGI maps, thanks to chroma keying. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).",
+        "duration": 15.499319727891157,
+        "start_time": 5.7817687074829935,
+        "end_time": 21.28108843537415
+    },
+    {
+        "narration": "In movies and video games, this technique allows for seamless blending of real and digital elements.",
+        "image_prompt": "In movies and video games, this technique allows for seamless blending of real and digital elements.",
+        "duration": 5.305759637188209,
+        "start_time": 21.28108843537415,
+        "end_time": 26.58684807256236
+    },
+    {
+        "narration": "With blue or green backgrounds, subjects are seamlessly placed into different environments.",
+        "image_prompt": "With blue or green backgrounds, subjects are seamlessly placed into different environments.",
+        "duration": 5.2477097505668935,
+        "start_time": 26.58684807256236,
+        "end_time": 31.834557823129256
+    }
+]

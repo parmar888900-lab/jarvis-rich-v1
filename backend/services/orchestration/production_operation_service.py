@@ -1,4 +1,4 @@
-﻿"""Persistence service for idempotent production operations."""
+"""Persistence service for idempotent production operations."""
 
 import json
 from datetime import datetime, timezone

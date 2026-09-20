@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Mastering_Camera_Movement_in_Filmmaking\\Mastering_Camera_Movement_in_Filmmaking.wav",
+    "duration": 36.931337868480725,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Mastering_Camera_Movement_in_Filmmaking_scene_001.wav",
+            "duration": 3.657142857142857,
+            "start_time": 0.0,
+            "end_time": 3.657142857142857,
+            "narration": "Camera movements create dynamic tension, drawing viewers into the story."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Mastering_Camera_Movement_in_Filmmaking_scene_002.wav",
+            "duration": 7.662585034013605,
+            "start_time": 3.657142857142857,
+            "end_time": 11.319727891156463,
+            "narration": "Zooms and pans reveal crucial plot points, keeping suspense alive. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Mastering_Camera_Movement_in_Filmmaking_scene_003.wav",
+            "duration": 22.31437641723356,
+            "start_time": 11.319727891156463,
+            "end_time": 33.63410430839002,
+            "narration": "Dutch angles and handheld shots add instability, heightening the experience. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Mastering_Camera_Movement_in_Filmmaking_scene_004.wav",
+            "duration": 3.297233560090703,
+            "start_time": 33.63410430839002,
+            "end_time": 36.931337868480725,
+            "narration": "Master these techniques to enhance your film's emotional impact."
+        }
+    ],
+    "script": "Camera movements create dynamic tension, drawing viewers into the story.\nZooms and pans reveal crucial plot points, keeping suspense alive. Filmmaking, or film production, is the process of creating a motion picture.\nDutch angles and handheld shots add instability, heightening the experience. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries.\nMaster these techniques to enhance your film's emotional impact."
+}

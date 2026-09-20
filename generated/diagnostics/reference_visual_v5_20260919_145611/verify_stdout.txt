@@ -1,0 +1,4 @@
+===== V5 RUNTIME VERIFICATION =====
+[PASS] _master_query_variants
+[PASS] _master_metadata_score
+[PASS] _master_choose_asset

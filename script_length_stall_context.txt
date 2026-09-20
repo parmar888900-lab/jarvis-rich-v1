@@ -1,0 +1,153 @@
+﻿
+  backend\services\content_generator.py:124:                movie_title=movie_title,
+  backend\services\content_generator.py:125:                reference_profile=reference_profile,
+  backend\services\content_generator.py:126:            ),
+  backend\services\content_generator.py:127:            json_mode=True,
+  backend\services\content_generator.py:128:        )
+  backend\services\content_generator.py:129:
+  backend\services\content_generator.py:130:        data = self._extract_json(raw)
+  backend\services\content_generator.py:131:
+  backend\services\content_generator.py:132:
+  backend\services\content_generator.py:133:        ####################################################
+  backend\services\content_generator.py:134:        # Attempt 2 - controlled regeneration
+  backend\services\content_generator.py:135:        ####################################################
+  backend\services\content_generator.py:136:
+  backend\services\content_generator.py:137:        if not self._is_valid_content(data):
+  backend\services\content_generator.py:138:
+  backend\services\content_generator.py:139:            previous_words = (
+  backend\services\content_generator.py:140:                self._word_count(data)
+  backend\services\content_generator.py:141:            )
+  backend\services\content_generator.py:142:
+  backend\services\content_generator.py:143:            logger.warning(
+> backend\services\content_generator.py:144:                "Initial content invalid "
+  backend\services\content_generator.py:145:                "(%s words). Regenerating.",
+  backend\services\content_generator.py:146:                previous_words,
+  backend\services\content_generator.py:147:            )
+  backend\services\content_generator.py:148:
+  backend\services\content_generator.py:149:            retry_raw = await self.llm.chat(
+  backend\services\content_generator.py:150:                self._build_messages(
+  backend\services\content_generator.py:151:                    topic=topic,
+  backend\services\content_generator.py:152:                    research=research,
+  backend\services\content_generator.py:153:                    previous_words=previous_words,
+  backend\services\content_generator.py:154:                    retry=True,
+  backend\services\content_generator.py:155:                    format_name=format_name,
+  backend\services\content_generator.py:156:                    movie_title=movie_title,
+  backend\services\content_generator.py:157:                    reference_profile=reference_profile,
+  backend\services\content_generator.py:158:            ),
+  backend\services\content_generator.py:159:                json_mode=True,
+  backend\services\content_generator.py:160:            )
+  backend\services\content_generator.py:161:
+  backend\services\content_generator.py:162:            retry_data = self._extract_json(
+  backend\services\content_generator.py:163:                retry_raw
+  backend\services\content_generator.py:164:            )
+  backend\services\content_generator.py:165:
+  backend\services\content_generator.py:166:
+  backend\services\content_generator.py:167:            if self._is_valid_content(
+  backend\services\content_generator.py:168:                retry_data
+  backend\services\content_generator.py:169:            ):
+  backend\services\content_generator.py:170:                data = retry_data
+  backend\services\content_generator.py:171:
+  backend\services\content_generator.py:172:                logger.info(
+  backend\services\content_generator.py:173:                    "Content regeneration succeeded."
+  backend\services\content_generator.py:174:                )
+  backend\services\content_generator.py:175:
+  backend\services\content_generator.py:176:            else:
+  backend\services\content_generator.py:177:                retry_words = self._word_count(
+  backend\services\content_generator.py:178:                    retry_data
+  backend\services\content_generator.py:179:                )
+  backend\services\content_generator.py:180:
+  backend\services\content_generator.py:181:                logger.warning(
+> backend\services\content_generator.py:182:                    "Content regeneration failed "
+  backend\services\content_generator.py:183:                    "(%s words). Attempting grounded "
+  backend\services\content_generator.py:184:                    "length recovery.",
+  backend\services\content_generator.py:185:                    retry_words,
+  backend\services\content_generator.py:186:                )
+  backend\services\content_generator.py:187:
+  backend\services\content_generator.py:188:                if self._is_movie_fact_generation(
+  backend\services\content_generator.py:189:                    format_name=format_name,
+  backend\services\content_generator.py:190:                    reference_format=reference_format,
+  backend\services\content_generator.py:191:                ):
+  backend\services\content_generator.py:192:
+  backend\services\content_generator.py:193:                    recovered = (
+  backend\services\content_generator.py:194:                        await self._recover_movie_generation_length(
+  backend\services\content_generator.py:195:                            data=retry_data,
+  backend\services\content_generator.py:196:                            topic=topic,
+  backend\services\content_generator.py:197:                            movie_title=movie_title,
+  backend\services\content_generator.py:198:                            research=research,
+  backend\services\content_generator.py:199:                        )
+  backend\services\content_generator.py:200:                    )
+  backend\services\content_generator.py:201:
+  backend\services\content_generator.py:202:                else:
+  backend\services\content_generator.py:203:
+  backend\services\content_generator.py:204:                    recovered = (
+  backend\services\content_generator.py:205:                        self._recover_generation_length(
+  backend\services\content_generator.py:206:                            data=retry_data,
+  backend\services\content_generator.py:207:                            research=research,
+  backend\services\content_generator.py:208:                        )
+  backend\services\content_generator.py:209:                    )
+  backend\services\content_generator.py:210:
+  backend\services\content_generator.py:211:                if recovered is not None:
+  backend\services\content_generator.py:212:                    data = recovered
+  backend\services\content_generator.py:213:
+  backend\services\content_generator.py:214:                    logger.info(
+  backend\services\content_generator.py:215:                        "Grounded generation length "
+  backend\services\content_generator.py:216:                        "recovery succeeded (%s words).",
+  backend\services\content_generator.py:217:                        self._word_count(data),
+  backend\services\content_generator.py:2769:        self,
+  backend\services\content_generator.py:2770:        data: dict,
+  backend\services\content_generator.py:2771:    ) -> bool:
+  backend\services\content_generator.py:2772:
+  backend\services\content_generator.py:2773:        if not self._is_structurally_valid_content(
+  backend\services\content_generator.py:2774:            data
+  backend\services\content_generator.py:2775:        ):
+  backend\services\content_generator.py:2776:            return False
+  backend\services\content_generator.py:2777:
+  backend\services\content_generator.py:2778:        word_count = self._word_count(
+  backend\services\content_generator.py:2779:            data
+  backend\services\content_generator.py:2780:        )
+  backend\services\content_generator.py:2781:
+  backend\services\content_generator.py:2782:        if not (
+  backend\services\content_generator.py:2783:            self.MIN_WORDS
+  backend\services\content_generator.py:2784:            <= word_count
+  backend\services\content_generator.py:2785:            <= self.MAX_WORDS
+  backend\services\content_generator.py:2786:        ):
+  backend\services\content_generator.py:2787:
+  backend\services\content_generator.py:2788:            logger.warning(
+> backend\services\content_generator.py:2789:                "Script length validation failed: "
+  backend\services\content_generator.py:2790:                "%s words.",
+  backend\services\content_generator.py:2791:                word_count,
+  backend\services\content_generator.py:2792:            )
+  backend\services\content_generator.py:2793:
+  backend\services\content_generator.py:2794:            return False
+  backend\services\content_generator.py:2795:
+  backend\services\content_generator.py:2796:        return True
+  backend\services\content_generator.py:2797:
+  backend\services\content_generator.py:2798:    ########################################################
+  backend\services\content_generator.py:2799:    # Word counting
+  backend\services\content_generator.py:2800:    ########################################################
+  backend\services\content_generator.py:2801:
+  backend\services\content_generator.py:2802:    @staticmethod
+  backend\services\content_generator.py:2803:    def _word_count(
+  backend\services\content_generator.py:2804:        data: dict,
+  backend\services\content_generator.py:2805:    ) -> int:
+  backend\services\content_generator.py:2806:
+  backend\services\content_generator.py:2807:        if not isinstance(data, dict):
+  backend\services\content_generator.py:2808:            return 0
+  backend\services\content_generator.py:2809:
+  backend\services\content_generator.py:2810:        lines = data.get(
+  backend\services\content_generator.py:2811:            "script_lines",
+  backend\services\content_generator.py:2812:            [],
+  backend\services\content_generator.py:2813:        )
+  backend\services\content_generator.py:2814:
+  backend\services\content_generator.py:2815:        if not isinstance(lines, list):
+  backend\services\content_generator.py:2816:            return 0
+  backend\services\content_generator.py:2817:
+  backend\services\content_generator.py:2818:        return sum(
+  backend\services\content_generator.py:2819:            len(str(line).split())
+  backend\services\content_generator.py:2820:            for line in lines
+  backend\services\content_generator.py:2821:        )
+  backend\services\content_generator.py:2822:
+  backend\services\content_generator.py:2823:    ########################################################
+  backend\services\content_generator.py:2824:    # Emergency fallback
+
+

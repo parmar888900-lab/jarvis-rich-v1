@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Blockbuster_Movies_Use_Previsualization_to_Ensure_Smooth_Fil\\Blockbuster_Movies_Use_Previsualization_to_Ensure_Smooth_Fil.wav",
+    "duration": 42.09777777777778,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Blockbuster_Movies_Use_Previsualization_to_Ensure_Smooth_Fil_scene_001.wav",
+            "duration": 4.655600907029479,
+            "start_time": 0.0,
+            "end_time": 4.655600907029479,
+            "narration": "Blockbuster movies use previsualization to plan shots and ensure smooth filming."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Blockbuster_Movies_Use_Previsualization_to_Ensure_Smooth_Fil_scene_002.wav",
+            "duration": 9.32281179138322,
+            "start_time": 4.655600907029479,
+            "end_time": 13.978412698412699,
+            "narration": "This technique helps directors and cinematographers visualize scenes before actual shooting begins. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Blockbuster_Movies_Use_Previsualization_to_Ensure_Smooth_Fil_scene_003.wav",
+            "duration": 23.1502947845805,
+            "start_time": 13.978412698412699,
+            "end_time": 37.1287074829932,
+            "narration": "Previs allows for adjustments and improvements, saving time and resources during production. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Blockbuster_Movies_Use_Previsualization_to_Ensure_Smooth_Fil_scene_004.wav",
+            "duration": 4.96907029478458,
+            "start_time": 37.1287074829932,
+            "end_time": 42.09777777777778,
+            "narration": "By using previsualization, filmmakers can create more polished and cohesive final products."
+        }
+    ],
+    "script": "Blockbuster movies use previsualization to plan shots and ensure smooth filming.\nThis technique helps directors and cinematographers visualize scenes before actual shooting begins. Filmmaking, or film production, is the process of creating a motion picture.\nPrevis allows for adjustments and improvements, saving time and resources during production. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries.\nBy using previsualization, filmmakers can create more polished and cohesive final products."
+}

@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:07,163
+Hollywood records sound effects separately to match visuals, enhancing realism and clarity during post-production.
+
+2
+00:00:07,163 --> 00:00:16,997
+Sound designers use specialized equipment to capture everything from footsteps to explosions, ensuring precise timing. Sound design is the art and practice of creating auditory elements of media.
+
+3
+00:00:16,997 --> 00:00:30,418
+For example, a gunshot is recorded in a soundproof booth, then synced with the scene, adding authenticity. It involves specifying, acquiring and creating audio using production techniques and equipment or software.
+
+4
+00:00:30,418 --> 00:00:36,212
+This technique allows editors to adjust each element independently, creating a seamless audio experience.

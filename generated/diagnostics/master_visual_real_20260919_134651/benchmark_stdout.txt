@@ -1,0 +1,27 @@
+================================================================
+JARVIS REAL MASTER-VISUAL BENCHMARK
+DIRECT PIPELINE / NO ORCHESTRATOR / NO PUBLISHER / NO UPLOAD
+================================================================
+
+[INFO] Topic: Why movie sound effects are often recorded separately
+[INFO] Upload: DISABLED
+[INFO] Orchestrator: DISABLED
+[INFO] Publisher: DISABLED
+
+
+================================================================
+PIPELINE STOPPED
+================================================================
+[RESULT] ElapsedSeconds=0.00
+[RESULT] Type=ModuleNotFoundError
+[RESULT] Reason=No module named 'backend'
+
+[INFO] Full diagnostic traceback follows.
+Traceback (most recent call last):
+  File "C:\Users\hp\jarvis.ai\generated\diagnostics\master_visual_real_20260919_134651\jarvis_real_visual_benchmark.py", line 25, in <module>
+    from backend.services.pipelines.video_pipeline import VideoPipeline
+ModuleNotFoundError: No module named 'backend'
+
+[PASS] No orchestrator used.
+[PASS] No publisher used.
+[PASS] No YouTube upload requested.

@@ -1,0 +1,8 @@
+﻿{
+    "phase":  "source_patch",
+    "timestamp":  "2026-09-18T17:20:20.9567212-06:00",
+    "report":  "C:\\Users\\hp\\jarvis.ai\\generated\\upgrade_reports\\stage123_20260918_172020.log",
+    "state":  "rolled_back",
+    "message":  "Transactional Python patch returned exit code 1.",
+    "backup":  "C:\\Users\\hp\\jarvis.ai\\generated\\backups\\master_stage123_20260918_172020"
+}

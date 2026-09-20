@@ -1,0 +1,7 @@
+[PASS] Removed duplicate V4 classmethod decorators.
+[PASS] _master_query_variants has exactly one @classmethod.
+[PASS] _master_metadata_score has exactly one @classmethod.
+[PASS] _master_choose_asset has exactly one @classmethod.
+[PASS] V4 semantic logic preserved.
+[PASS] Rights authorization preserved.
+[PASS] Block 5 preserved.

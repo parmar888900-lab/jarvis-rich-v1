@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Why_Movie_Sound_Effects_Are_Recorded_Separately\\Why_Movie_Sound_Effects_Are_Recorded_Separately.wav",
+    "duration": 29.31519274376417,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Why_Movie_Sound_Effects_Are_Recorded_Separately_scene_001.wav",
+            "duration": 6.559637188208617,
+            "start_time": 0.0,
+            "end_time": 6.559637188208617,
+            "narration": "Hollywood uses separate recordings for sound effects to enhance realism, like car crashes or footsteps, making scenes more immersive."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Why_Movie_Sound_Effects_Are_Recorded_Separately_scene_002.wav",
+            "duration": 7.465215419501134,
+            "start_time": 6.559637188208617,
+            "end_time": 14.02485260770975,
+            "narration": "Unlike dialogue, sound effects are added later, allowing editors to mix them seamlessly with visuals, improving overall film quality."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Why_Movie_Sound_Effects_Are_Recorded_Separately_scene_003.wav",
+            "duration": 7.63936507936508,
+            "start_time": 14.02485260770975,
+            "end_time": 21.66421768707483,
+            "narration": "For example, the roar of a T-Rex in Jurassic Park was created by combining dinosaur sounds with animal roars, adding layers of authenticity."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Why_Movie_Sound_Effects_Are_Recorded_Separately_scene_004.wav",
+            "duration": 7.650975056689342,
+            "start_time": 21.66421768707483,
+            "end_time": 29.31519274376417,
+            "narration": "This technique allows for precise timing and volume control, ensuring every sound complements the scene, enhancing the viewer's experience."
+        }
+    ],
+    "script": "Hollywood uses separate recordings for sound effects to enhance realism, like car crashes or footsteps, making scenes more immersive.\nUnlike dialogue, sound effects are added later, allowing editors to mix them seamlessly with visuals, improving overall film quality.\nFor example, the roar of a T-Rex in Jurassic Park was created by combining dinosaur sounds with animal roars, adding layers of authenticity.\nThis technique allows for precise timing and volume control, ensuring every sound complements the scene, enhancing the viewer's experience."
+}

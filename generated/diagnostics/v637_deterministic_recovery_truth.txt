@@ -1,0 +1,1541 @@
+﻿========================================================================
+V6.3.7 - CURRENT MOVIE RECOVERY FUNCTION
+========================================================================
+START=541
+END=1482
+
+  541:     async def _recover_movie_generation_length(
+  542:         self,
+  543:         *,
+  544:         data: dict,
+  545:         topic: str,
+  546:         movie_title: str,
+  547:         research: str,
+  548:     ) -> dict | None:
+  549:         """
+  550:         Recover short grounded movie-facts scripts.
+  551: 
+  552:         The research string may contain grounded facts without
+  553:         explicit evidence labels. Recovery therefore creates a
+  554:         deterministic local evidence contract from those facts.
+  555: 
+  556:         Validation remains fail-closed.
+  557:         """
+  558: 
+  559:         if not self._is_structurally_valid_content(
+  560:             data
+  561:         ):
+  562:             return None
+  563: 
+  564:         current_words = self._word_count(
+  565:             data
+  566:         )
+  567: 
+  568:         if (
+  569:             self.MIN_WORDS
+  570:             <= current_words
+  571:             <= self.MAX_WORDS
+  572:         ):
+  573:             return data
+  574: 
+  575:         if current_words > self.MAX_WORDS:
+  576:             return None
+  577: 
+  578:         # -------------------------------------------------
+  579:         # Build deterministic evidence units.
+  580:         #
+  581:         # Existing labelled evidence is preserved when
+  582:         # available. Otherwise grounded research sentences
+  583:         # become E1, E2, ... locally for this recovery.
+  584:         # -------------------------------------------------
+  585: 
+  586:         labelled_matches = re.findall(
+  587:             r"\[(E\d+)\]\s*([^\n]+)",
+  588:             research,
+  589:             flags=re.IGNORECASE,
+  590:         )
+  591: 
+  592:         evidence_map = {}
+  593: 
+  594:         for evidence_id, text in labelled_matches:
+  595: 
+  596:             normalized = (
+  597:                 str(evidence_id)
+  598:                 .strip()
+  599:                 .upper()
+  600:             )
+  601: 
+  602:             cleaned = " ".join(
+  603:                 str(text).split()
+  604:             ).strip()
+  605: 
+  606:             if normalized and cleaned:
+  607:                 evidence_map[
+  608:                     normalized
+  609:                 ] = cleaned
+  610: 
+  611:         if not evidence_map:
+  612: 
+  613:             # Research supplied by EvergreenResearch currently
+  614:             # arrives as grounded prose rather than E-labelled
+  615:             # evidence. Split it conservatively into factual
+  616:             # sentence-sized evidence units.
+  617: 
+  618:             raw_sentences = re.split(
+  619:                 r"(?<=[.!?])\s+",
+  620:                 str(research),
+  621:             )
+  622: 
+  623:             evidence_units = []
+  624: 
+  625:             banned_fragments = (
+  626:                 '"topic"',
+  627:                 '"summary"',
+  628:                 '"facts"',
+  629:                 '"keywords"',
+  630:                 '"sources"',
+  631:                 '"score"',
+  632:                 '"category"',
+  633:                 '"url"',
+  634:                 '"confidence"',
+  635:             )
+  636: 
+  637:             for sentence in raw_sentences:
+  638: 
+  639:                 cleaned = " ".join(
+  640:                     sentence.split()
+  641:                 ).strip()
+  642: 
+  643:                 if not cleaned:
+  644:                     continue
+  645: 
+  646:                 lower = cleaned.lower()
+  647: 
+  648:                 if any(
+  649:                     fragment in lower
+  650:                     for fragment in banned_fragments
+  651:                 ):
+  652:                     # JSON/key scaffolding is not evidence.
+  653:                     # Content following a key can still appear
+  654:                     # in later sentence units.
+  655:                     continue
+  656: 
+  657:                 words = cleaned.split()
+  658: 
+  659:                 if len(words) < 5:
+  660:                     continue
+  661: 
+  662:                 if cleaned in evidence_units:
+  663:                     continue
+  664: 
+  665:                 evidence_units.append(
+  666:                     cleaned
+  667:                 )
+  668: 
+  669:                 if len(evidence_units) >= 12:
+  670:                     break
+  671: 
+  672:             # If the serialized research format caused the
+  673:             # conservative pass to reject everything, perform
+  674:             # one bounded textual extraction rather than
+  675:             # inventing evidence.
+  676:             if not evidence_units:
+  677: 
+  678:                 candidate_text = re.sub(
+  679:                     r'https?://\S+',
+  680:                     ' ',
+  681:                     str(research),
+  682:                 )
+  683: 
+  684:                 candidate_text = re.sub(
+  685:                     r'["{}\[\],:]',
+  686:                     ' ',
+  687:                     candidate_text,
+  688:                 )
+  689: 
+  690:                 candidate_text = " ".join(
+  691:                     candidate_text.split()
+  692:                 )
+  693: 
+  694:                 raw_sentences = re.split(
+  695:                     r"(?<=[.!?])\s+",
+  696:                     candidate_text,
+  697:                 )
+  698: 
+  699:                 for sentence in raw_sentences:
+  700: 
+  701:                     cleaned = " ".join(
+  702:                         sentence.split()
+  703:                     ).strip()
+  704: 
+  705:                     if len(
+  706:                         cleaned.split()
+  707:                     ) < 5:
+  708:                         continue
+  709: 
+  710:                     if cleaned in evidence_units:
+  711:                         continue
+  712: 
+  713:                     evidence_units.append(
+  714:                         cleaned
+  715:                     )
+  716: 
+  717:                     if len(evidence_units) >= 12:
+  718:                         break
+  719: 
+  720:             for index, text in enumerate(
+  721:                 evidence_units,
+  722:                 start=1,
+  723:             ):
+  724:                 evidence_map[
+  725:                     f"E{index}"
+  726:                 ] = text
+  727: 
+  728:         if not evidence_map:
+  729:             logger.warning(
+  730:                 "Movie length recovery blocked: "
+  731:                 "no grounded evidence units could be derived."
+  732:             )
+  733:             return None
+  734: 
+  735:         allowed_evidence_ids = list(
+  736:             evidence_map.keys()
+  737:         )
+  738: 
+  739:         allowed_evidence_set = set(
+  740:             allowed_evidence_ids
+  741:         )
+  742: 
+  743:         allowed_evidence_text = ", ".join(
+  744:             allowed_evidence_ids
+  745:         )
+  746: 
+  747:         evidence_packet = "\n".join(
+  748:             f"[{evidence_id}] {text}"
+  749:             for evidence_id, text
+  750:             in evidence_map.items()
+  751:         )
+  752: 
+  753:         current_candidate = data
+  754: 
+  755:         # Rich V1 sprint: one decisive grounded recovery attempt.
+  756:         # The normal generation + regeneration have already run.
+  757:         # Keep every existing structural, length, evidence, and
+  758:         # claim-evidence validation gate below unchanged.
+  759:         for attempt in range(1, 2):
+  760: 
+  761:             candidate_words = self._word_count(
+  762:                 current_candidate
+  763:             )
+  764: 
+  765:             current_json = json.dumps(
+  766:                 current_candidate,
+  767:                 indent=2,
+  768:             )
+  769: 
+  770:             missing_words = max(
+  771:                 0,
+  772:                 85 - candidate_words,
+  773:             )
+  774: 
+  775:             if attempt == 1:
+  776:                 correction = f"""
+  777: The current narration has {candidate_words} words and
+  778: is too short.
+  779: 
+  780: Rewrite the ENTIRE narration, not just the ending.
+  781: 
+  782: HARD LENGTH CONTRACT:
+  783: - exactly four narration lines
+  784: - line 1: 22-24 words
+  785: - line 2: 22-24 words
+  786: - line 3: 22-24 words
+  787: - line 4: 22-24 words
+  788: - target 88-96 narration words total
+  789: - absolute accepted range remains 85-100 words
+  790: - no line may exceed 29 words
+  791: 
+  792: The current script needs approximately
+  793: {missing_words} additional useful words.
+  794: 
+  795: Distribute added information across all four lines.
+  796: Do not simply append filler to the final line.
+  797: 
+  798: Before responding:
+  799: 1. Count each narration line separately.
+  800: 2. Ensure every line contains 22-24 words.
+  801: 3. Count all four narration lines together.
+  802: 4. Ensure the total is 88-96 words.
+  803: 5. If any count is wrong, rewrite before returning.
+  804: 
+  805: Every added claim must be directly supported by the
+  806: evidence packet below.
+  807: 
+  808: Do not invent facts.
+  809: Do not add generic praise.
+  810: Do not add a CTA.
+  811: Do not repeat the same fact in different wording.
+  812: """
+  813:             else:
+  814:                 correction = f"""
+  815: THIS IS RECOVERY ATTEMPT {attempt} OF 3.
+  816: 
+  817: The previous candidate failed validation.
+  818: 
+  819: It contains {candidate_words} narration words.
+  820: 
+  821: Return 85-100 narration words.
+  822: Use exactly four narration lines.
+  823: Aim for 21-25 words per line.
+  824: 
+  825: Count the words before responding.
+  826: Do not add filler.
+  827: Do not invent facts.
+  828: Use only the allowed evidence IDs.
+  829: """
+  830: 
+  831:             messages = [
+  832:                 {
+  833:                     "role": "system",
+  834:                     "content": f"""
+  835: You are repairing a grounded movie-facts
+  836: YouTube Short.
+  837: 
+  838: Return ONLY one JSON object.
+  839: 
+  840: Required keys:
+  841: "title"
+  842: "hashtags"
+  843: "script_lines"
+  844: "evidence_ids"
+  845: 
+  846: MANDATORY:
+  847: 
+  848: - exactly four script_lines
+  849: - exactly four evidence_ids lists
+  850: - target 22-24 words in EACH narration line
+  851: - target 88-96 narration words total
+  852: - absolute accepted range: 85-100 narration words
+  853: - no narration line over 29 words
+  854: - count each line and the total before responding
+  855: - natural spoken vertical-video narration
+  856: - line 1 creates the information gap
+  857: - line 2 gives only necessary context
+  858: - line 3 gives the strongest supported mechanism,
+  859:   example, action, contrast, number, or consequence
+  860: - line 4 resolves the opening gap
+  861: - every line adds new information
+  862: - no generic CTA
+  863: - no filler
+  864: - no invented facts
+  865: - evidence labels never appear inside narration
+  866: 
+  867: The ONLY legal evidence IDs are:
+  868: 
+  869: {allowed_evidence_text}
+  870: 
+  871: Every narration line must cite at least one legal
+  872: evidence ID.
+  873: 
+  874: Never create another ID.
+  875: 
+  876: {correction}
+  877: """,
+  878:                 },
+  879:                 {
+  880:                     "role": "user",
+  881:                     "content": f"""
+  882: MOVIE:
+  883: {movie_title}
+  884: 
+  885: TOPIC:
+  886: {topic}
+  887: 
+  888: CURRENT SCRIPT:
+  889: {current_json}
+  890: 
+  891: GROUNDED EVIDENCE PACKET:
+  892: {evidence_packet}
+  893: 
+  894: Produce the corrected script.
+  895: 
+  896: Return JSON only.
+  897: """,
+  898:                 },
+  899:             ]
+  900: 
+  901:             raw = await self.llm.chat(
+  902:                 messages,
+  903:                 json_mode=True,
+  904:             )
+  905: 
+  906:             recovered = self._extract_json(
+  907:                 raw
+  908:             )
+  909: 
+  910:             if not isinstance(
+  911:                 recovered,
+  912:                 dict,
+  913:             ):
+  914:                 logger.warning(
+  915:                     "Movie recovery attempt %s "
+  916:                     "returned invalid JSON.",
+  917:                     attempt,
+  918:                 )
+  919:                 continue
+  920: 
+  921:             if not self._is_structurally_valid_content(
+  922:                 recovered
+  923:             ):
+  924:                 logger.warning(
+  925:                     "Movie recovery attempt %s "
+  926:                     "failed structural validation.",
+  927:                     attempt,
+  928:                 )
+  929: 
+  930:                 current_candidate = recovered
+  931:                 continue
+  932: 
+  933:             recovered_words = self._word_count(
+  934:                 recovered
+  935:             )
+  936: 
+  937:             # RICH_V1_MOVIE_STRUCTURAL_CONVERGENCE_V6_3_6
+  938:             #
+  939:             # Word-count compliance is treated as a measured
+  940:             # convergence problem, not a one-shot prompt problem.
+  941:             #
+  942:             # Up to four bounded normalization passes are allowed.
+  943:             # Each pass measures the ACTUAL returned word count and
+  944:             # chooses EXPAND or COMPACT for the next pass.
+  945:             #
+  946:             # No candidate bypasses the unchanged structural,
+  947:             # evidence-ID, claim-evidence, or leakage validators
+  948:             # below.
+  949:             if not (
+  950:                 self.MIN_WORDS
+  951:                 <= recovered_words
+  952:                 <= self.MAX_WORDS
+  953:             ):
+  954:                 normalization_candidate = recovered
+  955: 
+  956:                 for normalization_attempt in range(1, 5):
+  957:                     normalization_words = self._word_count(
+  958:                         normalization_candidate
+  959:                     )
+  960: 
+  961:                     normalization_lines = [
+  962:                         str(line).strip()
+  963:                         for line in normalization_candidate.get(
+  964:                             "script_lines",
+  965:                             [],
+  966:                         )
+  967:                         if str(line).strip()
+  968:                     ]
+  969: 
+  970:                     line_word_counts = [
+  971:                         len(line.split())
+  972:                         for line in normalization_lines
+  973:                     ]
+  974: 
+  975:                     structure_valid = (
+  976:                         len(normalization_lines) == 4
+  977:                         and all(
+  978:                             count <= 29
+  979:                             for count in line_word_counts
+  980:                         )
+  981:                     )
+  982: 
+  983:                     if (
+  984:                         self.MIN_WORDS
+  985:                         <= normalization_words
+  986:                         <= self.MAX_WORDS
+  987:                         and structure_valid
+  988:                     ):
+  989:                         recovered = normalization_candidate
+  990:                         recovered_words = normalization_words
+  991:                         break
+  992: 
+  993:                     if (
+  994:                         self.MIN_WORDS
+  995:                         <= normalization_words
+  996:                         <= self.MAX_WORDS
+  997:                         and not structure_valid
+  998:                     ):
+  999:                         normalization_mode = "REBALANCE"
+ 1000: 
+ 1001:                         mode_instruction = f"""
+ 1002: The TOTAL narration length is acceptable, but
+ 1003: the four-line structure is not.
+ 1004: 
+ 1005: ACTUAL TOTAL WORD COUNT:
+ 1006: {normalization_words}
+ 1007: 
+ 1008: ACTUAL LINE WORD COUNTS:
+ 1009: {line_word_counts}
+ 1010: 
+ 1011: REBALANCE the SAME grounded information across
+ 1012: exactly four narration lines.
+ 1013: 
+ 1014: HARD REQUIREMENTS:
+ 1015: - exactly four lines
+ 1016: - NO line may exceed 29 words
+ 1017: - target roughly 21-24 words per line
+ 1018: - preserve approximately the same total length
+ 1019: - preserve each line's cited evidence
+ 1020: - do not add any factual claim
+ 1021: - do not remove the core explanation
+ 1022: """
+ 1023: 
+ 1024:                     elif normalization_words < self.MIN_WORDS:
+ 1025:                         normalization_mode = "EXPAND"
+ 1026:                         word_delta = (
+ 1027:                             90 - normalization_words
+ 1028:                         )
+ 1029: 
+ 1030:                         mode_instruction = f"""
+ 1031: The current narration is TOO SHORT.
+ 1032: 
+ 1033: ACTUAL CURRENT WORD COUNT:
+ 1034: {normalization_words}
+ 1035: 
+ 1036: TARGET:
+ 1037: 90 narration words.
+ 1038: 
+ 1039: You need approximately {word_delta} MORE words.
+ 1040: 
+ 1041: Expand the EXISTING supported explanation.
+ 1042: Add concrete detail only when supported by the
+ 1043: evidence packet.
+ 1044: 
+ 1045: Do not merely append a long ending.
+ 1046: Distribute useful additions across the four lines.
+ 1047: """
+ 1048: 
+ 1049:                     else:
+ 1050:                         normalization_mode = "COMPACT"
+ 1051:                         word_delta = (
+ 1052:                             normalization_words - 90
+ 1053:                         )
+ 1054: 
+ 1055:                         mode_instruction = f"""
+ 1056: The current narration is TOO LONG.
+ 1057: 
+ 1058: ACTUAL CURRENT WORD COUNT:
+ 1059: {normalization_words}
+ 1060: 
+ 1061: TARGET:
+ 1062: 90 narration words.
+ 1063: 
+ 1064: Remove approximately {word_delta} words.
+ 1065: 
+ 1066: Delete repetition, weak modifiers, redundant
+ 1067: phrasing, and unnecessary setup.
+ 1068: 
+ 1069: Preserve the supported factual meaning.
+ 1070: """
+ 1071: 
+ 1072:                     logger.warning(
+ 1073:                         "Movie length convergence pass %s/4: "
+ 1074:                         "%s words -> %s toward 90.",
+ 1075:                         normalization_attempt,
+ 1076:                         normalization_words,
+ 1077:                         normalization_mode.lower(),
+ 1078:                     )
+ 1079: 
+ 1080:                     candidate_json = json.dumps(
+ 1081:                         normalization_candidate,
+ 1082:                         indent=2,
+ 1083:                     )
+ 1084: 
+ 1085:                     normalization_messages = [
+ 1086:                         {
+ 1087:                             "role": "system",
+ 1088:                             "content": f"""
+ 1089: You are a precision length editor for a grounded
+ 1090: movie YouTube Short.
+ 1091: 
+ 1092: Your ONLY job is to move an existing grounded
+ 1093: script toward the required narration length.
+ 1094: 
+ 1095: MODE:
+ 1096: {normalization_mode}
+ 1097: 
+ 1098: {mode_instruction}
+ 1099: 
+ 1100: RETURN ONLY ONE JSON OBJECT.
+ 1101: 
+ 1102: Required keys:
+ 1103: "title"
+ 1104: "hashtags"
+ 1105: "script_lines"
+ 1106: "evidence_ids"
+ 1107: 
+ 1108: NON-NEGOTIABLE STRUCTURE:
+ 1109: - exactly four script_lines
+ 1110: - exactly four evidence_ids lists
+ 1111: - keep the same four-part story progression:
+ 1112:   1. hook
+ 1113:   2. context
+ 1114:   3. mechanism / strongest explanation
+ 1115:   4. payoff
+ 1116: 
+ 1117: LENGTH:
+ 1118: - TARGET TOTAL: 90 narration words
+ 1119: - ACCEPTABLE TOTAL: 85-100 narration words
+ 1120: - ideal line length: 21-24 words
+ 1121: - absolute maximum per line: 29 words
+ 1122: 
+ 1123: GROUNDING:
+ 1124: - use ONLY facts supported by the evidence packet
+ 1125: - use ONLY these legal evidence IDs:
+ 1126:   {allowed_evidence_text}
+ 1127: - every line must retain at least one legal
+ 1128:   evidence ID
+ 1129: - never invent an evidence ID
+ 1130: - never invent a factual claim
+ 1131: - never put evidence labels inside narration
+ 1132: 
+ 1133: STYLE:
+ 1134: - natural spoken narration
+ 1135: - no CTA
+ 1136: - no filler
+ 1137: - no repeated fact
+ 1138: - no generic praise
+ 1139: - no meta commentary
+ 1140: 
+ 1141: IMPORTANT:
+ 1142: The ACTUAL measured word count from Python is
+ 1143: {normalization_words}.
+ 1144: 
+ 1145: Do not trust the previous prompt's estimate.
+ 1146: Edit specifically from {normalization_words}
+ 1147: toward 90 words.
+ 1148: 
+ 1149: Return JSON only.
+ 1150: """,
+ 1151:                         },
+ 1152:                         {
+ 1153:                             "role": "user",
+ 1154:                             "content": f"""
+ 1155: MOVIE:
+ 1156: {movie_title}
+ 1157: 
+ 1158: TOPIC:
+ 1159: {topic}
+ 1160: 
+ 1161: CURRENT GROUNDED SCRIPT:
+ 1162: {candidate_json}
+ 1163: 
+ 1164: GROUNDED EVIDENCE PACKET:
+ 1165: {evidence_packet}
+ 1166: 
+ 1167: Perform the requested {normalization_mode}
+ 1168: operation.
+ 1169: 
+ 1170: Return JSON only.
+ 1171: """,
+ 1172:                         },
+ 1173:                     ]
+ 1174: 
+ 1175:                     normalization_raw = await self.llm.chat(
+ 1176:                         normalization_messages,
+ 1177:                         json_mode=True,
+ 1178:                     )
+ 1179: 
+ 1180:                     normalized = self._extract_json(
+ 1181:                         normalization_raw
+ 1182:                     )
+ 1183: 
+ 1184:                     if not isinstance(normalized, dict):
+ 1185:                         logger.warning(
+ 1186:                             "Movie length convergence pass %s "
+ 1187:                             "returned invalid JSON.",
+ 1188:                             normalization_attempt,
+ 1189:                         )
+ 1190:                         continue
+ 1191: 
+ 1192:                     if not self._is_structurally_valid_content(
+ 1193:                         normalized
+ 1194:                     ):
+ 1195:                         logger.warning(
+ 1196:                             "Movie length convergence pass %s "
+ 1197:                             "returned structurally invalid content.",
+ 1198:                             normalization_attempt,
+ 1199:                         )
+ 1200:                         continue
+ 1201: 
+ 1202:                     new_words = self._word_count(
+ 1203:                         normalized
+ 1204:                     )
+ 1205: 
+ 1206:                     logger.warning(
+ 1207:                         "Movie length convergence pass %s "
+ 1208:                         "result: %s -> %s words.",
+ 1209:                         normalization_attempt,
+ 1210:                         normalization_words,
+ 1211:                         new_words,
+ 1212:                     )
+ 1213: 
+ 1214:                     normalization_candidate = normalized
+ 1215: 
+ 1216:                     new_lines = [
+ 1217:                         str(line).strip()
+ 1218:                         for line in normalized.get(
+ 1219:                             "script_lines",
+ 1220:                             [],
+ 1221:                         )
+ 1222:                         if str(line).strip()
+ 1223:                     ]
+ 1224: 
+ 1225:                     new_line_word_counts = [
+ 1226:                         len(line.split())
+ 1227:                         for line in new_lines
+ 1228:                     ]
+ 1229: 
+ 1230:                     new_structure_valid = (
+ 1231:                         len(new_lines) == 4
+ 1232:                         and all(
+ 1233:                             count <= 29
+ 1234:                             for count in new_line_word_counts
+ 1235:                         )
+ 1236:                     )
+ 1237: 
+ 1238:                     if (
+ 1239:                         self.MIN_WORDS
+ 1240:                         <= new_words
+ 1241:                         <= self.MAX_WORDS
+ 1242:                         and new_structure_valid
+ 1243:                     ):
+ 1244:                         recovered = normalized
+ 1245:                         recovered_words = new_words
+ 1246: 
+ 1247:                         logger.info(
+ 1248:                             "Movie structural convergence reached "
+ 1249:                             "valid range on pass %s: %s words; "
+ 1250:                             "lines=%s.",
+ 1251:                             normalization_attempt,
+ 1252:                             new_words,
+ 1253:                             new_line_word_counts,
+ 1254:                         )
+ 1255:                         break
+ 1256: 
+ 1257:                     if (
+ 1258:                         self.MIN_WORDS
+ 1259:                         <= new_words
+ 1260:                         <= self.MAX_WORDS
+ 1261:                         and not new_structure_valid
+ 1262:                     ):
+ 1263:                         logger.warning(
+ 1264:                             "Movie convergence pass %s has valid "
+ 1265:                             "total length but invalid line structure: "
+ 1266:                             "%s words; lines=%s. Rebalancing.",
+ 1267:                             normalization_attempt,
+ 1268:                             new_words,
+ 1269:                             new_line_word_counts,
+ 1270:                         )
+ 1271: 
+ 1272:                 else:
+ 1273:                     # Preserve final candidate for diagnostics,
+ 1274:                     # but the unchanged hard gate below will reject
+ 1275:                     # it if it remains outside 85-100.
+ 1276:                     recovered = normalization_candidate
+ 1277:                     recovered_words = self._word_count(
+ 1278:                         normalization_candidate
+ 1279:                     )
+ 1280: 
+ 1281:             if not (
+ 1282:                 self.MIN_WORDS
+ 1283:                 <= recovered_words
+ 1284:                 <= self.MAX_WORDS
+ 1285:             ):
+ 1286:                 logger.warning(
+ 1287:                     "Movie recovery attempt %s "
+ 1288:                     "failed length validation: %s words.",
+ 1289:                     attempt,
+ 1290:                     recovered_words,
+ 1291:                 )
+ 1292: 
+ 1293:                 current_candidate = recovered
+ 1294:                 continue
+ 1295: 
+ 1296:             recovered_lines = [
+ 1297:                 str(line).strip()
+ 1298:                 for line in recovered.get(
+ 1299:                     "script_lines",
+ 1300:                     []
+ 1301:                 )
+ 1302:             ]
+ 1303: 
+ 1304:             if len(recovered_lines) != 4:
+ 1305:                 logger.warning(
+ 1306:                     "Movie recovery attempt %s "
+ 1307:                     "did not return four lines.",
+ 1308:                     attempt,
+ 1309:                 )
+ 1310: 
+ 1311:                 current_candidate = recovered
+ 1312:                 continue
+ 1313: 
+ 1314:             if any(
+ 1315:                 len(line.split()) > 29
+ 1316:                 for line in recovered_lines
+ 1317:             ):
+ 1318:                 logger.warning(
+ 1319:                     "Movie recovery attempt %s "
+ 1320:                     "contains a line over 29 words.",
+ 1321:                     attempt,
+ 1322:                 )
+ 1323: 
+ 1324:                 current_candidate = recovered
+ 1325:                 continue
+ 1326: 
+ 1327:             raw_ids = recovered.get(
+ 1328:                 "evidence_ids",
+ 1329:                 [],
+ 1330:             )
+ 1331: 
+ 1332:             if (
+ 1333:                 not isinstance(raw_ids, list)
+ 1334:                 or len(raw_ids) != 4
+ 1335:             ):
+ 1336:                 logger.warning(
+ 1337:                     "Movie recovery attempt %s "
+ 1338:                     "returned invalid evidence structure.",
+ 1339:                     attempt,
+ 1340:                 )
+ 1341: 
+ 1342:                 current_candidate = recovered
+ 1343:                 continue
+ 1344: 
+ 1345:             sanitized = []
+ 1346:             unknown = []
+ 1347: 
+ 1348:             for line_ids in raw_ids:
+ 1349: 
+ 1350:                 if not isinstance(
+ 1351:                     line_ids,
+ 1352:                     list,
+ 1353:                 ):
+ 1354:                     unknown.append(
+ 1355:                         "<invalid-list>"
+ 1356:                     )
+ 1357:                     sanitized.append([])
+ 1358:                     continue
+ 1359: 
+ 1360:                 clean_line = []
+ 1361: 
+ 1362:                 for evidence_id in line_ids:
+ 1363: 
+ 1364:                     normalized = (
+ 1365:                         str(evidence_id)
+ 1366:                         .strip()
+ 1367:                         .upper()
+ 1368:                     )
+ 1369: 
+ 1370:                     if (
+ 1371:                         normalized
+ 1372:                         in allowed_evidence_set
+ 1373:                     ):
+ 1374:                         if (
+ 1375:                             normalized
+ 1376:                             not in clean_line
+ 1377:                         ):
+ 1378:                             clean_line.append(
+ 1379:                                 normalized
+ 1380:                             )
+ 1381:                     else:
+ 1382:                         unknown.append(
+ 1383:                             normalized
+ 1384:                         )
+ 1385: 
+ 1386:                 sanitized.append(
+ 1387:                     clean_line
+ 1388:                 )
+ 1389: 
+ 1390:             if unknown:
+ 1391:                 logger.warning(
+ 1392:                     "Movie recovery attempt %s "
+ 1393:                     "rejected unknown evidence IDs: %s",
+ 1394:                     attempt,
+ 1395:                     sorted(set(unknown)),
+ 1396:                 )
+ 1397: 
+ 1398:                 recovered[
+ 1399:                     "evidence_ids"
+ 1400:                 ] = sanitized
+ 1401: 
+ 1402:                 current_candidate = recovered
+ 1403:                 continue
+ 1404: 
+ 1405:             if any(
+ 1406:                 not ids
+ 1407:                 for ids in sanitized
+ 1408:             ):
+ 1409:                 logger.warning(
+ 1410:                     "Movie recovery attempt %s "
+ 1411:                     "left a line without evidence.",
+ 1412:                     attempt,
+ 1413:                 )
+ 1414: 
+ 1415:                 recovered[
+ 1416:                     "evidence_ids"
+ 1417:                 ] = sanitized
+ 1418: 
+ 1419:                 current_candidate = recovered
+ 1420:                 continue
+ 1421: 
+ 1422:             recovered[
+ 1423:                 "evidence_ids"
+ 1424:             ] = sanitized
+ 1425: 
+ 1426:             # IMPORTANT:
+ 1427:             # Validate against the SAME deterministic labelled
+ 1428:             # evidence packet supplied to the recovery model.
+ 1429:             validation = (
+ 1430:                 self.claim_evidence_validator.validate(
+ 1431:                     script_lines=recovered_lines,
+ 1432:                     evidence_ids=sanitized,
+ 1433:                     research=evidence_packet,
+ 1434:                 )
+ 1435:             )
+ 1436: 
+ 1437:             if not validation.valid:
+ 1438:                 logger.warning(
+ 1439:                     "Movie recovery attempt %s "
+ 1440:                     "failed claim-evidence validation: %s",
+ 1441:                     attempt,
+ 1442:                     validation.issues,
+ 1443:                 )
+ 1444: 
+ 1445:                 current_candidate = recovered
+ 1446:                 continue
+ 1447: 
+ 1448:             if any(
+ 1449:                 re.search(
+ 1450:                     r"\[E\d+\]",
+ 1451:                     line,
+ 1452:                     flags=re.IGNORECASE,
+ 1453:                 )
+ 1454:                 for line in recovered_lines
+ 1455:             ):
+ 1456:                 logger.warning(
+ 1457:                     "Movie recovery attempt %s "
+ 1458:                     "rejected evidence-label leakage.",
+ 1459:                     attempt,
+ 1460:                 )
+ 1461: 
+ 1462:                 current_candidate = recovered
+ 1463:                 continue
+ 1464: 
+ 1465:             logger.info(
+ 1466:                 "Movie evidence-aware length recovery "
+ 1467:                 "succeeded on attempt %s: %s words.",
+ 1468:                 attempt,
+ 1469:                 recovered_words,
+ 1470:             )
+ 1471: 
+ 1472:             return recovered
+ 1473: 
+ 1474:         logger.warning(
+ 1475:             "Movie evidence-aware length recovery "
+ 1476:             "exhausted configured bounded attempts."
+ 1477:         )
+ 1478: 
+ 1479:         return None
+ 1480: 
+ 1481: 
+
+========================================================================
+MOVIE RESEARCH / EVIDENCE BUILDERS
+========================================================================
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:284:            # semantic repair engine. The repair engine itself
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:285:            # re-runs BOTH lexical and semantic validators before
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:286:            # accepting any replacement.
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:287:            evidence_ids = data.get(
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:288:                "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:289:                [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:290:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:291:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:292:            evidence_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:293:                self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:294:                    script_lines=lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:295:                    evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:296:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:297:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:298:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:299:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:300:            if not evidence_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:301:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:302:                lexical_line_results = []
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:303:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:326:                                    "new facts."
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:327:                                ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:328:                            ),
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:329:                            "evidence_ids": item.get(
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:330:                                "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:331:                                [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:332:                            ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:333:                            "shared_terms": item.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:334:                                "shared_terms",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:335:                                [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:336:                            ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:337:                        }
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:338:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:371:                repaired_lines = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:372:                    await self._repair_movie_semantic_failures(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:373:                        script_lines=lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:374:                        evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:375:                        research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:376:                        semantic_validation=(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:377:                            lexical_repair_validation
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:378:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:379:                        topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:380:                        movie_title=movie_title,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:381:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:382:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:402:                evidence_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:403:                    self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:404:                        script_lines=lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:405:                        evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:406:                        research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:407:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:408:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:409:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:410:                if not evidence_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:411:                    raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:412:                        "Movie lexical evidence repair returned "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:413:                        "content that still failed validation: "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:421:            semantic_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:422:                await self.semantic_claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:423:                    script_lines=lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:424:                    evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:425:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:426:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:427:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:428:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:429:            if not semantic_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:430:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:431:                repaired_lines = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:432:                    await self._repair_movie_semantic_failures(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:433:                        script_lines=lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:434:                        evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:435:                        research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:436:                        semantic_validation=semantic_validation,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:437:                        topic=topic,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:438:                        movie_title=movie_title,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:439:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:440:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:441:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:442:                if repaired_lines is None:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:457:                final_lexical_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:458:                    self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:459:                        script_lines=lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:460:                        evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:461:                        research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:462:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:463:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:464:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:465:                if not final_lexical_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:466:                    raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:467:                        "Movie semantic repair regressed lexical "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:468:                        "evidence validation: "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:472:                final_semantic_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:473:                    await self.semantic_claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:474:                        script_lines=lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:475:                        evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:476:                        research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:477:                    )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:478:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:479:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:480:                if not final_semantic_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:481:                    raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:482:                        "Movie semantic repair returned content "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:483:                        "that still failed semantic validation: "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:522:                "premise_audit": self.evaluate_premise_strength(topic, reference_format),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:523:                "content_format": format_name,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:524:                "movie_title": movie_title,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:525:                "evidence_ids": (
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:526:                    data.get("evidence_ids", [])
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:527:                    if format_name == "famous_movie_commentary"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:528:                    else []
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:529:                ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:530:                "word_count": sum(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:531:                    len(line.split())
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:532:                    for line in lines
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:533:                ),
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:534:            },
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:732:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:733:            return None
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:734:
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:735:        allowed_evidence_ids = list(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:736:            evidence_map.keys()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:737:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:738:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:739:        allowed_evidence_set = set(
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:740:            allowed_evidence_ids
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:741:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:742:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:743:        allowed_evidence_text = ", ".join(
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:744:            allowed_evidence_ids
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:745:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:746:
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:747:        evidence_packet = "\n".join(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:748:            f"[{evidence_id}] {text}"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:749:            for evidence_id, text
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:750:            in evidence_map.items()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:751:        )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:752:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:753:        current_candidate = data
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:754:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:755:        # Rich V1 sprint: one decisive grounded recovery attempt.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:841:"title"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:842:"hashtags"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:843:"script_lines"
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:844:"evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:845:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:846:MANDATORY:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:847:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:848:- exactly four script_lines
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:849:- exactly four evidence_ids lists
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:850:- target 22-24 words in EACH narration line
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:851:- target 88-96 narration words total
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:852:- absolute accepted range: 85-100 narration words
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:853:- no narration line over 29 words
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:854:- count each line and the total before responding
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:855:- natural spoken vertical-video narration
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:856:- line 1 creates the information gap
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:857:- line 2 gives only necessary context
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:889:{current_json}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:890:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:891:GROUNDED EVIDENCE PACKET:
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:892:{evidence_packet}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:893:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:894:Produce the corrected script.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:895:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:896:Return JSON only.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:897:""",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:898:                },
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:899:            ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:900:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1103:"title"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1104:"hashtags"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1105:"script_lines"
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1106:"evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1107:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1108:NON-NEGOTIABLE STRUCTURE:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1109:- exactly four script_lines
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1110:- exactly four evidence_ids lists
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1111:- keep the same four-part story progression:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1112:  1. hook
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1113:  2. context
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1114:  3. mechanism / strongest explanation
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1115:  4. payoff
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1116:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1117:LENGTH:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1118:- TARGET TOTAL: 90 narration words
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1162:{candidate_json}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1163:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1164:GROUNDED EVIDENCE PACKET:
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1165:{evidence_packet}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1166:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1167:Perform the requested {normalization_mode}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1168:operation.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1169:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1170:Return JSON only.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1171:""",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1172:                        },
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1173:                    ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1325:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1326:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1327:            raw_ids = recovered.get(
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1328:                "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1329:                [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1330:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1331:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1332:            if (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1333:                not isinstance(raw_ids, list)
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1334:                or len(raw_ids) != 4
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1335:            ):
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1336:                logger.warning(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1396:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1397:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1398:                recovered[
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1399:                    "evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1400:                ] = sanitized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1401:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1402:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1403:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1404:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1405:            if any(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1406:                not ids
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1407:                for ids in sanitized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1413:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1414:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1415:                recovered[
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1416:                    "evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1417:                ] = sanitized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1418:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1419:                current_candidate = recovered
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1420:                continue
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1421:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1422:            recovered[
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1423:                "evidence_ids"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1424:            ] = sanitized
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1425:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1426:            # IMPORTANT:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1427:            # Validate against the SAME deterministic labelled
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1428:            # evidence packet supplied to the recovery model.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1429:            validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1430:                self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1431:                    script_lines=recovered_lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1432:                    evidence_ids=sanitized,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1433:                    research=evidence_packet,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1434:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1435:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1436:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1437:            if not validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1438:                logger.warning(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1439:                    "Movie recovery attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1440:                    "failed claim-evidence validation: %s",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1441:                    attempt,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1483:        self,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1484:        *,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1485:        script_lines: list[str],
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1486:        evidence_ids: list[list[str]],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1487:        research: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1488:        semantic_validation,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1489:        topic: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1490:        movie_title: str,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1491:    ) -> list[str] | None:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1492:        """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1493:        Repair only semantic evidence failures.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1494:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1553:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1554:                cited_ids = [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1555:                    str(item).strip().upper()
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1556:                    for item in evidence_ids[
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1557:                        line_number - 1
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1558:                    ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1559:                    if str(item).strip()
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1560:                ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1561:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1562:                cited_evidence = {
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1563:                    evidence_id: evidence_map.get(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1564:                        evidence_id,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1581:                                [],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1582:                            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1583:                        ),
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1584:                        "evidence_ids": cited_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1585:                        "evidence": cited_evidence,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1586:                    }
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1587:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1588:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1589:            messages = [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1590:                {
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1591:                    "role": "system",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1592:                    "content": """
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1740:            lexical_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1741:                self.claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1742:                    script_lines=candidate_lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1743:                    evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1744:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1745:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1746:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1747:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1748:            if not lexical_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1749:                logger.warning(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1750:                    "Semantic repair attempt %s "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1751:                    "failed lexical validation: %s",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1757:            next_validation = (
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1758:                await self.semantic_claim_evidence_validator.validate(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1759:                    script_lines=candidate_lines,
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1760:                    evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1761:                    research=research,
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1762:                )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1763:            )
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1764:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1765:            if next_validation.valid:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1766:                logger.info(
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1767:                    "Semantic repair succeeded "
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:1768:                    "on attempt %s.",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2979:    "line 3",
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2980:    "line 4"
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2981:  ],
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2982:  "evidence_ids": [
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2983:    ["E1"],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2984:    ["E2"],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2985:    ["E3"],
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2986:    ["E4"]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2987:  ]
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2988:}
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2989:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2990:MOVIE COMMENTARY RULES:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2992:EVIDENCE RULES:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2993:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2994:- Research facts are labelled [E1], [E2], [E3], and so on.
+> C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2995:- evidence_ids must contain exactly four lists, one for each script line.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2996:- Every script line must cite at least one real evidence ID.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2997:- Cite only IDs that actually exist in the supplied research.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2998:- The factual meaning of each line must be supported by its cited evidence.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:2999:- A line may cite multiple evidence IDs when needed.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:3000:- Do not cite evidence merely because it mentions the same movie.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:3001:- Interpretation is allowed only when its factual premise is supported by cited evidence.
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:3002:
+  C:\Users\hp\jarvis.ai\backend\services\content_generator.py:3003:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:75:        self,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:76:        *,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:77:        script_lines: list[str],
+> C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:78:        evidence_ids: list[list[str]],
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:79:        research: str,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:80:    ) -> ClaimEvidenceResult:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:81:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:82:        evidence = self._parse_evidence(
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:83:            research
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:84:        )
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:85:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:86:        issues: list[str] = []
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:91:                "script_line_count_invalid"
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:92:            )
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:93:
+> C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:94:        if len(evidence_ids) != len(script_lines):
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:95:            issues.append(
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:96:                "evidence_line_count_mismatch"
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:97:            )
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:98:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:99:        for index, line in enumerate(
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:100:            script_lines,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:101:            start=1,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:102:        ):
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:103:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:104:            cited = (
+> C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:105:                evidence_ids[index - 1]
+> C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:106:                if index - 1 < len(evidence_ids)
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:107:                else []
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:108:            )
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:109:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:110:            if not isinstance(cited, list):
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:111:                cited = []
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:112:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:113:            clean_ids = [
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:114:                str(item).strip().upper()
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:168:                {
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:169:                    "line": index,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:170:                    "valid": line_valid,
+> C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:171:                    "evidence_ids": clean_ids,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:172:                    "shared_terms": shared_terms,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:173:                }
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:174:            )
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:175:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:176:        return ClaimEvidenceResult(
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:177:            valid=(
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:178:                not issues
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\claim_evidence_validator.py:179:                and all(
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:47:        self,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:48:        *,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:49:        script_lines: list[str],
+> C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:50:        evidence_ids: list[list[str]],
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:51:        research: str,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:52:    ) -> SemanticClaimEvidenceResult:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:53:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:54:        if len(script_lines) != 4:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:55:            return SemanticClaimEvidenceResult(
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:56:                valid=False,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:57:                issues=[
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:58:                    "semantic_script_line_count_invalid",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:60:                line_results=[],
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:61:            )
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:62:
+> C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:63:        if len(evidence_ids) != len(script_lines):
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:64:            return SemanticClaimEvidenceResult(
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:65:                valid=False,
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:66:                issues=[
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:67:                    "semantic_evidence_line_count_mismatch",
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:68:                ],
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:69:                line_results=[],
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:70:            )
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:71:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:82:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:83:            cited_ids = [
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:84:                str(item).strip().upper()
+> C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:85:                for item in evidence_ids[
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:86:                    index - 1
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:87:                ]
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:88:                if str(item).strip()
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:89:            ]
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:90:
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:91:            cited_evidence = {
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:92:                evidence_id: evidence.get(
+  C:\Users\hp\jarvis.ai\backend\services\intelligence\semantic_claim_evidence_validator.py:93:                    evidence_id,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:22:from backend.services.intelligence.content_format_classifier import ContentFormatClassifier
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:23:from backend.services.intelligence.movie_topic_parser import MovieTopicParser
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:24:from backend.services.research.evergreen_research_service import EvergreenResearchService
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:25:from backend.services.research.movie_research_service import MovieResearchService
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:26:from backend.services.storyboard.generator import StoryboardGenerator
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:27:# RICH_V1_MOVIE_MEDIA_V6_3
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:28:from backend.services.storyboard.movie_visual_beat_planner import (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:29:    MovieVisualBeatPlanner,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:30:)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:31:from backend.services.video.movie_media_resolver import (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:32:    MovieMediaResolver,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:33:)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:79:        self.generator = ContentGenerator()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:80:        self.content_validator = ContentValidator()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:81:        self.research_service = EvergreenResearchService()
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:82:        self.movie_research_service = MovieResearchService()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:83:        self.format_classifier = ContentFormatClassifier()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:84:        self.storyboard = StoryboardGenerator()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:85:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:86:        self.media_provider = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:87:            WikimediaCommonsProvider()
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:88:        )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:89:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:90:        self.asset_collector = AssetCollector()
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:12:)
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:13:
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:14:
+> C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:15:class MovieResearchService:
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:16:    """
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:17:    Research the actual film and extract material relevant to the
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:18:    commentary angle.
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:19:
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:20:    This service does not authorize footage.
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:21:    """
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:22:
+  C:\Users\hp\jarvis.ai\backend\services\research\movie_research_service.py:23:    MOVIE_PAGE_ALIASES = {
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:21:    preferred_media: list[str]
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:22:    target_duration: float
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:23:    priority: str
+> C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:24:    evidence_ids: list[str]
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:25:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:26:    def to_dict(self) -> dict:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:27:        return asdict(self)
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:28:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:29:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:30:class MovieVisualBeatPlanner:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:31:    """
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:32:    Convert four narration lines into a fast multi-cut movie
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:105:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:106:        raw_evidence = (
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:107:            content.metadata.get(
+> C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:108:                "evidence_ids",
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:109:                [],
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:110:            )
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:111:        )
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:112:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:113:        if not isinstance(
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:114:            raw_evidence,
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:115:            list,
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:116:        ):
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:134:                target_count=target_count,
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:135:            )
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:136:
+> C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:137:            evidence_ids = []
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:138:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:139:            if (
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:140:                narration_index - 1
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:141:                < len(raw_evidence)
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:142:                and isinstance(
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:143:                    raw_evidence[
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:144:                        narration_index - 1
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:145:                    ],
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:146:                    list,
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:147:                )
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:148:            ):
+> C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:149:                evidence_ids = [
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:150:                    str(item).strip().upper()
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:151:                    for item in raw_evidence[
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:152:                        narration_index - 1
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:153:                    ]
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:154:                    if str(item).strip()
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:155:                ]
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:156:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:157:            for local_index, query in enumerate(
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:191:                            )
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:192:                            else "normal"
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:193:                        ),
+> C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:194:                        evidence_ids=evidence_ids,
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:195:                    )
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:196:                )
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:197:
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:198:        if not (
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:199:            self.MIN_BEATS
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:200:            <= len(beats)
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:201:            <= self.MAX_BEATS
+  C:\Users\hp\jarvis.ai\backend\services\storyboard\movie_visual_beat_planner.py:202:        ):
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:36:    purpose: str
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:37:    visual_query: str
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:38:    target_duration: float
+> C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:39:    evidence_ids: list[str]
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:40:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:41:    asset: MediaAsset | None
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:42:    status: str
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:43:    attempted_queries: list[str]
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:44:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:45:    def to_dict(self) -> dict:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:46:        data = asdict(self)
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:47:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:327:                        target_duration=(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:328:                            beat.target_duration
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:329:                        ),
+> C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:330:                        evidence_ids=list(
+> C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:331:                            beat.evidence_ids
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:332:                        ),
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:333:                        asset=None,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:334:                        status="unresolved",
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:335:                        attempted_queries=queries,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:336:                    )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:337:                )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:338:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:339:                continue
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:353:                    target_duration=(
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:354:                        beat.target_duration
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:355:                    ),
+> C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:356:                    evidence_ids=list(
+> C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:357:                        beat.evidence_ids
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:358:                    ),
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:359:                    asset=winner,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:360:                    status="resolved",
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:361:                    attempted_queries=queries,
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:362:                )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:363:            )
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:364:
+  C:\Users\hp\jarvis.ai\backend\services\video\movie_media_resolver.py:365:        return resolved
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:121:                "purpose": item.purpose,
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:122:                "visual_query": item.visual_query,
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:123:                "target_duration": item.target_duration,
+> C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:124:                "evidence_ids": list(
+> C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:125:                    item.evidence_ids
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:126:                ),
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:127:                "attempted_queries": list(
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:128:                    item.attempted_queries
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:129:                ),
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:130:                "thumbnail": None,
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:131:            }
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:132:
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:133:        source_path = Path(
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:176:            "target_duration": (
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:177:                item.target_duration
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:178:            ),
+> C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:179:            "evidence_ids": list(
+> C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:180:                item.evidence_ids
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:181:            ),
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:182:            "attempted_queries": list(
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:183:                item.attempted_queries
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:184:            ),
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:185:            "asset_id": asset.asset_id,
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:186:            "asset_type": asset.asset_type,
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:187:            "file_path": asset.file_path,
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:188:            "source_url": asset.source_url,
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:478:
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:479:                    <p>
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:480:                        <strong>Evidence:</strong>
+> C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:481:                        {html.escape(str(record.get("evidence_ids", [])))}
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:482:                    </p>
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:483:
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:484:                    <p>
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:485:                        <strong>Source:</strong>
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:486:                        {source_display}
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:487:                    </p>
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:488:
+  C:\Users\hp\jarvis.ai\backend\services\video\visual_audit.py:489:                    <details>

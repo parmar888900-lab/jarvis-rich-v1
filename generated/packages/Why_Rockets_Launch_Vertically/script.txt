@@ -1,0 +1,4 @@
+To reach space, rockets must overcome Earth's gravity, starting vertically.
+Launching straight up minimizes fuel use by avoiding lateral speeds needed for horizontal travel. A rocket (from Italian: rocchetto, lit.
+Vertical ascent allows rockets to quickly achieve orbital velocity without wasting fuel on lateral movement. ''bobbin/spool'', and so named for its shape) is an elongated flying vehicle that uses a rocket engine to accelerate without using any surrounding air.
+Once vertical ascent is complete, rockets can safely tilt and navigate their trajectories.

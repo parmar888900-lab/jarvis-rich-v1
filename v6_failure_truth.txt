@@ -1,0 +1,14 @@
+=== V6 FAILURE TRUTH ===
+Generated: 2026-09-19T18:04:32.6449631-06:00
+Installer: C:\Users\hp\jarvis.ai\generated\diagnostics\v6_video_beats_20260919_180347\install_v6.py
+
+Traceback (most recent call last):
+  File "C:\Users\hp\jarvis.ai\generated\diagnostics\v6_video_beats_20260919_180347\install_v6.py", line 24, in <module>
+    raise RuntimeError("Could not locate pipeline import anchor.")
+RuntimeError: Could not locate pipeline import anchor.
+
+InstallerExitCode: 1
+
+=== POST-DIAGNOSTIC ROLLBACK ===
+Original production files restored.
+CompileExitCode: 0

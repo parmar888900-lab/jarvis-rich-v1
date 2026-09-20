@@ -1,4 +1,4 @@
-﻿"""Cloudflare Workers AI FLUX image provider."""
+"""Cloudflare Workers AI FLUX image provider."""
 
 from __future__ import annotations
 

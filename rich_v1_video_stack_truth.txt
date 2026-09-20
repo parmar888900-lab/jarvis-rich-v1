@@ -1,0 +1,2426 @@
+=== RICH V1 — EXISTING VIDEO STACK ===
+Generated: 2026-09-19T18:01:20.4235420-06:00
+
+============================================================
+FILE: .\backend\services\video\source_clip_indexer.py
+============================================================
+1: """Shot/clip indexing for Jarvis Rich V1 source footage."""
+2: 
+3: from __future__ import annotations
+4: 
+5: import re
+6: import shutil
+7: import subprocess
+8: from dataclasses import asdict, dataclass
+9: from pathlib import Path
+10: 
+11: from backend.services.video.media_asset import MediaAsset
+12: 
+13: 
+14: @dataclass(slots=True)
+15: class IndexedSourceClip:
+16:     clip_id: str
+17:     asset_id: str
+18:     source_path: str
+19:     source_name: str
+20: 
+21:     start_time: float
+22:     end_time: float
+23:     duration: float
+24: 
+25:     preview_path: str
+26: 
+27:     width: int | None = None
+28:     height: int | None = None
+29: 
+30:     def to_dict(self) -> dict:
+31:         return asdict(self)
+32: 
+33: 
+34: class SourceClipIndexer:
+35:     """
+36:     Convert source videos into short selectable visual moments.
+37: 
+38:     The indexer does not render the final Short.
+39:     It identifies candidate shot windows that ClipMatcher can later
+40:     rank against narration/visual beats.
+41:     """
+42: 
+43:     MIN_CLIP_DURATION = 1.0
+44:     TARGET_CLIP_DURATION = 2.0
+45:     MAX_CLIP_DURATION = 3.2
+46: 
+47:     SCENE_THRESHOLD = 0.30
+48: 
+49:     MAX_CLIPS_PER_ASSET = 40
+50: 
+51:     def __init__(
+52:         self,
+53:         *,
+54:         ffmpeg_binary: str | None = None,
+55:         ffprobe_binary: str | None = None,
+56:         output_root: str | Path = (
+57:             "generated/clip_index"
+58:         ),
+59:     ) -> None:
+60: 
+61:         self.ffmpeg = (
+62:             ffmpeg_binary
+63:             or shutil.which("ffmpeg")
+64:             or "ffmpeg"
+65:         )
+66: 
+67:         self.ffprobe = (
+68:             ffprobe_binary
+69:             or shutil.which("ffprobe")
+70:             or "ffprobe"
+71:         )
+72: 
+73:         self.output_root = Path(
+74:             output_root
+75:         )
+76: 
+77:         self.output_root.mkdir(
+78:             parents=True,
+79:             exist_ok=True,
+80:         )
+81: 
+82:     def index_assets(
+83:         self,
+84:         *,
+85:         assets: list[MediaAsset],
+86:         content_id: str,
+87:     ) -> list[IndexedSourceClip]:
+88: 
+89:         output: list[
+90:             IndexedSourceClip
+91:         ] = []
+92: 
+93:         for asset in assets:
+94: 
+95:             if asset.asset_type != "video":
+96:                 continue
+97: 
+98:             output.extend(
+99:                 self.index_asset(
+100:                     asset=asset,
+101:                     content_id=content_id,
+102:                 )
+103:             )
+104: 
+105:         return output
+106: 
+107:     def index_asset(
+108:         self,
+109:         *,
+110:         asset: MediaAsset,
+111:         content_id: str,
+112:     ) -> list[IndexedSourceClip]:
+113: 
+114:         source = Path(
+115:             asset.file_path
+116:         )
+117: 
+118:         if not source.exists():
+119:             return []
+120: 
+121:         duration = self._duration(
+122:             source
+123:         )
+124: 
+125:         if duration <= 0:
+126:             return []
+127: 
+128:         boundaries = self._scene_boundaries(
+129:             source
+130:         )
+131: 
+132:         windows = self._build_windows(
+133:             duration=duration,
+134:             boundaries=boundaries,
+135:         )
+136: 
+137:         output_dir = (
+138:             self.output_root
+139:             / content_id
+140:             / asset.asset_id
+141:         )
+142: 
+143:         output_dir.mkdir(
+144:             parents=True,
+145:             exist_ok=True,
+146:         )
+147: 
+148:         clips: list[
+149:             IndexedSourceClip
+150:         ] = []
+151: 
+152:         for index, (
+153:             start,
+154:             end,
+155:         ) in enumerate(
+156:             windows[
+157:                 :self.MAX_CLIPS_PER_ASSET
+158:             ],
+159:             start=1,
+160:         ):
+161: 
+162:             preview = (
+163:                 output_dir
+164:                 / f"clip_{index:03d}.jpg"
+165:             )
+166: 
+167:             midpoint = (
+168:                 start
+169:                 + (
+170:                     end - start
+171:                 )
+172:                 / 2.0
+173:             )
+174: 
+175:             if not self._extract_frame(
+176:                 source=source,
+177:                 timestamp=midpoint,
+178:                 output=preview,
+179:             ):
+180:                 continue
+181: 
+182:             clip_id = (
+183:                 f"{asset.asset_id}_"
+184:                 f"{index:03d}"
+185:             )
+186: 
+187:             clips.append(
+188:                 IndexedSourceClip(
+189:                     clip_id=clip_id,
+190:                     asset_id=asset.asset_id,
+191:                     source_path=str(source),
+192:                     source_name=(
+193:                         asset.source_name
+194:                     ),
+195:                     start_time=round(
+196:                         start,
+197:                         3,
+198:                     ),
+199:                     end_time=round(
+200:                         end,
+201:                         3,
+202:                     ),
+203:                     duration=round(
+204:                         end - start,
+205:                         3,
+206:                     ),
+207:                     preview_path=str(
+208:                         preview
+209:                     ),
+210:                     width=asset.width,
+211:                     height=asset.height,
+212:                 )
+213:             )
+214: 
+215:         return clips
+216: 
+217:     def _duration(
+218:         self,
+219:         source: Path,
+220:     ) -> float:
+221: 
+222:         command = [
+223:             self.ffprobe,
+224:             "-v",
+225:             "error",
+226:             "-show_entries",
+227:             "format=duration",
+228:             "-of",
+229:             (
+230:                 "default="
+231:                 "noprint_wrappers=1:"
+232:                 "nokey=1"
+233:             ),
+234:             str(source),
+235:         ]
+236: 
+237:         try:
+238: 
+239:             completed = subprocess.run(
+240:                 command,
+241:                 capture_output=True,
+242:                 text=True,
+243:                 check=False,
+244:                 timeout=30,
+245:             )
+246: 
+247:             if completed.returncode != 0:
+248:                 return 0.0
+249: 
+250:             return float(
+251:                 completed.stdout.strip()
+252:             )
+253: 
+254:         except Exception:
+255:             return 0.0
+256: 
+257:     def _scene_boundaries(
+258:         self,
+259:         source: Path,
+260:     ) -> list[float]:
+261: 
+262:         ####################################################
+263:         # FFmpeg prints scene-change timestamps through
+264:         # showinfo. We only use these as candidate boundaries.
+265:         ####################################################
+266: 
+267:         filter_value = (
+268:             "select="
+269:             f"'gt(scene,{self.SCENE_THRESHOLD})',"
+270:             "showinfo"
+271:         )
+272: 
+273:         command = [
+274:             self.ffmpeg,
+275:             "-hide_banner",
+276:             "-i",
+277:             str(source),
+278:             "-vf",
+279:             filter_value,
+280:             "-an",
+281:             "-f",
+282:             "null",
+283:             "-",
+284:         ]
+285: 
+286:         try:
+287: 
+288:             completed = subprocess.run(
+289:                 command,
+290:                 stdout=subprocess.DEVNULL,
+291:                 stderr=subprocess.PIPE,
+292:                 text=True,
+293:                 check=False,
+294:                 timeout=180,
+295:             )
+296: 
+297:         except Exception:
+298:             return []
+299: 
+300:         matches = re.findall(
+301:             r"pts_time:([0-9]+(?:\.[0-9]+)?)",
+302:             completed.stderr,
+303:         )
+304: 
+305:         values = []
+306: 
+307:         for item in matches:
+308: 
+309:             try:
+310:                 value = float(
+311:                     item
+312:                 )
+313:             except ValueError:
+314:                 continue
+315: 
+316:             if value > 0:
+317:                 values.append(
+318:                     value
+319:                 )
+320: 
+321:         return sorted(
+322:             set(values)
+323:         )
+324: 
+325:     def _build_windows(
+326:         self,
+327:         *,
+328:         duration: float,
+329:         boundaries: list[float],
+330:     ) -> list[tuple[float, float]]:
+331: 
+332:         ####################################################
+333:         # Prefer real scene boundaries.
+334:         ####################################################
+335: 
+336:         points = [
+337:             0.0,
+338:             *[
+339:                 value
+340:                 for value in boundaries
+341:                 if (
+342:                     0.0 < value < duration
+343:                 )
+344:             ],
+345:             duration,
+346:         ]
+347: 
+348:         windows: list[
+349:             tuple[float, float]
+350:         ] = []
+351: 
+352:         for index in range(
+353:             len(points) - 1
+354:         ):
+355: 
+356:             start = points[index]
+357:             stop = points[index + 1]
+358: 
+359:             scene_duration = (
+360:                 stop - start
+361:             )
+362: 
+363:             if (
+364:                 scene_duration
+365:                 < self.MIN_CLIP_DURATION
+366:             ):
+367:                 continue
+368: 
+369:             current = start
+370: 
+371:             while current < stop:
+372: 
+373:                 remaining = (
+374:                     stop - current
+375:                 )
+376: 
+377:                 if (
+378:                     remaining
+379:                     < self.MIN_CLIP_DURATION
+380:                 ):
+381:                     break
+382: 
+383:                 clip_duration = min(
+384:                     self.TARGET_CLIP_DURATION,
+385:                     remaining,
+386:                     self.MAX_CLIP_DURATION,
+387:                 )
+388: 
+389:                 end = min(
+390:                     current
+391:                     + clip_duration,
+392:                     stop,
+393:                 )
+394: 
+395:                 if (
+396:                     end - current
+397:                     >= self.MIN_CLIP_DURATION
+398:                 ):
+399:                     windows.append(
+400:                         (
+401:                             current,
+402:                             end,
+403:                         )
+404:                     )
+405: 
+406:                 current = end
+407: 
+408:         ####################################################
+409:         # Some videos contain very few detectable cuts.
+410:         # Fall back to uniform windows rather than producing
+411:         # an empty index.
+412:         ####################################################
+413: 
+414:         if len(windows) < 4:
+415: 
+416:             windows = []
+417: 
+418:             current = 0.0
+419: 
+420:             while (
+421:                 current
+422:                 < duration
+423:                 and len(windows)
+424:                 < self.MAX_CLIPS_PER_ASSET
+425:             ):
+426: 
+427:                 end = min(
+428:                     current
+429:                     + self.TARGET_CLIP_DURATION,
+430:                     duration,
+431:                 )
+432: 
+433:                 if (
+434:                     end - current
+435:                     < self.MIN_CLIP_DURATION
+436:                 ):
+437:                     break
+438: 
+439:                 windows.append(
+440:                     (
+441:                         current,
+442:                         end,
+443:                     )
+444:                 )
+445: 
+446:                 current = end
+447: 
+448:         return windows
+449: 
+450:     def _extract_frame(
+451:         self,
+452:         *,
+453:         source: Path,
+454:         timestamp: float,
+455:         output: Path,
+456:     ) -> bool:
+457: 
+458:         command = [
+459:             self.ffmpeg,
+460:             "-y",
+461:             "-loglevel",
+462:             "error",
+463:             "-ss",
+464:             str(
+465:                 round(
+466:                     timestamp,
+467:                     3,
+468:                 )
+469:             ),
+470:             "-i",
+471:             str(source),
+472:             "-frames:v",
+473:             "1",
+474:             "-q:v",
+475:             "3",
+476:             str(output),
+477:         ]
+478: 
+479:         try:
+480: 
+481:             completed = subprocess.run(
+482:                 command,
+483:                 stdout=subprocess.DEVNULL,
+484:                 stderr=subprocess.DEVNULL,
+485:                 check=False,
+486:                 timeout=45,
+487:             )
+488: 
+489:         except Exception:
+490:             return False
+491: 
+492:         return (
+493:             completed.returncode == 0
+494:             and output.exists()
+495:         )
+
+============================================================
+FILE: .\backend\services\video\clip_matcher.py
+============================================================
+1: """Semantic clip matching for Jarvis Rich V1."""
+2: 
+3: from __future__ import annotations
+4: 
+5: from dataclasses import dataclass, asdict
+6: from pathlib import Path
+7: 
+8: import torch
+9: from PIL import Image
+10: import open_clip
+11: 
+12: from backend.services.video.source_clip_indexer import (
+13:     IndexedSourceClip,
+14: )
+15: 
+16: 
+17: @dataclass(slots=True)
+18: class MatchedClip:
+19:     beat_id: str
+20:     query: str
+21:     clip_id: str
+22:     source_path: str
+23:     source_name: str
+24: 
+25:     start_time: float
+26:     end_time: float
+27:     duration: float
+28: 
+29:     preview_path: str
+30: 
+31:     semantic_score: float
+32: 
+33:     def to_dict(self) -> dict:
+34:         return asdict(self)
+35: 
+36: 
+37: class ClipMatcher:
+38:     """
+39:     Match narration/visual beats to indexed source clips using CLIP.
+40: 
+41:     One image embedding is created for each indexed preview frame.
+42:     Beat text is embedded and compared by cosine similarity.
+43:     """
+44: 
+45:     MODEL_NAME = "ViT-B-32"
+46:     PRETRAINED = "laion2b_s34b_b79k"
+47: 
+48:     MIN_SCORE = 0.18
+49: 
+50:     def __init__(
+51:         self,
+52:         *,
+53:         device: str | None = None,
+54:     ) -> None:
+55: 
+56:         self.device = (
+57:             device
+58:             or (
+59:                 "cuda"
+60:                 if torch.cuda.is_available()
+61:                 else "cpu"
+62:             )
+63:         )
+64: 
+65:         self.model = None
+66:         self.preprocess = None
+67:         self.tokenizer = None
+68: 
+69:         self._embedding_cache: dict[
+70:             str,
+71:             torch.Tensor,
+72:         ] = {}
+73: 
+74:     def match_many(
+75:         self,
+76:         *,
+77:         beats: list[dict],
+78:         clips: list[IndexedSourceClip],
+79:         max_reuse_per_source: int = 8,
+80:     ) -> list[MatchedClip]:
+81: 
+82:         if not beats:
+83:             return []
+84: 
+85:         if not clips:
+86:             return []
+87: 
+88:         self._ensure_model()
+89: 
+90:         ####################################################
+91:         # Precompute clip embeddings once.
+92:         ####################################################
+93: 
+94:         clip_embeddings = []
+95: 
+96:         valid_clips = []
+97: 
+98:         for clip in clips:
+99: 
+100:             embedding = self._clip_embedding(
+101:                 clip
+102:             )
+103: 
+104:             if embedding is None:
+105:                 continue
+106: 
+107:             valid_clips.append(
+108:                 clip
+109:             )
+110: 
+111:             clip_embeddings.append(
+112:                 embedding
+113:             )
+114: 
+115:         if not valid_clips:
+116:             return []
+117: 
+118:         image_matrix = torch.cat(
+119:             clip_embeddings,
+120:             dim=0,
+121:         )
+122: 
+123:         used_clip_ids: set[str] = set()
+124: 
+125:         source_usage: dict[
+126:             str,
+127:             int,
+128:         ] = {}
+129: 
+130:         output: list[
+131:             MatchedClip
+132:         ] = []
+133: 
+134:         for beat in beats:
+135: 
+136:             beat_id = str(
+137:                 beat.get(
+138:                     "beat_id",
+139:                     "",
+140:                 )
+141:             ).strip()
+142: 
+143:             query = " ".join(
+144:                 str(
+145:                     beat.get(
+146:                         "query",
+147:                         "",
+148:                     )
+149:                 ).split()
+150:             ).strip()
+151: 
+152:             if not query:
+153:                 continue
+154: 
+155:             text_embedding = (
+156:                 self._text_embedding(
+157:                     query
+158:                 )
+159:             )
+160: 
+161:             similarities = (
+162:                 text_embedding
+163:                 @ image_matrix.T
+164:             ).squeeze(0)
+165: 
+166:             ranked_indexes = torch.argsort(
+167:                 similarities,
+168:                 descending=True,
+169:             ).tolist()
+170: 
+171:             selected = None
+172:             selected_score = 0.0
+173: 
+174:             for index in ranked_indexes:
+175: 
+176:                 clip = valid_clips[
+177:                     index
+178:                 ]
+179: 
+180:                 score = float(
+181:                     similarities[
+182:                         index
+183:                     ].item()
+184:                 )
+185: 
+186:                 if score < self.MIN_SCORE:
+187:                     break
+188: 
+189:                 if (
+190:                     clip.clip_id
+191:                     in used_clip_ids
+192:                 ):
+193:                     continue
+194: 
+195:                 source_key = (
+196:                     clip.source_path
+197:                 )
+198: 
+199:                 if (
+200:                     source_usage.get(
+201:                         source_key,
+202:                         0,
+203:                     )
+204:                     >= max_reuse_per_source
+205:                 ):
+206:                     continue
+207: 
+208:                 selected = clip
+209:                 selected_score = score
+210:                 break
+211: 
+212:             if selected is None:
+213:                 continue
+214: 
+215:             used_clip_ids.add(
+216:                 selected.clip_id
+217:             )
+218: 
+219:             source_usage[
+220:                 selected.source_path
+221:             ] = (
+222:                 source_usage.get(
+223:                     selected.source_path,
+224:                     0,
+225:                 )
+226:                 + 1
+227:             )
+228: 
+229:             output.append(
+230:                 MatchedClip(
+231:                     beat_id=beat_id,
+232:                     query=query,
+233:                     clip_id=(
+234:                         selected.clip_id
+235:                     ),
+236:                     source_path=(
+237:                         selected.source_path
+238:                     ),
+239:                     source_name=(
+240:                         selected.source_name
+241:                     ),
+242:                     start_time=(
+243:                         selected.start_time
+244:                     ),
+245:                     end_time=(
+246:                         selected.end_time
+247:                     ),
+248:                     duration=(
+249:                         selected.duration
+250:                     ),
+251:                     preview_path=(
+252:                         selected.preview_path
+253:                     ),
+254:                     semantic_score=round(
+255:                         selected_score,
+256:                         4,
+257:                     ),
+258:                 )
+259:             )
+260: 
+261:         return output
+262: 
+263:     def _ensure_model(
+264:         self,
+265:     ) -> None:
+266: 
+267:         if self.model is not None:
+268:             return
+269: 
+270:         model, _, preprocess = (
+271:             open_clip.create_model_and_transforms(
+272:                 self.MODEL_NAME,
+273:                 pretrained=self.PRETRAINED,
+274:                 device=self.device,
+275:             )
+276:         )
+277: 
+278:         tokenizer = (
+279:             open_clip.get_tokenizer(
+280:                 self.MODEL_NAME
+281:             )
+282:         )
+283: 
+284:         model.eval()
+285: 
+286:         self.model = model
+287:         self.preprocess = preprocess
+288:         self.tokenizer = tokenizer
+289: 
+290:     def _clip_embedding(
+291:         self,
+292:         clip: IndexedSourceClip,
+293:     ) -> torch.Tensor | None:
+294: 
+295:         cache_key = str(
+296:             clip.preview_path
+297:         )
+298: 
+299:         cached = (
+300:             self._embedding_cache.get(
+301:                 cache_key
+302:             )
+303:         )
+304: 
+305:         if cached is not None:
+306:             return cached
+307: 
+308:         path = Path(
+309:             clip.preview_path
+310:         )
+311: 
+312:         if not path.exists():
+313:             return None
+314: 
+315:         try:
+316: 
+317:             image = (
+318:                 Image.open(
+319:                     path
+320:                 )
+321:                 .convert(
+322:                     "RGB"
+323:                 )
+324:             )
+325: 
+326:             tensor = (
+327:                 self.preprocess(
+328:                     image
+329:                 )
+330:                 .unsqueeze(0)
+331:                 .to(
+332:                     self.device
+333:                 )
+334:             )
+335: 
+336:             with torch.no_grad():
+337: 
+338:                 features = (
+339:                     self.model.encode_image(
+340:                         tensor
+341:                     )
+342:                 )
+343: 
+344:                 features = (
+345:                     features
+346:                     / features.norm(
+347:                         dim=-1,
+348:                         keepdim=True,
+349:                     )
+350:                 )
+351: 
+352:             features = (
+353:                 features.cpu()
+354:             )
+355: 
+356:             self._embedding_cache[
+357:                 cache_key
+358:             ] = features
+359: 
+360:             return features
+361: 
+362:         except Exception:
+363:             return None
+364: 
+365:     def _text_embedding(
+366:         self,
+367:         query: str,
+368:     ) -> torch.Tensor:
+369: 
+370:         tokens = (
+371:             self.tokenizer(
+372:                 [
+373:                     query,
+374:                     (
+375:                         "cinematic visual of "
+376:                         + query
+377:                     ),
+378:                     (
+379:                         "close relevant footage of "
+380:                         + query
+381:                     ),
+382:                 ]
+383:             )
+384:             .to(
+385:                 self.device
+386:             )
+387:         )
+388: 
+389:         with torch.no_grad():
+390: 
+391:             features = (
+392:                 self.model.encode_text(
+393:                     tokens
+394:                 )
+395:             )
+396: 
+397:             features = (
+398:                 features
+399:                 / features.norm(
+400:                     dim=-1,
+401:                     keepdim=True,
+402:                 )
+403:             )
+404: 
+405:             ################################################
+406:             # Average the prompt variants.
+407:             ################################################
+408: 
+409:             features = (
+410:                 features.mean(
+411:                     dim=0,
+412:                     keepdim=True,
+413:                 )
+414:             )
+415: 
+416:             features = (
+417:                 features
+418:                 / features.norm(
+419:                     dim=-1,
+420:                     keepdim=True,
+421:                 )
+422:             )
+423: 
+424:         return features.cpu()
+
+============================================================
+FILE: .\backend\services\video\strict_clip_matcher.py
+============================================================
+1: """Strict positive/negative semantic clip matching for Rich V1."""
+2: 
+3: from __future__ import annotations
+4: 
+5: from dataclasses import asdict, dataclass
+6: from pathlib import Path
+7: 
+8: import open_clip
+9: import torch
+10: from PIL import Image
+11: 
+12: from backend.services.video.source_clip_indexer import (
+13:     IndexedSourceClip,
+14: )
+15: from backend.services.video.visual_beat_source_planner import (
+16:     SourceVisualBeat,
+17: )
+18: 
+19: 
+20: @dataclass(slots=True)
+21: class StrictMatchedClip:
+22:     beat_id: str
+23:     visual_goal: str
+24: 
+25:     clip_id: str
+26:     source_path: str
+27:     source_name: str
+28: 
+29:     start_time: float
+30:     end_time: float
+31:     duration: float
+32: 
+33:     preview_path: str
+34: 
+35:     positive_score: float
+36:     negative_score: float
+37:     final_score: float
+38: 
+39:     def to_dict(self) -> dict:
+40:         return asdict(self)
+41: 
+42: 
+43: class StrictClipMatcher:
+44:     """
+45:     Match source clips against a concrete visual goal while penalizing
+46:     footage resembling explicitly unwanted visuals.
+47:     """
+48: 
+49:     MODEL_NAME = "ViT-B-32"
+50:     PRETRAINED = "laion2b_s34b_b79k"
+51: 
+52:     ########################################################
+53:     # Stricter than the earlier generic matcher.
+54:     ########################################################
+55: 
+56:     MIN_POSITIVE_SCORE = 0.20
+57:     MIN_FINAL_SCORE = 0.10
+58: 
+59:     NEGATIVE_WEIGHT = 0.55
+60: 
+61:     def __init__(
+62:         self,
+63:         *,
+64:         device: str | None = None,
+65:     ) -> None:
+66: 
+67:         self.device = (
+68:             device
+69:             or (
+70:                 "cuda"
+71:                 if torch.cuda.is_available()
+72:                 else "cpu"
+73:             )
+74:         )
+75: 
+76:         self.model = None
+77:         self.preprocess = None
+78:         self.tokenizer = None
+79: 
+80:         self.image_cache: dict[
+81:             str,
+82:             torch.Tensor,
+83:         ] = {}
+84: 
+85:     def match_many(
+86:         self,
+87:         *,
+88:         beats: list[SourceVisualBeat],
+89:         clips: list[IndexedSourceClip],
+90:         max_reuse_per_source: int = 10,
+91:     ) -> list[StrictMatchedClip]:
+92: 
+93:         if not beats or not clips:
+94:             return []
+95: 
+96:         self._ensure_model()
+97: 
+98:         valid_clips = []
+99:         embeddings = []
+100: 
+101:         for clip in clips:
+102: 
+103:             embedding = (
+104:                 self._image_embedding(
+105:                     clip.preview_path
+106:                 )
+107:             )
+108: 
+109:             if embedding is None:
+110:                 continue
+111: 
+112:             valid_clips.append(
+113:                 clip
+114:             )
+115: 
+116:             embeddings.append(
+117:                 embedding
+118:             )
+119: 
+120:         if not valid_clips:
+121:             return []
+122: 
+123:         image_matrix = torch.cat(
+124:             embeddings,
+125:             dim=0,
+126:         )
+127: 
+128:         used_clip_ids: set[str] = set()
+129: 
+130:         source_usage: dict[
+131:             str,
+132:             int,
+133:         ] = {}
+134: 
+135:         output = []
+136: 
+137:         for beat in beats:
+138: 
+139:             positive_prompts = [
+140:                 beat.visual_goal,
+141:                 *beat.search_queries,
+142:             ]
+143: 
+144:             positive_embedding = (
+145:                 self._text_embedding(
+146:                     positive_prompts
+147:                 )
+148:             )
+149: 
+150:             positive_scores = (
+151:                 positive_embedding
+152:                 @ image_matrix.T
+153:             ).squeeze(0)
+154: 
+155:             negative_scores = torch.zeros_like(
+156:                 positive_scores
+157:             )
+158: 
+159:             if beat.negative_visuals:
+160: 
+161:                 negative_embedding = (
+162:                     self._text_embedding(
+163:                         beat.negative_visuals
+164:                     )
+165:                 )
+166: 
+167:                 negative_scores = (
+168:                     negative_embedding
+169:                     @ image_matrix.T
+170:                 ).squeeze(0)
+171: 
+172:             final_scores = (
+173:                 positive_scores
+174:                 - (
+175:                     negative_scores
+176:                     * self.NEGATIVE_WEIGHT
+177:                 )
+178:             )
+179: 
+180:             ranked = torch.argsort(
+181:                 final_scores,
+182:                 descending=True,
+183:             ).tolist()
+184: 
+185:             winner = None
+186: 
+187:             for index in ranked:
+188: 
+189:                 clip = valid_clips[
+190:                     index
+191:                 ]
+192: 
+193:                 positive = float(
+194:                     positive_scores[
+195:                         index
+196:                     ].item()
+197:                 )
+198: 
+199:                 negative = float(
+200:                     negative_scores[
+201:                         index
+202:                     ].item()
+203:                 )
+204: 
+205:                 final = float(
+206:                     final_scores[
+207:                         index
+208:                     ].item()
+209:                 )
+210: 
+211:                 if (
+212:                     positive
+213:                     < self.MIN_POSITIVE_SCORE
+214:                 ):
+215:                     continue
+216: 
+217:                 if (
+218:                     final
+219:                     < self.MIN_FINAL_SCORE
+220:                 ):
+221:                     continue
+222: 
+223:                 if (
+224:                     clip.clip_id
+225:                     in used_clip_ids
+226:                 ):
+227:                     continue
+228: 
+229:                 if (
+230:                     source_usage.get(
+231:                         clip.source_path,
+232:                         0,
+233:                     )
+234:                     >= max_reuse_per_source
+235:                 ):
+236:                     continue
+237: 
+238:                 winner = (
+239:                     clip,
+240:                     positive,
+241:                     negative,
+242:                     final,
+243:                 )
+244: 
+245:                 break
+246: 
+247:             if winner is None:
+248:                 continue
+249: 
+250:             clip, positive, negative, final = (
+251:                 winner
+252:             )
+253: 
+254:             used_clip_ids.add(
+255:                 clip.clip_id
+256:             )
+257: 
+258:             source_usage[
+259:                 clip.source_path
+260:             ] = (
+261:                 source_usage.get(
+262:                     clip.source_path,
+263:                     0,
+264:                 )
+265:                 + 1
+266:             )
+267: 
+268:             output.append(
+269:                 StrictMatchedClip(
+270:                     beat_id=beat.beat_id,
+271:                     visual_goal=(
+272:                         beat.visual_goal
+273:                     ),
+274:                     clip_id=(
+275:                         clip.clip_id
+276:                     ),
+277:                     source_path=(
+278:                         clip.source_path
+279:                     ),
+280:                     source_name=(
+281:                         clip.source_name
+282:                     ),
+283:                     start_time=(
+284:                         clip.start_time
+285:                     ),
+286:                     end_time=(
+287:                         clip.end_time
+288:                     ),
+289:                     duration=(
+290:                         clip.duration
+291:                     ),
+292:                     preview_path=(
+293:                         clip.preview_path
+294:                     ),
+295:                     positive_score=round(
+296:                         positive,
+297:                         4,
+298:                     ),
+299:                     negative_score=round(
+300:                         negative,
+301:                         4,
+302:                     ),
+303:                     final_score=round(
+304:                         final,
+305:                         4,
+306:                     ),
+307:                 )
+308:             )
+309: 
+310:         return output
+311: 
+312:     def _ensure_model(
+313:         self,
+314:     ) -> None:
+315: 
+316:         if self.model is not None:
+317:             return
+318: 
+319:         model, _, preprocess = (
+320:             open_clip.create_model_and_transforms(
+321:                 self.MODEL_NAME,
+322:                 pretrained=self.PRETRAINED,
+323:                 device=self.device,
+324:             )
+325:         )
+326: 
+327:         tokenizer = (
+328:             open_clip.get_tokenizer(
+329:                 self.MODEL_NAME
+330:             )
+331:         )
+332: 
+333:         model.eval()
+334: 
+335:         self.model = model
+336:         self.preprocess = preprocess
+337:         self.tokenizer = tokenizer
+338: 
+339:     def _image_embedding(
+340:         self,
+341:         path_value: str,
+342:     ) -> torch.Tensor | None:
+343: 
+344:         cached = self.image_cache.get(
+345:             path_value
+346:         )
+347: 
+348:         if cached is not None:
+349:             return cached
+350: 
+351:         path = Path(
+352:             path_value
+353:         )
+354: 
+355:         if not path.exists():
+356:             return None
+357: 
+358:         try:
+359: 
+360:             image = Image.open(
+361:                 path
+362:             ).convert(
+363:                 "RGB"
+364:             )
+365: 
+366:             tensor = (
+367:                 self.preprocess(
+368:                     image
+369:                 )
+370:                 .unsqueeze(0)
+371:                 .to(
+372:                     self.device
+373:                 )
+374:             )
+375: 
+376:             with torch.no_grad():
+377: 
+378:                 features = (
+379:                     self.model.encode_image(
+380:                         tensor
+381:                     )
+382:                 )
+383: 
+384:                 features = (
+385:                     features
+386:                     / features.norm(
+387:                         dim=-1,
+388:                         keepdim=True,
+389:                     )
+390:                 )
+391: 
+392:             features = (
+393:                 features.cpu()
+394:             )
+395: 
+396:             self.image_cache[
+397:                 path_value
+398:             ] = features
+399: 
+400:             return features
+401: 
+402:         except Exception:
+403:             return None
+404: 
+405:     def _text_embedding(
+406:         self,
+407:         prompts: list[str],
+408:     ) -> torch.Tensor:
+409: 
+410:         cleaned = [
+411:             " ".join(
+412:                 str(prompt).split()
+413:             ).strip()
+414:             for prompt in prompts
+415:             if str(prompt).strip()
+416:         ]
+417: 
+418:         if not cleaned:
+419:             raise ValueError(
+420:                 "Text embedding requires prompts."
+421:             )
+422: 
+423:         tokens = (
+424:             self.tokenizer(
+425:                 cleaned
+426:             )
+427:             .to(
+428:                 self.device
+429:             )
+430:         )
+431: 
+432:         with torch.no_grad():
+433: 
+434:             features = (
+435:                 self.model.encode_text(
+436:                     tokens
+437:                 )
+438:             )
+439: 
+440:             features = (
+441:                 features
+442:                 / features.norm(
+443:                     dim=-1,
+444:                     keepdim=True,
+445:                 )
+446:             )
+447: 
+448:             ################################################
+449:             # Average all positive or negative descriptions.
+450:             ################################################
+451: 
+452:             features = features.mean(
+453:                 dim=0,
+454:                 keepdim=True,
+455:             )
+456: 
+457:             features = (
+458:                 features
+459:                 / features.norm(
+460:                     dim=-1,
+461:                     keepdim=True,
+462:                 )
+463:             )
+464: 
+465:         return features.cpu()
+
+============================================================
+FILE: .\backend\services\video_renderer\matched_clip_renderer.py
+============================================================
+1: """Render semantically matched source clips for Jarvis Rich V1."""
+2: 
+3: from __future__ import annotations
+4: 
+5: from pathlib import Path
+6: 
+7: from moviepy import (
+8:     VideoFileClip,
+9:     concatenate_videoclips,
+10: )
+11: 
+12: from backend.services.runtime.runtime_config import RuntimeConfig
+13: from backend.services.video.clip_matcher import MatchedClip
+14: from backend.services.video.reference_profiles import RichFormatProfile
+15: from backend.services.video_renderer.moviepy_runtime import (
+16:     configure_moviepy_ffmpeg,
+17: )
+18: 
+19: 
+20: class MatchedClipRenderer:
+21:     """
+22:     Render exact source segments selected by ClipMatcher.
+23: 
+24:     Unlike the old renderer, this does not choose arbitrary portions
+25:     of a MediaAsset. It honors the indexed source timestamps.
+26:     """
+27: 
+28:     def __init__(
+29:         self,
+30:         runtime_config: RuntimeConfig | None = None,
+31:     ) -> None:
+32: 
+33:         config = (
+34:             runtime_config
+35:             if runtime_config is not None
+36:             else RuntimeConfig.from_environment()
+37:         )
+38: 
+39:         self.ffmpeg_executable = (
+40:             configure_moviepy_ffmpeg(
+41:                 config.ffmpeg_executable
+42:             )
+43:         )
+44: 
+45:         self.output_dir = (
+46:             Path(config.generated_dir)
+47:             / "videos"
+48:         )
+49: 
+50:         self.output_dir.mkdir(
+51:             parents=True,
+52:             exist_ok=True,
+53:         )
+54: 
+55:     async def render(
+56:         self,
+57:         *,
+58:         title: str,
+59:         matches: list[MatchedClip],
+60:         profile: RichFormatProfile,
+61:     ) -> dict:
+62: 
+63:         if not matches:
+64:             raise RuntimeError(
+65:                 "MatchedClipRenderer received no matched clips."
+66:             )
+67: 
+68:         clips = []
+69:         opened_sources = []
+70: 
+71:         try:
+72: 
+73:             for index, match in enumerate(
+74:                 matches
+75:             ):
+76: 
+77:                 source_path = Path(
+78:                     match.source_path
+79:                 )
+80: 
+81:                 if not source_path.exists():
+82:                     continue
+83: 
+84:                 source = VideoFileClip(
+85:                     str(source_path)
+86:                 )
+87: 
+88:                 opened_sources.append(
+89:                     source
+90:                 )
+91: 
+92:                 start = max(
+93:                     0.0,
+94:                     float(
+95:                         match.start_time
+96:                     ),
+97:                 )
+98: 
+99:                 end = min(
+100:                     float(
+101:                         match.end_time
+102:                     ),
+103:                     float(
+104:                         source.duration
+105:                     ),
+106:                 )
+107: 
+108:                 if end <= start:
+109:                     continue
+110: 
+111:                 clip = source.subclipped(
+112:                     start,
+113:                     end,
+114:                 )
+115: 
+116:                 ################################################
+117:                 # Vertical 9:16 reframe.
+118:                 ################################################
+119: 
+120:                 scale = max(
+121:                     profile.width / clip.w,
+122:                     profile.height / clip.h,
+123:                 )
+124: 
+125:                 clip = clip.resized(
+126:                     scale
+127:                 )
+128: 
+129:                 ################################################
+130:                 # Light deterministic zoom variation.
+131:                 ################################################
+132: 
+133:                 if (
+134:                     profile.zoom_enabled
+135:                     and index % 3 == 1
+136:                 ):
+137:                     clip = clip.resized(
+138:                         1.035
+139:                     )
+140: 
+141:                 elif (
+142:                     profile.zoom_enabled
+143:                     and index % 3 == 2
+144:                 ):
+145:                     clip = clip.resized(
+146:                         1.06
+147:                     )
+148: 
+149:                 clip = clip.cropped(
+150:                     x_center=clip.w / 2,
+151:                     y_center=clip.h / 2,
+152:                     width=profile.width,
+153:                     height=profile.height,
+154:                 )
+155: 
+156:                 clips.append(
+157:                     clip
+158:                 )
+159: 
+160:             if not clips:
+161:                 raise RuntimeError(
+162:                     "No matched clips were renderable."
+163:                 )
+164: 
+165:             final = concatenate_videoclips(
+166:                 clips,
+167:                 method="compose",
+168:             )
+169: 
+170:             safe_name = "".join(
+171:                 c if c.isalnum()
+172:                 else "_"
+173:                 for c in title
+174:             )[:70]
+175: 
+176:             output = (
+177:                 self.output_dir
+178:                 / (
+179:                     f"{safe_name}_"
+180:                     f"{profile.format_name}_"
+181:                     "matched.mp4"
+182:                 )
+183:             )
+184: 
+185:             final.write_videofile(
+186:                 str(output),
+187:                 fps=profile.fps,
+188:                 codec="libx264",
+189:                 audio_codec="aac",
+190:                 logger=None,
+191:             )
+192: 
+193:             duration = float(
+194:                 final.duration
+195:             )
+196: 
+197:             final.close()
+198: 
+199:             return {
+200:                 "status": "success",
+201:                 "video_path": str(
+202:                     output
+203:                 ),
+204:                 "format_name": (
+205:                     profile.format_name
+206:                 ),
+207:                 "clip_count": len(
+208:                     clips
+209:                 ),
+210:                 "duration": round(
+211:                     duration,
+212:                     2,
+213:                 ),
+214:                 "resolution": (
+215:                     f"{profile.width}"
+216:                     f"x{profile.height}"
+217:                 ),
+218:                 "fps": profile.fps,
+219:             }
+220: 
+221:         finally:
+222: 
+223:             for clip in clips:
+224: 
+225:                 try:
+226:                     clip.close()
+227:                 except Exception:
+228:                     pass
+229: 
+230:             for source in opened_sources:
+231: 
+232:                 try:
+233:                     source.close()
+234:                 except Exception:
+235:                     pass
+
+============================================================
+FILE: .\backend\services\video_renderer\rich_multi_shot_renderer.py
+============================================================
+1: """Profile-driven multi-shot renderer for Jarvis Rich V1."""
+2: 
+3: from __future__ import annotations
+4: import hashlib
+5: import subprocess
+6: 
+7: from pathlib import Path
+8: 
+9: from moviepy import (
+10:     AudioFileClip,
+11:     CompositeVideoClip,
+12:     ImageClip,
+13:     VideoFileClip,
+14:     concatenate_videoclips,
+15: )
+16: 
+17: from backend.services.runtime.runtime_config import RuntimeConfig
+18: from backend.services.video.media_asset import MediaAsset
+19: from backend.services.video.reference_profiles import (
+20:     RichFormatProfile,
+21: )
+22: from backend.services.video_renderer.moviepy_runtime import (
+23:     configure_moviepy_ffmpeg,
+24: )
+25: 
+26: 
+27: class RichMultiShotRenderer:
+28:     """
+29:     Render fast vertical Shorts from multiple real media assets.
+30: 
+31:     V1 responsibilities:
+32:         - profile-driven shot timing
+33:         - video + image inputs
+34:         - 9:16 crop/reframe
+35:         - mild per-shot zoom variation
+36:         - narration/music attachment
+37:         - 1080x1920 output
+38:     """
+39: 
+40:     def __init__(
+41:         self,
+42:         runtime_config: RuntimeConfig | None = None,
+43:     ) -> None:
+44: 
+45:         config = (
+46:             runtime_config
+47:             if runtime_config is not None
+48:             else RuntimeConfig.from_environment()
+49:         )
+50: 
+51:         self.ffmpeg_executable = (
+52:             configure_moviepy_ffmpeg(
+53:                 config.ffmpeg_executable
+54:             )
+55:         )
+56: 
+57:         self.output_dir = (
+58:             Path(config.generated_dir)
+59:             / "videos"
+60:         )
+61: 
+62:         self.output_dir.mkdir(
+63:             parents=True,
+64:             exist_ok=True,
+65:         )
+66: 
+67:         self.normalized_video_dir = (
+68:             Path(config.generated_dir)
+69:             / "normalized_video"
+70:         )
+71: 
+72:         self.normalized_video_dir.mkdir(
+73:             parents=True,
+74:             exist_ok=True,
+75:         )
+76: 
+77:     async def render(
+78:         self,
+79:         *,
+80:         title: str,
+81:         assets: list[MediaAsset],
+82:         profile: RichFormatProfile,
+83:         narration_audio_path: str | None = None,
+84:         music_audio_path: str | None = None,
+85:     ) -> dict:
+86: 
+87:         if not assets:
+88:             raise RuntimeError(
+89:                 "RichMultiShotRenderer received no assets."
+90:             )
+91: 
+92:         target_duration = float(
+93:             profile.target_duration
+94:         )
+95: 
+96:         ####################################################
+97:         # Determine timeline duration.
+98:         #
+99:         # If narration exists, narration controls the final
+100:         # timeline for narrated formats.
+101:         ####################################################
+102: 
+103:         narration = None
+104:         music = None
+105: 
+106:         if narration_audio_path:
+107: 
+108:             narration_path = Path(
+109:                 narration_audio_path
+110:             )
+111: 
+112:             if not narration_path.exists():
+113:                 raise FileNotFoundError(
+114:                     narration_path
+115:                 )
+116: 
+117:             narration = AudioFileClip(
+118:                 str(narration_path)
+119:             )
+120: 
+121:             if (
+122:                 profile.narration_enabled
+123:                 and narration.duration > 0
+124:             ):
+125:                 target_duration = min(
+126:                     max(
+127:                         narration.duration,
+128:                         profile.min_duration,
+129:                     ),
+130:                     profile.max_duration,
+131:                 )
+132: 
+133:         if music_audio_path:
+134: 
+135:             music_path = Path(
+136:                 music_audio_path
+137:             )
+138: 
+139:             if not music_path.exists():
+140:                 raise FileNotFoundError(
+141:                     music_path
+142:                 )
+143: 
+144:             music = AudioFileClip(
+145:                 str(music_path)
+146:             )
+147: 
+148:         ####################################################
+149:         # Build the visual sequence.
+150:         ####################################################
+151: 
+152:         shot_clips = []
+153: 
+154:         try:
+155: 
+156:             current_time = 0.0
+157:             asset_index = 0
+158:             shot_index = 0
+159: 
+160:             while current_time < target_duration:
+161: 
+162:                 asset = assets[
+163:                     asset_index
+164:                     % len(assets)
+165:                 ]
+166: 
+167:                 remaining = (
+168:                     target_duration
+169:                     - current_time
+170:                 )
+171: 
+172:                 duration = self._shot_duration(
+173:                     profile=profile,
+174:                     shot_index=shot_index,
+175:                     remaining=remaining,
+176:                 )
+177: 
+178:                 clip = self._build_asset_clip(
+179:                     asset=asset,
+180:                     duration=duration,
+181:                     profile=profile,
+182:                     shot_index=shot_index,
+183:                 )
+184: 
+185:                 shot_clips.append(
+186:                     clip
+187:                 )
+188: 
+189:                 current_time += duration
+190:                 asset_index += 1
+191:                 shot_index += 1
+192: 
+193:             if not shot_clips:
+194:                 raise RuntimeError(
+195:                     "Renderer produced no visual shots."
+196:                 )
+197: 
+198:             base = concatenate_videoclips(
+199:                 shot_clips,
+200:                 method="compose",
+201:             )
+202: 
+203:             base = base.with_duration(
+204:                 target_duration
+205:             )
+206: 
+207:             ################################################
+208:             # Audio
+209:             ################################################
+210: 
+211:             final = base
+212: 
+213:             if narration is not None:
+214: 
+215:                 narration = narration.subclipped(
+216:                     0,
+217:                     min(
+218:                         narration.duration,
+219:                         target_duration,
+220:                     ),
+221:                 )
+222: 
+223:                 final = final.with_audio(
+224:                     narration
+225:                 )
+226: 
+227:             elif (
+228:                 music is not None
+229:                 and profile.music_enabled
+230:             ):
+231: 
+232:                 music_duration = min(
+233:                     music.duration,
+234:                     target_duration,
+235:                 )
+236: 
+237:                 music = music.subclipped(
+238:                     0,
+239:                     music_duration,
+240:                 )
+241: 
+242:                 final = final.with_audio(
+243:                     music
+244:                 )
+245: 
+246:             ################################################
+247:             # Safe filename
+248:             ################################################
+249: 
+250:             safe_name = "".join(
+251:                 c if c.isalnum()
+252:                 else "_"
+253:                 for c in title
+254:             )[:70]
+255: 
+256:             output = (
+257:                 self.output_dir
+258:                 / (
+259:                     f"{safe_name}_"
+260:                     f"{profile.format_name}.mp4"
+261:                 )
+262:             )
+263: 
+264:             ################################################
+265:             # Render
+266:             ################################################
+267: 
+268:             final.write_videofile(
+269:                 str(output),
+270:                 fps=profile.fps,
+271:                 codec="libx264",
+272:                 audio_codec="aac",
+273:                 logger=None,
+274:             )
+275: 
+276:             final.close()
+277:             base.close()
+278: 
+279:             return {
+280:                 "status": "success",
+281:                 "video_path": str(output),
+282:                 "duration": target_duration,
+283:                 "format_name": (
+284:                     profile.format_name
+285:                 ),
+286:                 "benchmark_reference": (
+287:                     profile.benchmark_reference
+288:                 ),
+289:                 "shot_count": len(
+290:                     shot_clips
+291:                 ),
+292:                 "resolution": (
+293:                     f"{profile.width}"
+294:                     f"x{profile.height}"
+295:                 ),
+296:                 "fps": profile.fps,
+297:             }
+298: 
+299:         finally:
+300: 
+301:             for clip in shot_clips:
+302: 
+303:                 try:
+304:                     clip.close()
+305:                 except Exception:
+306:                     pass
+307: 
+308:             if narration is not None:
+309: 
+310:                 try:
+311:                     narration.close()
+312:                 except Exception:
+313:                     pass
+314: 
+315:             if music is not None:
+316: 
+317:                 try:
+318:                     music.close()
+319:                 except Exception:
+320:                     pass
+321: 
+322:     def _normalize_video_for_moviepy(
+323:         self,
+324:         source_path: Path,
+325:     ) -> Path:
+326:         """
+327:         Normalize third-party video containers before MoviePy reads
+328:         them.
+329: 
+330:         This removes timecode/data streams and provider metadata that
+331:         can confuse MoviePy's FFmpeg parser, while caching the result
+332:         so repeated renders do not transcode the same asset again.
+333:         """
+334: 
+335:         stat = source_path.stat()
+336: 
+337:         identity = (
+338:             f"{source_path.resolve()}|"
+339:             f"{stat.st_size}|"
+340:             f"{stat.st_mtime_ns}"
+341:         )
+342: 
+343:         digest = hashlib.sha1(
+344:             identity.encode(
+345:                 "utf-8"
+346:             )
+347:         ).hexdigest()[:16]
+348: 
+349:         output = (
+350:             self.normalized_video_dir
+351:             / f"{digest}.mp4"
+352:         )
+353: 
+354:         if (
+355:             output.exists()
+356:             and output.stat().st_size > 0
+357:         ):
+358:             return output
+359: 
+360:         command = [
+361:             self.ffmpeg_executable,
+362:             "-y",
+363: 
+364:             "-i",
+365:             str(source_path),
+366: 
+367:             # Keep only the primary video stream.
+368:             "-map",
+369:             "0:v:0",
+370: 
+371:             # Explicitly remove non-video streams.
+372:             "-an",
+373:             "-sn",
+374:             "-dn",
+375: 
+376:             # Remove timecode/provider metadata.
+377:             "-map_metadata",
+378:             "-1",
+379: 
+380:             "-metadata",
+381:             "timecode=",
+382: 
+383:             # Stable MoviePy-friendly encoding.
+384:             "-c:v",
+385:             "libx264",
+386: 
+387:             "-preset",
+388:             "veryfast",
+389: 
+390:             "-crf",
+391:             "18",
+392: 
+393:             "-pix_fmt",
+394:             "yuv420p",
+395: 
+396:             "-movflags",
+397:             "+faststart",
+398: 
+399:             str(output),
+400:         ]
+401: 
+402:         completed = subprocess.run(
+403:             command,
+404:             stdout=subprocess.DEVNULL,
+405:             stderr=subprocess.PIPE,
+406:             text=True,
+407:             check=False,
+408:             timeout=180,
+409:         )
+410: 
+411:         if (
+412:             completed.returncode != 0
+413:             or not output.exists()
+414:             or output.stat().st_size <= 0
+415:         ):
+416:             raise RuntimeError(
+417:                 "FFmpeg video normalization failed for "
+418:                 f"{source_path}: "
+419:                 f"{completed.stderr[-1500:]}"
+420:             )
+421: 
+422:         return output
+423: 
+424:     def _build_asset_clip(
+425:         self,
+426:         *,
+427:         asset: MediaAsset,
+428:         duration: float,
+429:         profile: RichFormatProfile,
+430:         shot_index: int,
+431:     ):
+432: 
+433:         source_path = Path(
+434:             asset.file_path
+435:         )
+436: 
+437:         if not source_path.exists():
+438:             raise FileNotFoundError(
+439:                 source_path
+440:             )
+441: 
+442:         if asset.asset_type == "video":
+443: 
+444:             normalized_path = (
+445:                 self._normalize_video_for_moviepy(
+446:                     source_path
+447:                 )
+448:             )
+449: 
+450:             source = VideoFileClip(
+451:                 str(normalized_path)
+452:             )
+453: 
+454:             if source.duration <= 0:
+455:                 source.close()
+456: 
+457:                 raise RuntimeError(
+458:                     "Video asset has invalid duration: "
+459:                     f"{source_path}"
+460:                 )
+461: 
+462:             usable_duration = min(
+463:                 duration,
+464:                 source.duration,
+465:             )
+466: 
+467:             ################################################
+468:             # Avoid always starting at frame zero.
+469:             ################################################
+470: 
+471:             max_start = max(
+472:                 0.0,
+473:                 source.duration
+474:                 - usable_duration,
+475:             )
+476: 
+477:             if max_start > 0:
+478: 
+479:                 fraction = (
+480:                     (
+481:                         shot_index * 0.37
+482:                     )
+483:                     % 1.0
+484:                 )
+485: 
+486:                 start = (
+487:                     max_start
+488:                     * fraction
+489:                 )
+490: 
+491:             else:
+492:                 start = 0.0
+493: 
+494:             clip = source.subclipped(
+495:                 start,
+496:                 start + usable_duration,
+497:             )
+498: 
+499:         elif asset.asset_type == "image":
+500: 
+501:             clip = (
+502:                 ImageClip(
+503:                     str(source_path)
+504:                 )
+505:                 .with_duration(
+506:                     duration
+507:                 )
+508:             )
+509: 
+510:         else:
+511: 
+512:             raise ValueError(
+513:                 "Unsupported media type: "
+514:                 f"{asset.asset_type}"
+515:             )
+516: 
+517:         ####################################################
+518:         # 9:16 crop/reframe.
+519:         ####################################################
+520: 
+521:         scale = max(
+522:             profile.width / clip.w,
+523:             profile.height / clip.h,
+524:         )
+525: 
+526:         clip = clip.resized(
+527:             scale
+528:         )
+529: 
+530:         ####################################################
+531:         # Mild zoom variation.
+532:         ####################################################
+533: 
+534:         if (
+535:             profile.zoom_enabled
+536:             and shot_index % 3 == 1
+537:         ):
+538:             clip = clip.resized(
+539:                 1.035
+540:             )
+541: 
+542:         elif (
+543:             profile.zoom_enabled
+544:             and shot_index % 3 == 2
+545:         ):
+546:             clip = clip.resized(
+547:                 1.06
+548:             )
+549: 
+550:         clip = clip.cropped(
+551:             x_center=clip.w / 2,
+552:             y_center=clip.h / 2,
+553:             width=profile.width,
+554:             height=profile.height,
+555:         )
+556: 
+557:         return clip.with_duration(
+558:             duration
+559:         )
+560: 
+561:     @staticmethod
+562:     def _shot_duration(
+563:         *,
+564:         profile: RichFormatProfile,
+565:         shot_index: int,
+566:         remaining: float,
+567:     ) -> float:
+568: 
+569:         ####################################################
+570:         # Deterministic rhythmic variation.
+571:         ####################################################
+572: 
+573:         pattern = (
+574:             0.82,
+575:             1.00,
+576:             1.18,
+577:             0.92,
+578:             1.08,
+579:         )
+580: 
+581:         factor = pattern[
+582:             shot_index
+583:             % len(pattern)
+584:         ]
+585: 
+586:         duration = (
+587:             profile.target_shot_duration
+588:             * factor
+589:         )
+590: 
+591:         duration = max(
+592:             profile.min_shot_duration,
+593:             min(
+594:                 duration,
+595:                 profile.max_shot_duration,
+596:             ),
+597:         )
+598: 
+599:         return min(
+600:             duration,
+601:             remaining,
+602:         )
+
+============================================================
+FILE: .\backend\services\video\media_asset.py
+============================================================
+1: """Media asset model for Rich V1 licensed-media production."""
+2: 
+3: from __future__ import annotations
+4: 
+5: from dataclasses import dataclass
+6: 
+7: 
+8: @dataclass
+9: class MediaAsset:
+10:     """A production-approved visual asset."""
+11: 
+12:     asset_id: str
+13:     asset_type: str
+14:     file_path: str
+15:     source_url: str
+16:     source_name: str
+17: 
+18:     creator: str | None = None
+19:     license_name: str | None = None
+20:     license_url: str | None = None
+21: 
+22:     attribution_required: bool = False
+23:     commercial_use_allowed: bool = False
+24: 
+25:     relevance_score: float = 0.0
+26: 
+27:     duration: float | None = None
+28:     width: int | None = None
+29:     height: int | None = None
+30: 
+31:     content_id: str | None = None
+32: 
+33:     @property
+34:     def image_path(self) -> str:
+35:         """Legacy renderer compatibility."""
+36:         return self.file_path
+37: 
+38:     @property
+39:     def provider(self) -> str:
+40:         """Legacy production-package compatibility."""
+41:         return self.source_name
+42: 
+43:     @property
+44:     def prompt(self) -> str:
+45:         """Legacy manifest compatibility."""
+46:         return self.source_url
+47: 
+
+============================================================
+CURRENT PIPELINE REFERENCES TO VIDEO STACK
+============================================================
+
+--- SourceClipIndexer ---
+
+--- ClipMatcher ---
+
+--- StrictClipMatcher ---
+
+--- MatchedClipRenderer ---
+
+--- RichMultiShotRenderer ---
+
+--- asset_type ---
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1168:                for image_asset in authorized:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1169:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1170:                    if (
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1171:                        image_asset.asset_type
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1172:                        != "image"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1173:                    ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1174:                        continue
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1175:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1176:                    identity = (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1177:                        self._master_asset_identity(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1273:                asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1274:                for asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1275:                in media_groups[stage_index]
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1276:                if asset.asset_type == "image"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1277:            ]
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1278:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1279:            if not stage_candidates:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1280:                raise RuntimeError(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1281:                    "Stage 2B fallback media missing for "
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1282:                    f"narration stage {narration_index}."
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1348:                images = [
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1349:                    asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1350:                    for asset in authorized
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1351:                    if asset.asset_type == "image"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1352:                ]
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1353:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1354:                master_candidate_count += len(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1355:                    images
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1356:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1357:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1581:                (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1582:                    asset
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1583:                    for asset in group
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1584:                    if asset.asset_type
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1585:                    == "image"
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1586:                ),
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1587:                None,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1588:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1589:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1590:            if image_asset is None:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1796:                [
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1797:                    {
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1798:                        "asset_id": asset.asset_id,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1799:                        "asset_type": asset.asset_type,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1800:                        "file_path": asset.file_path,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1801:                        "source_url": asset.source_url,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1802:                        "source_name": asset.source_name,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1803:                        "creator": asset.creator,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1804:                        "license_name": asset.license_name,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1805:                        "license_url": asset.license_url,
+
+--- licensed_video ---
+
+--- video_path ---
+
+--- file_path ---
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:509:            "description",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:510:            "source_url",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:511:            "asset_id",
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:512:            "file_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:513:            "local_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:514:            "source_name",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:515:        ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:516:            value = getattr(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:517:                asset,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:518:                attr,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:748:                    "description",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:749:                    "source_url",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:750:                    "asset_id",
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:751:                    "file_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:752:                    "local_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:753:                    "source_name",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:754:                )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:755:            )
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:756:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:757:            metadata_tokens = token_set(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1631:
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1632:            for attribute in (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1633:                "image_path",
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1634:                "file_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1635:                "local_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1636:                "path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1637:                "source_url",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1638:                "asset_id",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1639:            ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1640:                value = getattr(
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1649:            if isinstance(asset, dict):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1650:                for key in (
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1651:                    "image_path",
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1652:                    "file_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1653:                    "local_path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1654:                    "path",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1655:                    "source_url",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1656:                    "asset_id",
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1657:                ):
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1658:                    value = asset.get(key)
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1797:                    {
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1798:                        "asset_id": asset.asset_id,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1799:                        "asset_type": asset.asset_type,
+> C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1800:                        "file_path": asset.file_path,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1801:                        "source_url": asset.source_url,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1802:                        "source_name": asset.source_name,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1803:                        "creator": asset.creator,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1804:                        "license_name": asset.license_name,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1805:                        "license_url": asset.license_url,
+  C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1806:                        "attribution_required": (
+
+============================================================
+COMPILE CHECK
+============================================================
+.\backend\services\video\source_clip_indexer.py => ExitCode 0
+.\backend\services\video\clip_matcher.py => ExitCode 0
+.\backend\services\video\strict_clip_matcher.py => ExitCode 0
+.\backend\services\video_renderer\matched_clip_renderer.py => ExitCode 0
+.\backend\services\video_renderer\rich_multi_shot_renderer.py => ExitCode 0
+.\backend\services\video\media_asset.py => ExitCode 0

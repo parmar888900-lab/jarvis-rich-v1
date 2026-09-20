@@ -1,4 +1,4 @@
-﻿"""
+"""
 Speech-aligned caption timing using OpenAI Whisper.
 """
 
@@ -12,11 +12,11 @@ class CaptionAligner:
 
     MODEL_NAME = "tiny.en"
 
-    WORDS_PER_PHRASE = 4
+    WORDS_PER_PHRASE = 3
 
     # Start a new caption when speech pauses
     # for at least this long.
-    PAUSE_THRESHOLD = 0.30
+    PAUSE_THRESHOLD = 0.24
 
     def __init__(self):
 
@@ -156,18 +156,35 @@ class CaptionAligner:
         words: list[dict],
     ) -> dict:
 
+        if not words:
+            raise ValueError(
+                "Cannot build caption phrase from no words."
+            )
+
+        start_time = max(
+            0.0,
+            float(
+                words[0]["start_time"]
+            ),
+        )
+
+        end_time = float(
+            words[-1]["end_time"]
+        )
+
+        # Whisper occasionally produces identical or
+        # slightly reversed word boundaries. Downstream
+        # subtitle rendering requires positive duration.
+        if end_time <= start_time:
+            end_time = start_time + 0.08
+
         return {
             "text": " ".join(
                 word["text"]
                 for word in words
             ),
-            "start_time": words[0][
-                "start_time"
-            ],
-            "end_time": words[-1][
-                "end_time"
-            ],
-            "words": words,
+            "start_time": start_time,
+            "end_time": end_time,
         }
 
     def _transcribe(

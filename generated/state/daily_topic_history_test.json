@@ -1,0 +1,90 @@
+[
+  {
+    "topic": "Avengers Endgame",
+    "format_name": "movie_facts",
+    "popularity_score": 82.0,
+    "visual_score": 90.0,
+    "freshness_score": 70.0,
+    "novelty_score": 78.0,
+    "suitability_score": 88.0,
+    "source_hint": "seed",
+    "final_score": 82.8
+  },
+  {
+    "topic": "The Dark Knight",
+    "format_name": "cinematic_movie_edit",
+    "popularity_score": 80.0,
+    "visual_score": 89.0,
+    "freshness_score": 70.0,
+    "novelty_score": 78.0,
+    "suitability_score": 88.0,
+    "source_hint": "seed",
+    "final_score": 82.05
+  },
+  {
+    "topic": "the world's most dangerous road",
+    "format_name": "curiosity_story",
+    "popularity_score": 82.0,
+    "visual_score": 90.0,
+    "freshness_score": 70.0,
+    "novelty_score": 78.0,
+    "suitability_score": 88.0,
+    "source_hint": "seed",
+    "final_score": 82.8
+  },
+  {
+    "topic": "Patek Philippe Grand Complications",
+    "format_name": "luxury_product",
+    "popularity_score": 82.0,
+    "visual_score": 90.0,
+    "freshness_score": 70.0,
+    "novelty_score": 78.0,
+    "suitability_score": 88.0,
+    "source_hint": "seed",
+    "final_score": 82.8
+  },
+  {
+    "topic": "how jet engines work",
+    "format_name": "science_explainer",
+    "popularity_score": 82.0,
+    "visual_score": 90.0,
+    "freshness_score": 70.0,
+    "novelty_score": 78.0,
+    "suitability_score": 88.0,
+    "source_hint": "seed",
+    "final_score": 82.8
+  },
+  {
+    "topic": "how Nvidia became one of the world's most valuable companies",
+    "format_name": "business_wealth",
+    "popularity_score": 82.0,
+    "visual_score": 90.0,
+    "freshness_score": 70.0,
+    "novelty_score": 78.0,
+    "suitability_score": 88.0,
+    "source_hint": "seed",
+    "final_score": 82.8
+  },
+  {
+    "topic": "Interstellar",
+    "format_name": "movie_facts",
+    "popularity_score": 80.0,
+    "visual_score": 89.0,
+    "freshness_score": 70.0,
+    "novelty_score": 78.0,
+    "suitability_score": 88.0,
+    "source_hint": "seed",
+    "final_score": 82.05
+  },
+  {
+    "topic": "Dune",
+    "format_name": "cinematic_movie_edit",
+    "popularity_score": 76.0,
+    "visual_score": 87.0,
+    "freshness_score": 70.0,
+    "novelty_score": 78.0,
+    "suitability_score": 88.0,
+    "source_hint": "seed",
+    "final_score": 80.55
+  }
+]

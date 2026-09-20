@@ -1,4 +1,4 @@
-﻿"""Microphone audio capture for the Jarvis voice assistant."""
+"""Microphone audio capture for the Jarvis voice assistant."""
 
 from __future__ import annotations
 

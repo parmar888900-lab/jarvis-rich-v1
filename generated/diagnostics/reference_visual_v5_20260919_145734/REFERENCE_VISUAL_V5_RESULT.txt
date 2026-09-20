@@ -1,0 +1,32 @@
+﻿========================================================
+ JARVIS REFERENCE VISUAL V5
+ SIX-REFERENCE QUALITY PUSH
+========================================================
+
+[PASS] Reference Visual V5 installed.
+[PASS] Literal Foley mechanism queries installed.
+[PASS] Footsteps acquisition installed.
+[PASS] Prop-action acquisition installed.
+[PASS] ADR/dialogue acquisition installed.
+[PASS] Sound-editing acquisition installed.
+[PASS] Field-recording acquisition installed.
+[PASS] Generic creator imagery strongly penalized.
+[PASS] Immediate-repeat penalty installed.
+[PASS] Semantic rejection preserved.
+[PASS] Rights authorization preserved.
+[PASS] Block 5 preserved.
+
+===== V5 RUNTIME VERIFICATION =====
+===== V5 RUNTIME VERIFICATION =====
+[PASS] _master_query_variants
+[PASS] _master_metadata_score
+[PASS] _master_choose_asset
+Traceback (most recent call last):
+  File "C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145734\verify_reference_visual_v5.py", line 162, in <module>
+    raise RuntimeError(
+        "Editing visual routing failed."
+    )
+RuntimeError: Editing visual routing failed.
+
+[ROLLBACK] V5 runtime verification failed.
+[PASS] Pre-V5 source restored.

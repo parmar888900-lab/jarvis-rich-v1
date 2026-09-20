@@ -1,0 +1,30 @@
+[
+    {
+        "narration": "Imagine an actor performing a scene with a green screen behind them, how does that work?",
+        "image_prompt": "Imagine an actor performing a scene with a green screen behind them, how does that work?",
+        "duration": 4.249251700680272,
+        "start_time": 0.0,
+        "end_time": 4.249251700680272
+    },
+    {
+        "narration": "Chroma keying allows the background to be removed, replacing it with anything from CGI maps to digital landscapes. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).",
+        "image_prompt": "Chroma keying allows the background to be removed, replacing it with anything from CGI maps to digital landscapes. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).",
+        "duration": 16.114648526077097,
+        "start_time": 4.249251700680272,
+        "end_time": 20.36390022675737
+    },
+    {
+        "narration": "This technique is widely used in weather broadcasts and movie productions, making actors appear in front of different backgrounds seamlessly.",
+        "image_prompt": "This technique is widely used in weather broadcasts and movie productions, making actors appear in front of different backgrounds seamlessly.",
+        "duration": 7.128526077097506,
+        "start_time": 20.36390022675737,
+        "end_time": 27.492426303854877
+    },
+    {
+        "narration": "Simple yet powerful, chroma keying transforms scenes, giving filmmakers endless creative possibilities.",
+        "image_prompt": "Simple yet powerful, chroma keying transforms scenes, giving filmmakers endless creative possibilities.",
+        "duration": 5.363809523809524,
+        "start_time": 27.492426303854877,
+        "end_time": 32.8562358276644
+    }
+]

@@ -1,4 +1,4 @@
-﻿"""Persistent goal model for the Jarvis Target/Goal Engine."""
+"""Persistent goal model for the Jarvis Target/Goal Engine."""
 
 import enum
 import uuid

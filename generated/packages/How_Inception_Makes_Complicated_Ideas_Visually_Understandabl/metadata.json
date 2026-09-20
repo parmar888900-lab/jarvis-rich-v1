@@ -1,0 +1,42 @@
+{
+    "title": "How Inception Makes Complicated Ideas Visually Understandable",
+    "hashtags": [
+        "#Inception",
+        "#ChristopherNolan",
+        "#VisualEffects"
+    ],
+    "scene_count": 4,
+    "duration": 31.950657596371883,
+    "created_by": "Jarvis Rich V1",
+    "metadata": {
+        "source": "How Inception makes complicated ideas visually understandable",
+        "generator": "Jarvis Rich V1",
+        "content_format": "famous_movie_commentary",
+        "movie_title": "Inception",
+        "evidence_ids": [
+            [
+                "E2",
+                "E3",
+                "E6",
+                "E13"
+            ],
+            [
+                "E2",
+                "E3",
+                "E6",
+                "E13"
+            ],
+            [
+                "E3",
+                "E6",
+                "E12"
+            ],
+            [
+                "E2",
+                "E3",
+                "E6"
+            ]
+        ],
+        "word_count": 75
+    }
+}

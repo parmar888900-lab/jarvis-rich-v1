@@ -1,0 +1,4 @@
+Imagine an actor stepping onto a virtual set without leaving the studio – that's green screen magic!
+In chroma key compositing, the actor stands in front of a green screen, which is later replaced with any background you can imagine.
+This technique, widely used in film, TV, and gaming, allows seamless integration of real actors into any environment.
+From weather reports to epic battle scenes, chroma keying brings imagination to life, one green screen at a time.

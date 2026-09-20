@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Camera_Movement_in_Film__Building_Tension\\Camera_Movement_in_Film__Building_Tension.wav",
+    "duration": 40.50721088435374,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Camera_Movement_in_Film__Building_Tension_scene_001.wav",
+            "duration": 5.201269841269841,
+            "start_time": 0.0,
+            "end_time": 5.201269841269841,
+            "narration": "Camera movement in films can heighten tension, subtly guiding viewer emotions."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Camera_Movement_in_Film__Building_Tension_scene_002.wav",
+            "duration": 7.75546485260771,
+            "start_time": 5.201269841269841,
+            "end_time": 12.95673469387755,
+            "narration": "For instance, a slow pan across a tense room can make us feel on edge. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Camera_Movement_in_Film__Building_Tension_scene_003.wav",
+            "duration": 23.196734693877552,
+            "start_time": 12.95673469387755,
+            "end_time": 36.1534693877551,
+            "narration": "Likewise, abrupt jolts or handheld shots amplify anxiety in dramatic scenes. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Camera_Movement_in_Film__Building_Tension_scene_004.wav",
+            "duration": 4.35374149659864,
+            "start_time": 36.1534693877551,
+            "end_time": 40.50721088435374,
+            "narration": "Masterful use of camera work enhances storytelling, making every frame count."
+        }
+    ],
+    "script": "Camera movement in films can heighten tension, subtly guiding viewer emotions.\nFor instance, a slow pan across a tense room can make us feel on edge. Filmmaking, or film production, is the process of creating a motion picture.\nLikewise, abrupt jolts or handheld shots amplify anxiety in dramatic scenes. Traditionally, filmmaking is thought of as a process specific to the creation of feature films; however, its iconic methodology has been used in the creation of other types of filmed products, including movies and episodic series for streaming and network broadcasting, commercials and advertisements, animations, music videos, and documentaries.\nMasterful use of camera work enhances storytelling, making every frame count."
+}

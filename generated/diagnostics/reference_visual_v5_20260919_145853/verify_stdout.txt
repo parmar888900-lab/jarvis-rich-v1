@@ -1,0 +1,20 @@
+===== V5 RUNTIME VERIFICATION =====
+[PASS] _master_query_variants
+[PASS] _master_metadata_score
+[PASS] _master_choose_asset
+[PASS] Footstep visual routing.
+[PASS] Sound-editing visual routing.
+[PASS] ADR visual routing.
+[INFO] Footstep queries:
+       Foley artist recording footsteps shoes floor film studio
+       film Foley footsteps shoes sound effects stage
+       Foley performer footsteps movie sound recording
+[INFO] Editing queries:
+       film sound editor audio waveform post production workstation
+       movie sound design editing timeline workstation
+       film audio post production sound editor mixing
+[INFO] ADR queries:
+       actor ADR dialogue recording film microphone studio
+       film ADR booth actor dialogue microphone
+       movie dialogue replacement recording studio
+[PASS] V5 runtime verification passed.

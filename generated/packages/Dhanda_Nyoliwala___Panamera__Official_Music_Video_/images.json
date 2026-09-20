@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "flux",
+        "prompt": "Here's what's happening with Dhanda Nyoliwala - Panamera (Official Music Video)., cinematic, ultra detailed, dramatic lighting, volumetric light, 8k, realistic, masterpiece, vertical composition, highly detailed",
+        "image_path": "generated\\packages\\Dhanda_Nyoliwala___Panamera__Official_Music_Video_\\images\\scene_001.png",
+        "width": 1080,
+        "height": 1920
+    },
+    {
+        "scene": 2,
+        "provider": "flux",
+        "prompt": "The story is gaining attention online., cinematic, ultra detailed, dramatic lighting, volumetric light, 8k, realistic, masterpiece, vertical composition, highly detailed",
+        "image_path": "generated\\packages\\Dhanda_Nyoliwala___Panamera__Official_Music_Video_\\images\\scene_002.png",
+        "width": 1080,
+        "height": 1920
+    },
+    {
+        "scene": 3,
+        "provider": "flux",
+        "prompt": "People are reacting for several reasons., cinematic, ultra detailed, dramatic lighting, volumetric light, 8k, realistic, masterpiece, vertical composition, highly detailed",
+        "image_path": "generated\\packages\\Dhanda_Nyoliwala___Panamera__Official_Music_Video_\\images\\scene_003.png",
+        "width": 1080,
+        "height": 1920
+    },
+    {
+        "scene": 4,
+        "provider": "flux",
+        "prompt": "Follow for more trending stories., cinematic, ultra detailed, dramatic lighting, volumetric light, 8k, realistic, masterpiece, vertical composition, highly detailed",
+        "image_path": "generated\\packages\\Dhanda_Nyoliwala___Panamera__Official_Music_Video_\\images\\scene_004.png",
+        "width": 1080,
+        "height": 1920
+    }
+]

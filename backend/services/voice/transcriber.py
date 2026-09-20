@@ -1,4 +1,4 @@
-﻿"""Local speech-to-text for the Jarvis voice assistant."""
+"""Local speech-to-text for the Jarvis voice assistant."""
 
 from __future__ import annotations
 

@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Using_Camera_Movement_to_Increase_Tension\\Using_Camera_Movement_to_Increase_Tension.wav",
+    "duration": 26.946757369614513,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Using_Camera_Movement_to_Increase_Tension_scene_001.wav",
+            "duration": 6.095238095238095,
+            "start_time": 0.0,
+            "end_time": 6.095238095238095,
+            "narration": "Camera movement can dramatically increase tension in a scene, guiding the audience's eye to the most crucial elements."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Using_Camera_Movement_to_Increase_Tension_scene_002.wav",
+            "duration": 5.723718820861678,
+            "start_time": 6.095238095238095,
+            "end_time": 11.818956916099772,
+            "narration": "A slow dolly-in or a sudden pan can heighten suspense, making viewers feel like they're right there with the characters."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Using_Camera_Movement_to_Increase_Tension_scene_003.wav",
+            "duration": 7.627755102040816,
+            "start_time": 11.818956916099772,
+            "end_time": 19.446712018140587,
+            "narration": "Skilful use of camera angles and movement, like a shaky handheld shot, can mimic the protagonist's fear and uncertainty."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Using_Camera_Movement_to_Increase_Tension_scene_004.wav",
+            "duration": 7.500045351473923,
+            "start_time": 19.446712018140587,
+            "end_time": 26.94675736961451,
+            "narration": "By carefully planning and executing these techniques, filmmakers can manipulate the viewer's emotional response, enhancing the overall storytelling."
+        }
+    ],
+    "script": "Camera movement can dramatically increase tension in a scene, guiding the audience's eye to the most crucial elements.\nA slow dolly-in or a sudden pan can heighten suspense, making viewers feel like they're right there with the characters.\nSkilful use of camera angles and movement, like a shaky handheld shot, can mimic the protagonist's fear and uncertainty.\nBy carefully planning and executing these techniques, filmmakers can manipulate the viewer's emotional response, enhancing the overall storytelling."
+}

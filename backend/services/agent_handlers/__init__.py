@@ -1,4 +1,4 @@
-﻿"""Built-in agent handlers. Add new handler files here to register agents."""
+"""Built-in agent handlers. Add new handler files here to register agents."""
 
 from backend.services.agent_handlers.base import BaseAgentHandler
 from backend.services.agent_handlers.goal import GoalAgentHandler

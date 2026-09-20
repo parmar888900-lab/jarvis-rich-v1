@@ -1,0 +1,20 @@
+﻿========================================================
+ JARVIS V4 DECORATOR REPAIR + REAL BENCHMARK
+========================================================
+
+[PASS] Removed duplicate V4 classmethod decorators.
+[PASS] _master_query_variants has exactly one @classmethod.
+[PASS] _master_metadata_score has exactly one @classmethod.
+[PASS] _master_choose_asset has exactly one @classmethod.
+[PASS] V4 semantic logic preserved.
+[PASS] Rights authorization preserved.
+[PASS] Block 5 preserved.
+
+===== RUNTIME DESCRIPTOR TEST =====
+Traceback (most recent call last):
+  File "C:\Users\hp\jarvis.ai\generated\diagnostics\v4_decorator_repair_20260919_142859\verify_v4_runtime.py", line 3, in <module>
+    from backend.services.pipelines.video_pipeline import VideoPipeline
+ModuleNotFoundError: No module named 'backend'
+
+[ROLLBACK] Runtime test failed.
+[PASS] Source restored.

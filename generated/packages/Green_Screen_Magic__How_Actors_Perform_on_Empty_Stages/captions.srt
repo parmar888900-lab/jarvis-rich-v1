@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:06,513
+Imagine an actor stepping onto a magical green stage, but what you see is just a backdrop waiting to be transformed.
+
+2
+00:00:06,513 --> 00:00:14,385
+Chroma key compositing separates the actor from the green screen, allowing filmmakers to replace the background with anything from outer space to a bustling city.
+
+3
+00:00:14,385 --> 00:00:21,537
+This technique, used in news, movies, and video games, turns a simple green screen into an endless creative canvas.
+
+4
+00:00:21,537 --> 00:00:26,018
+The result? Scenes come to life with stunning visual effects, making the impossible, possible.

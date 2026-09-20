@@ -1,0 +1,48 @@
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\py_compile.py", line 144, in compile
+    code = loader.source_to_code(source_bytes, dfile or file,
+                                 _optimize=optimize)
+  File "<frozen importlib._bootstrap_external>", line 1087, in source_to_code
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\hp\jarvis.ai\backend\services\video_renderer\renderer.py", line 427
+    {indent}# RICH_V1_REAL_VIDEO_V6
+SyntaxError: expected 'except' or 'finally' block
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\hp\jarvis.ai\install_rich_v1_v6.py", line 947, in <module>
+    compile_file(RENDERER)
+    ~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\hp\jarvis.ai\install_rich_v1_v6.py", line 25, in compile_file
+    py_compile.compile(
+    ~~~~~~~~~~~~~~~~~~^
+        str(path),
+        ^^^^^^^^^^
+        doraise=True,
+        ^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\py_compile.py", line 150, in compile
+    raise py_exc
+py_compile.PyCompileError:   File "C:\Users\hp\jarvis.ai\backend\services\video_renderer\renderer.py", line 427
+    {indent}# RICH_V1_REAL_VIDEO_V6
+SyntaxError: expected 'except' or 'finally' block
+
+============================================================
+ RICH V1 — REAL VIDEO V6 INSTALLER
+============================================================
+
+PRE-INSTALL COMPILE: PASS
+Backup: C:\Users\hp\jarvis.ai\generated\diagnostics\v6_real_20260919_181203\backup
+
+
+============================================================
+ V6 INSTALL FAILED — ROLLING BACK
+============================================================
+
+
+ROLLBACK COMPILE: PASS
+
+Original production files restored from:
+C:\Users\hp\jarvis.ai\generated\diagnostics\v6_real_20260919_181203\backup

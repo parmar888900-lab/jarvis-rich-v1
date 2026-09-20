@@ -1,0 +1,3 @@
+[ROLLBACK] V4 patch failed.
+[ROLLBACK] RuntimeError: Semantic Visual V4 is already installed.
+[PASS] Original V3 source restored.

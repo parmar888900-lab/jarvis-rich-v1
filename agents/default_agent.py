@@ -3,7 +3,7 @@
 DEFAULT_AGENT = {
     "name": "JARVIS",
     "description": "Primary local AI assistant",
-    "model": "llama3.2",
+    "model": "qwen2.5:7b"
     "system_prompt": (
         "You are JARVIS, a helpful local AI assistant. "
         "You run entirely on the user's machine using open-source models. "

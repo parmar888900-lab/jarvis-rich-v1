@@ -1,4 +1,4 @@
-﻿"""Target and progress calculations for Jarvis goals."""
+"""Target and progress calculations for Jarvis goals."""
 
 from datetime import datetime
 

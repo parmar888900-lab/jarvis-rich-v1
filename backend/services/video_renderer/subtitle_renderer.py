@@ -1,4 +1,4 @@
-﻿"""
+"""
 Subtitle rendering utilities for Jarvis videos.
 """
 
@@ -8,15 +8,15 @@ from moviepy import TextClip
 class SubtitleRenderer:
 
     # Tuned for 1080x1920 vertical Shorts.
-    FONT_SIZE = 78
-    WIDTH = 900
-    Y_POSITION = 1320
+    FONT_SIZE = 74
+    WIDTH = 860
+    Y_POSITION = 1120
 
     TEXT_COLOR = "white"
     STROKE_COLOR = "black"
     STROKE_WIDTH = 5
 
-    WORDS_PER_PHRASE = 4
+    WORDS_PER_PHRASE = 3
 
     def create_clip(
         self,
@@ -151,3 +151,4 @@ class SubtitleRenderer:
             current_time = phrase_end
 
         return clips
+

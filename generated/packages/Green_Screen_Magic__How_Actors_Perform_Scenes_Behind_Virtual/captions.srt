@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:06,374
+Imagine an actor stepping onto a virtual set without leaving the studio – that's green screen magic!
+
+2
+00:00:06,374 --> 00:00:12,701
+In chroma key compositing, the actor stands in front of a green screen, which is later replaced with any background you can imagine.
+
+3
+00:00:12,701 --> 00:00:19,528
+This technique, widely used in film, TV, and gaming, allows seamless integration of real actors into any environment.
+
+4
+00:00:19,528 --> 00:00:25,577
+From weather reports to epic battle scenes, chroma keying brings imagination to life, one green screen at a time.

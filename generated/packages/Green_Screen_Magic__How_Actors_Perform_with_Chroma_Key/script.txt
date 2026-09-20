@@ -1,0 +1,4 @@
+Step into the world of green screens where actors perform against a blank background.
+Chroma keying allows editors to replace the green with any setting, like a bustling city or a serene beach. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).
+This technique is widely used in weather forecasts and film production, seamlessly blending actors with digital environments.
+Watch as the same actor appears in different settings, all thanks to chroma keying.

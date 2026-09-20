@@ -1,4 +1,4 @@
-﻿"""Google News research provider."""
+"""Google News research provider."""
 
 from html import unescape
 from urllib.parse import quote_plus

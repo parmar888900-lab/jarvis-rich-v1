@@ -1,4 +1,4 @@
-﻿"""
+"""
 Builds a complete production package.
 
 Everything required to recreate the video is stored

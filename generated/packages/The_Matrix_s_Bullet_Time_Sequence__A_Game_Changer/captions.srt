@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:07,686
+In 1999, The Matrix introduced 'bullet time', a technique that allowed the action to slow down while the camera moved at normal speed.
+
+2
+00:00:07,686 --> 00:00:13,444
+This sequence was designed to illustrate characters' ability to manipulate time and space, a core theme of the film.
+
+3
+00:00:13,444 --> 00:00:21,862
+The Wachowskis proposed the effect in their screenplay, and it became a defining visual element of the movie, influencing future action sequences.
+
+4
+00:00:21,862 --> 00:00:30,093
+The bullet time technique showcased innovative use of still images and algorithms, creating a revolutionary visual effect that transformed action scenes.

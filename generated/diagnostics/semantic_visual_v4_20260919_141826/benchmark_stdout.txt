@@ -1,0 +1,16 @@
+====================================================================
+JARVIS SEMANTIC VISUAL V4 REAL BENCHMARK
+====================================================================
+[INFO] Topic: Why movie sound effects are often recorded separately
+[INFO] Content ID: semantic_v4_20260919_141826
+[INFO] Upload: DISABLED
+[INFO] Orchestrator: DISABLED
+[INFO] Publisher: DISABLED
+
+[PASS] Real VideoPipeline imported.
+[PASS] VideoPipeline constructed.
+[PASS] Mandatory content_id supplied.
+
+===== REAL PIPELINE START =====
+
+[EvergreenResearch] MISS -> Why movie sound effects are often recorded separately

@@ -1,0 +1,41 @@
+{
+    "status": "success",
+    "audio_path": "generated\\packages\\Camera_Movement_for_Tension\\Camera_Movement_for_Tension.wav",
+    "duration": 37.99945578231293,
+    "provider": "piper",
+    "scenes": [
+        {
+            "scene": 1,
+            "audio_path": "generated\\audio\\Camera_Movement_for_Tension_scene_001.wav",
+            "duration": 4.20281179138322,
+            "start_time": 0.0,
+            "end_time": 4.20281179138322,
+            "narration": "Camera movement can subtly increase tension, like slowly panning to an ominous door."
+        },
+        {
+            "scene": 2,
+            "audio_path": "generated\\audio\\Camera_Movement_for_Tension_scene_002.wav",
+            "duration": 7.616145124716553,
+            "start_time": 4.20281179138322,
+            "end_time": 11.818956916099772,
+            "narration": "Or a handheld shot that makes the viewer feel like they're right there in the action. Filmmaking, or film production, is the process of creating a motion picture."
+        },
+        {
+            "scene": 3,
+            "audio_path": "generated\\audio\\Camera_Movement_for_Tension_scene_003.wav",
+            "duration": 22.337596371882086,
+            "start_time": 11.818956916099772,
+            "end_time": 34.15655328798186,
+            "narration": "By carefully choosing camera movements, filmmakers can guide your attention and emotions. It involves a number of distinct stages, including an initial story idea or commission, followed by screenwriting, casting, pre-production, shooting, sound recording, post-production, and screening the finished product before an audience, which may result in a film release distribution and exhibition."
+        },
+        {
+            "scene": 4,
+            "audio_path": "generated\\audio\\Camera_Movement_for_Tension_scene_004.wav",
+            "duration": 3.842902494331066,
+            "start_time": 34.15655328798186,
+            "end_time": 37.99945578231292,
+            "narration": "Watch how these techniques build suspense in key scenes of your favorite films."
+        }
+    ],
+    "script": "Camera movement can subtly increase tension, like slowly panning to an ominous door.\nOr a handheld shot that makes the viewer feel like they're right there in the action. Filmmaking, or film production, is the process of creating a motion picture.\nBy carefully choosing camera movements, filmmakers can guide your attention and emotions. It involves a number of distinct stages, including an initial story idea or commission, followed by screenwriting, casting, pre-production, shooting, sound recording, post-production, and screening the finished product before an audience, which may result in a film release distribution and exhibition.\nWatch how these techniques build suspense in key scenes of your favorite films."
+}

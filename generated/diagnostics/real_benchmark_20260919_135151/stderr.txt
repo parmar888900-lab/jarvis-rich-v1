@@ -1,0 +1,2 @@
+Script length validation failed: 70 words.
+Initial content invalid (70 words). Regenerating.

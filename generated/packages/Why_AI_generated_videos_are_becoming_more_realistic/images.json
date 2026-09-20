@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "flux-comfyui",
+        "prompt": "Here's what's happening with Why AI-generated videos are becoming more realistic., cinematic, ultra detailed, dramatic lighting, volumetric light, 8k, realistic, masterpiece, vertical composition, highly detailed",
+        "image_path": "generated\\packages\\Why_AI_generated_videos_are_becoming_more_realistic\\images\\scene_001.png",
+        "width": 720,
+        "height": 1280
+    },
+    {
+        "scene": 2,
+        "provider": "flux-comfyui",
+        "prompt": "The story is gaining attention online., cinematic, ultra detailed, dramatic lighting, volumetric light, 8k, realistic, masterpiece, vertical composition, highly detailed",
+        "image_path": "generated\\packages\\Why_AI_generated_videos_are_becoming_more_realistic\\images\\scene_002.png",
+        "width": 720,
+        "height": 1280
+    },
+    {
+        "scene": 3,
+        "provider": "flux-comfyui",
+        "prompt": "People are reacting for several reasons., cinematic, ultra detailed, dramatic lighting, volumetric light, 8k, realistic, masterpiece, vertical composition, highly detailed",
+        "image_path": "generated\\packages\\Why_AI_generated_videos_are_becoming_more_realistic\\images\\scene_003.png",
+        "width": 720,
+        "height": 1280
+    },
+    {
+        "scene": 4,
+        "provider": "flux-comfyui",
+        "prompt": "Follow for more trending stories., cinematic, ultra detailed, dramatic lighting, volumetric light, 8k, realistic, masterpiece, vertical composition, highly detailed",
+        "image_path": "generated\\packages\\Why_AI_generated_videos_are_becoming_more_realistic\\images\\scene_004.png",
+        "width": 720,
+        "height": 1280
+    }
+]

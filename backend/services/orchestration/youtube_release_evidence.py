@@ -1,4 +1,4 @@
-﻿"""Resolve trusted YouTube release evidence from persisted production state."""
+"""Resolve trusted YouTube release evidence from persisted production state."""
 
 from __future__ import annotations
 

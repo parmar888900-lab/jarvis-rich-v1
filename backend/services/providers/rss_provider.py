@@ -1,4 +1,4 @@
-﻿"""Google News RSS trend provider."""
+"""Google News RSS trend provider."""
 
 from datetime import timezone
 from email.utils import parsedate_to_datetime

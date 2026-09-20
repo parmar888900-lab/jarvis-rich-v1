@@ -1,4 +1,4 @@
-﻿"""Internal protected service for releasing private YouTube uploads."""
+"""Internal protected service for releasing private YouTube uploads."""
 
 from __future__ import annotations
 

@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:J24_962_Bw_Temuco,_Dampflokomotivrads%C3%A4tze.jpg",
+        "image_path": "generated\\packages\\Why_train_wheels_are_shaped_differently_from_car_wheels\\images\\scene_001.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:J24_962_Bw_Temuco,_Dampflokomotivrads%C3%A4tze.jpg",
+        "image_path": "generated\\packages\\Why_train_wheels_are_shaped_differently_from_car_wheels\\images\\scene_002.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:J24_962_Bw_Temuco,_Dampflokomotivrads%C3%A4tze.jpg",
+        "image_path": "generated\\packages\\Why_train_wheels_are_shaped_differently_from_car_wheels\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:J24_962_Bw_Temuco,_Dampflokomotivrads%C3%A4tze.jpg",
+        "image_path": "generated\\packages\\Why_train_wheels_are_shaped_differently_from_car_wheels\\images\\scene_004.jpg",
+        "width": null,
+        "height": null
+    }
+]

@@ -1,0 +1,1349 @@
+=== V5 EXACT ROUTING DIAGNOSTIC ===
+
+==============================
+=== ACTIVE VIDEO PIPELINE ROUTING ===
+=== .\backend\services\pipelines\video_pipeline.py lines 230-480 ===
+==============================
+  230:                 "purpose",
+  231:                 "",
+  232:             )
+  233:         )
+  234: 
+  235:         beat_text = " ".join(
+  236:             part
+  237:             for part in (
+  238:                 visual_requirement,
+  239:                 search_query,
+  240:                 purpose,
+  241:             )
+  242:             if part
+  243:         )
+  244: 
+  245:         lower = beat_text.lower()
+  246: 
+  247:         beat_words = {
+  248:             token.strip(".,:;!?()[]{}-_/'""")
+  249:             for token in lower.split()
+  250:             if token.strip(".,:;!?()[]{}-_/'""")
+  251:         }
+  252: 
+  253:         queries = []
+  254: 
+  255:         def add(query):
+  256:             query = clean(query)
+  257: 
+  258:             if not query:
+  259:                 return
+  260: 
+  261:             key = query.lower()
+  262: 
+  263:             if key not in {
+  264:                 existing.lower()
+  265:                 for existing in queries
+  266:             }:
+  267:                 queries.append(query)
+  268: 
+  269:         # ====================================================
+  270:         # LITERAL FOLEY MECHANISMS
+  271:         # ====================================================
+  272: 
+  273:         if any(
+  274:             word in beat_words
+  275:             for word in (
+  276:                 "footstep",
+  277:                 "footsteps",
+  278:                 "shoe",
+  279:                 "shoes",
+  280:                 "walking",
+  281:                 "walk",
+  282:                 "floor",
+  283:             )
+  284:         ):
+  285:             add(
+  286:                 "Foley artist recording footsteps "
+  287:                 "shoes floor film studio"
+  288:             )
+  289:             add(
+  290:                 "film Foley footsteps shoes "
+  291:                 "sound effects stage"
+  292:             )
+  293:             add(
+  294:                 "Foley performer footsteps "
+  295:                 "movie sound recording"
+  296:             )
+  297: 
+  298:         elif any(
+  299:             word in beat_words
+  300:             for word in (
+  301:                 "prop",
+  302:                 "props",
+  303:                 "object",
+  304:                 "objects",
+  305:                 "door",
+  306:                 "cloth",
+  307:                 "clothes",
+  308:                 "fabric",
+  309:                 "glass",
+  310:                 "metal",
+  311:                 "wood",
+  312:                 "paper",
+  313:             )
+  314:         ):
+  315:             add(
+  316:                 "Foley artist using props "
+  317:                 "movie sound effects studio"
+  318:             )
+  319:             add(
+  320:                 "hands Foley props film "
+  321:                 "sound recording"
+  322:             )
+  323:             add(
+  324:                 "Foley stage objects props "
+  325:                 "sound effects"
+  326:             )
+  327: 
+  328:         elif any(
+  329:             word in beat_words
+  330:             for word in (
+  331:                 "adr",
+  332:                 "dialogue",
+  333:                 "dialog",
+  334:                 "voice",
+  335:                 "actor",
+  336:                 "speech",
+  337:                 "line",
+  338:                 "lines",
+  339:             )
+  340:         ):
+  341:             add(
+  342:                 "actor ADR dialogue recording "
+  343:                 "film microphone studio"
+  344:             )
+  345:             add(
+  346:                 "film ADR booth actor "
+  347:                 "dialogue microphone"
+  348:             )
+  349:             add(
+  350:                 "movie dialogue replacement "
+  351:                 "recording studio"
+  352:             )
+  353: 
+  354:         elif any(
+  355:             word in beat_words
+  356:             for word in (
+  357:                 "edit",
+  358:                 "editing",
+  359:                 "editor",
+  360:                 "post",
+  361:                 "timeline",
+  362:                 "waveform",
+  363:                 "mix",
+  364:                 "mixing",
+  365:                 "layer",
+  366:                 "layers",
+  367:             )
+  368:         ):
+  369:             add(
+  370:                 "film sound editor audio waveform "
+  371:                 "post production workstation"
+  372:             )
+  373:             add(
+  374:                 "movie sound design editing "
+  375:                 "timeline workstation"
+  376:             )
+  377:             add(
+  378:                 "film audio post production "
+  379:                 "sound editor mixing"
+  380:             )
+  381: 
+  382:         elif any(
+  383:             word in beat_words
+  384:             for word in (
+  385:                 "microphone",
+  386:                 "mic",
+  387:                 "record",
+  388:                 "recorded",
+  389:                 "recording",
+  390:                 "studio",
+  391:             )
+  392:         ):
+  393:             add(
+  394:                 "Foley artist recording movie "
+  395:                 "sound effects microphone"
+  396:             )
+  397:             add(
+  398:                 "film Foley recording stage "
+  399:                 "microphone sound effects"
+  400:             )
+  401:             add(
+  402:                 "professional Foley performer "
+  403:                 "film sound studio"
+  404:             )
+  405: 
+  406:         elif any(
+  407:             word in beat_words
+  408:             for word in (
+  409:                 "ambient",
+  410:                 "ambience",
+  411:                 "environment",
+  412:                 "outside",
+  413:                 "field",
+  414:                 "nature",
+  415:                 "background",
+  416:             )
+  417:         ):
+  418:             add(
+  419:                 "film field recording ambience "
+  420:                 "professional microphone"
+  421:             )
+  422:             add(
+  423:                 "sound recordist field recording "
+  424:                 "movie ambience"
+  425:             )
+  426: 
+  427:         # ====================================================
+  428:         # USE THE PLANNER'S EXACT VISUAL REQUIREMENT
+  429:         #
+  430:         # Keep it concrete by adding the filmmaking context.
+  431:         # ====================================================
+  432: 
+  433:         if visual_requirement:
+  434:             add(
+  435:                 visual_requirement
+  436:                 + " film Foley sound effects"
+  437:             )
+  438: 
+  439:         if search_query:
+  440:             add(
+  441:                 search_query
+  442:                 + " film Foley"
+  443:             )
+  444: 
+  445:         # ====================================================
+  446:         # SAFE DOMAIN FALLBACK
+  447:         #
+  448:         # Deliberately NOT:
+  449:         #   recording room
+  450:         #   content creator
+  451:         #   studio person
+  452:         #
+  453:         # Those searches produced the ring-light imagery.
+  454:         # ====================================================
+  455: 
+  456:         add(
+  457:             "Foley artist performing "
+  458:             "movie sound effects studio"
+  459:         )
+  460: 
+  461:         add(
+  462:             "film Foley stage professional "
+  463:             "sound effects recording"
+  464:         )
+  465: 
+  466:         # Only expose the strongest variants to the provider.
+  467:         # This preserves bounded provider/API work.
+  468:         return queries[:3]
+  469: 
+  470: 
+  471:     @classmethod
+  472:     def _master_metadata_score(
+  473:         cls,
+  474:         *,
+  475:         asset,
+  476:         query,
+  477:         topic,
+  478:     ):
+  479:         """
+  480:         REFERENCE_VISUAL_V5
+
+==============================
+=== ACTIVE VISUAL SCORING AND REJECTION ===
+=== .\backend\services\pipelines\video_pipeline.py lines 530-730 ===
+==============================
+  530: 
+  531:         if not metadata:
+  532:             return 0.0
+  533: 
+  534:         query_tokens = token_set(query)
+  535:         topic_tokens = token_set(topic)
+  536:         metadata_tokens = token_set(metadata)
+  537: 
+  538:         if not metadata_tokens:
+  539:             return 0.0
+  540: 
+  541:         query_overlap = len(
+  542:             query_tokens & metadata_tokens
+  543:         )
+  544: 
+  545:         topic_overlap = len(
+  546:             topic_tokens & metadata_tokens
+  547:         )
+  548: 
+  549:         query_score = (
+  550:             query_overlap
+  551:             / max(
+  552:                 1,
+  553:                 len(query_tokens),
+  554:             )
+  555:         )
+  556: 
+  557:         topic_score = (
+  558:             topic_overlap
+  559:             / max(
+  560:                 1,
+  561:                 len(topic_tokens),
+  562:             )
+  563:         )
+  564: 
+  565:         # Literal visual intent matters substantially more than
+  566:         # merely matching the broad topic.
+  567:         score = (
+  568:             query_score * 0.86
+  569:             + topic_score * 0.14
+  570:         )
+  571: 
+  572:         # Domain evidence.
+  573:         domain_tokens = {
+  574:             "foley",
+  575:             "film",
+  576:             "movie",
+  577:             "cinema",
+  578:             "sound",
+  579:             "audio",
+  580:             "microphone",
+  581:             "recording",
+  582:             "editor",
+  583:             "editing",
+  584:             "production",
+  585:             "footsteps",
+  586:             "props",
+  587:             "dialogue",
+  588:             "waveform",
+  589:             "mixing",
+  590:         }
+  591: 
+  592:         domain_overlap = len(
+  593:             metadata_tokens & domain_tokens
+  594:         )
+  595: 
+  596:         if domain_overlap >= 3:
+  597:             score += 0.12
+  598: 
+  599:         elif domain_overlap >= 2:
+  600:             score += 0.07
+  601: 
+  602:         elif domain_overlap == 1:
+  603:             score += 0.025
+  604: 
+  605:         # Highly undesirable imagery discovered in the actual
+  606:         # V3/V4 benchmark renders.
+  607:         negative_tokens = {
+  608:             "selfie",
+  609:             "vlog",
+  610:             "vlogger",
+  611:             "blogger",
+  612:             "webcam",
+  613:             "streamer",
+  614:             "streaming",
+  615:             "influencer",
+  616:             "portrait",
+  617:             "fashion",
+  618:             "makeup",
+  619:             "ringlight",
+  620:             "ring-light",
+  621:             "livestream",
+  622:             "podcast",
+  623:             "podcaster",
+  624:             "youtuber",
+  625:             "creator",
+  626:         }
+  627: 
+  628:         negative_overlap = len(
+  629:             metadata_tokens & negative_tokens
+  630:         )
+  631: 
+  632:         score -= (
+  633:             negative_overlap * 0.24
+  634:         )
+  635: 
+  636:         return max(
+  637:             0.0,
+  638:             min(
+  639:                 1.0,
+  640:                 float(score),
+  641:             ),
+  642:         )
+  643: 
+  644: 
+  645:     @classmethod
+  646:     def _master_choose_asset(
+  647:         cls,
+  648:         *,
+  649:         candidates,
+  650:         query,
+  651:         topic,
+  652:         used_identities,
+  653:         previous_identity,
+  654:     ):
+  655:         """
+  656:         REFERENCE_VISUAL_V5
+  657: 
+  658:         Select literal, domain-relevant, non-repetitive media.
+  659: 
+  660:         Generic social-media studio imagery is rejected instead
+  661:         of being rewarded simply because it contains a microphone.
+  662:         """
+  663: 
+  664:         if not candidates:
+  665:             return None
+  666: 
+  667:         def normalize(value):
+  668:             return " ".join(
+  669:                 str(value or "").lower().split()
+  670:             )
+  671: 
+  672:         def token_set(value):
+  673:             return {
+  674:                 token.strip(
+  675:                     ".,:;!?()[]{}-_/"
+  676:                 )
+  677:                 for token in normalize(value).split()
+  678:                 if len(
+  679:                     token.strip(
+  680:                         ".,:;!?()[]{}-_/"
+  681:                     )
+  682:                 ) >= 3
+  683:             }
+  684: 
+  685:         domain_tokens = {
+  686:             "foley",
+  687:             "film",
+  688:             "movie",
+  689:             "cinema",
+  690:             "sound",
+  691:             "audio",
+  692:             "microphone",
+  693:             "recording",
+  694:             "editor",
+  695:             "editing",
+  696:             "production",
+  697:             "footsteps",
+  698:             "shoes",
+  699:             "props",
+  700:             "dialogue",
+  701:             "adr",
+  702:             "waveform",
+  703:             "mixing",
+  704:         }
+  705: 
+  706:         negative_tokens = {
+  707:             "selfie",
+  708:             "vlog",
+  709:             "vlogger",
+  710:             "blogger",
+  711:             "webcam",
+  712:             "streamer",
+  713:             "streaming",
+  714:             "influencer",
+  715:             "portrait",
+  716:             "fashion",
+  717:             "makeup",
+  718:             "ringlight",
+  719:             "ring-light",
+  720:             "livestream",
+  721:             "podcast",
+  722:             "podcaster",
+  723:             "youtuber",
+  724:             "creator",
+  725:         }
+  726: 
+  727:         ranked = []
+  728: 
+  729:         for asset in candidates:
+  730: 
+
+==============================
+=== FAILED V5 VERIFIER ===
+=== .\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py lines 1-230 ===
+==============================
+    1: import ast
+    2: import inspect
+    3: import sys
+    4: from pathlib import Path
+    5: 
+    6: ROOT = Path.cwd().resolve()
+    7: 
+    8: if str(ROOT) not in sys.path:
+    9:     sys.path.insert(
+   10:         0,
+   11:         str(ROOT),
+   12:     )
+   13: 
+   14: PIPELINE = Path(
+   15:     "backend/services/pipelines/video_pipeline.py"
+   16: )
+   17: 
+   18: source = PIPELINE.read_text(
+   19:     encoding="utf-8-sig"
+   20: )
+   21: 
+   22: tree = ast.parse(source)
+   23: 
+   24: from backend.services.pipelines.video_pipeline import VideoPipeline
+   25: 
+   26: print(
+   27:     "===== V5 RUNTIME VERIFICATION ====="
+   28: )
+   29: 
+   30: if not getattr(
+   31:     VideoPipeline,
+   32:     "REFERENCE_VISUAL_V5",
+   33:     False,
+   34: ):
+   35:     raise RuntimeError(
+   36:         "V5 runtime marker missing."
+   37:     )
+   38: 
+   39: for name in (
+   40:     "_master_query_variants",
+   41:     "_master_metadata_score",
+   42:     "_master_choose_asset",
+   43: ):
+   44: 
+   45:     raw = inspect.getattr_static(
+   46:         VideoPipeline,
+   47:         name,
+   48:     )
+   49: 
+   50:     if not isinstance(
+   51:         raw,
+   52:         classmethod,
+   53:     ):
+   54:         raise RuntimeError(
+   55:             f"{name} is not a classmethod."
+   56:         )
+   57: 
+   58:     if isinstance(
+   59:         raw.__func__,
+   60:         classmethod,
+   61:     ):
+   62:         raise RuntimeError(
+   63:             f"{name} has nested classmethod."
+   64:         )
+   65: 
+   66:     bound = getattr(
+   67:         VideoPipeline,
+   68:         name,
+   69:     )
+   70: 
+   71:     if not callable(bound):
+   72:         raise RuntimeError(
+   73:             f"{name} is not callable."
+   74:         )
+   75: 
+   76:     print(
+   77:         f"[PASS] {name}"
+   78:     )
+   79: 
+   80: 
+   81: class FootstepBeat:
+   82:     search_query = (
+   83:         "footsteps sound effects"
+   84:     )
+   85:     visual_requirement = (
+   86:         "artist recreating footsteps"
+   87:     )
+   88:     purpose = (
+   89:         "show how footsteps are recreated"
+   90:     )
+   91: 
+   92: 
+   93: class EditBeat:
+   94:     search_query = (
+   95:         "movie sound editing"
+   96:     )
+   97:     visual_requirement = (
+   98:         "sound editor working on audio timeline"
+   99:     )
+  100:     purpose = (
+  101:         "show sounds being edited after filming"
+  102:     )
+  103: 
+  104: 
+  105: class ADRBeat:
+  106:     search_query = (
+  107:         "dialogue replacement"
+  108:     )
+  109:     visual_requirement = (
+  110:         "actor recording dialogue"
+  111:     )
+  112:     purpose = (
+  113:         "show dialogue recorded separately"
+  114:     )
+  115: 
+  116: 
+  117: footstep_queries = (
+  118:     VideoPipeline._master_query_variants(
+  119:         topic=(
+  120:             "Why movie sound effects are "
+  121:             "often recorded separately"
+  122:         ),
+  123:         beat=FootstepBeat(),
+  124:     )
+  125: )
+  126: 
+  127: edit_queries = (
+  128:     VideoPipeline._master_query_variants(
+  129:         topic=(
+  130:             "Why movie sound effects are "
+  131:             "often recorded separately"
+  132:         ),
+  133:         beat=EditBeat(),
+  134:     )
+  135: )
+  136: 
+  137: adr_queries = (
+  138:     VideoPipeline._master_query_variants(
+  139:         topic=(
+  140:             "Why movie sound effects are "
+  141:             "often recorded separately"
+  142:         ),
+  143:         beat=ADRBeat(),
+  144:     )
+  145: )
+  146: 
+  147: if not any(
+  148:     "footstep" in query.lower()
+  149:     for query in footstep_queries
+  150: ):
+  151:     raise RuntimeError(
+  152:         "Footstep visual routing failed."
+  153:     )
+  154: 
+  155: if not any(
+  156:     (
+  157:         "editor" in query.lower()
+  158:         or "editing" in query.lower()
+  159:     )
+  160:     for query in edit_queries
+  161: ):
+  162:     raise RuntimeError(
+  163:         "Editing visual routing failed."
+  164:     )
+  165: 
+  166: if not any(
+  167:     (
+  168:         "adr" in query.lower()
+  169:         or "dialogue" in query.lower()
+  170:     )
+  171:     for query in adr_queries
+  172: ):
+  173:     raise RuntimeError(
+  174:         "ADR visual routing failed."
+  175:     )
+  176: 
+  177: print(
+  178:     "[PASS] Footstep visual routing."
+  179: )
+  180: 
+  181: print(
+  182:     "[PASS] Sound-editing visual routing."
+  183: )
+  184: 
+  185: print(
+  186:     "[PASS] ADR visual routing."
+  187: )
+  188: 
+  189: print(
+  190:     "[INFO] Footstep queries:"
+  191: )
+  192: 
+  193: for query in footstep_queries:
+  194:     print(
+  195:         "       " + query
+  196:     )
+  197: 
+  198: print(
+  199:     "[INFO] Editing queries:"
+  200: )
+  201: 
+  202: for query in edit_queries:
+  203:     print(
+  204:         "       " + query
+  205:     )
+  206: 
+  207: print(
+  208:     "[INFO] ADR queries:"
+  209: )
+  210: 
+  211: for query in adr_queries:
+  212:     print(
+  213:         "       " + query
+  214:     )
+  215: 
+  216: print(
+  217:     "[PASS] V5 runtime verification passed."
+  218: )
+
+==============================
+=== V5 INSTALLER ROUTING PATCH ===
+=== .\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py lines 120-520 ===
+==============================
+  120:             getattr(
+  121:                 beat,
+  122:                 "visual_requirement",
+  123:                 "",
+  124:             )
+  125:         )
+  126: 
+  127:         purpose = clean(
+  128:             getattr(
+  129:                 beat,
+  130:                 "purpose",
+  131:                 "",
+  132:             )
+  133:         )
+  134: 
+  135:         beat_text = " ".join(
+  136:             part
+  137:             for part in (
+  138:                 visual_requirement,
+  139:                 search_query,
+  140:                 purpose,
+  141:             )
+  142:             if part
+  143:         )
+  144: 
+  145:         lower = beat_text.lower()
+  146: 
+  147:         beat_words = {
+  148:             token.strip(".,:;!?()[]{}-_/'""")
+  149:             for token in lower.split()
+  150:             if token.strip(".,:;!?()[]{}-_/'""")
+  151:         }
+  152: 
+  153:         queries = []
+  154: 
+  155:         def add(query):
+  156:             query = clean(query)
+  157: 
+  158:             if not query:
+  159:                 return
+  160: 
+  161:             key = query.lower()
+  162: 
+  163:             if key not in {
+  164:                 existing.lower()
+  165:                 for existing in queries
+  166:             }:
+  167:                 queries.append(query)
+  168: 
+  169:         # ====================================================
+  170:         # LITERAL FOLEY MECHANISMS
+  171:         # ====================================================
+  172: 
+  173:         if any(
+  174:             word in beat_words
+  175:             for word in (
+  176:                 "footstep",
+  177:                 "footsteps",
+  178:                 "shoe",
+  179:                 "shoes",
+  180:                 "walking",
+  181:                 "walk",
+  182:                 "floor",
+  183:             )
+  184:         ):
+  185:             add(
+  186:                 "Foley artist recording footsteps "
+  187:                 "shoes floor film studio"
+  188:             )
+  189:             add(
+  190:                 "film Foley footsteps shoes "
+  191:                 "sound effects stage"
+  192:             )
+  193:             add(
+  194:                 "Foley performer footsteps "
+  195:                 "movie sound recording"
+  196:             )
+  197: 
+  198:         elif any(
+  199:             word in beat_words
+  200:             for word in (
+  201:                 "prop",
+  202:                 "props",
+  203:                 "object",
+  204:                 "objects",
+  205:                 "door",
+  206:                 "cloth",
+  207:                 "clothes",
+  208:                 "fabric",
+  209:                 "glass",
+  210:                 "metal",
+  211:                 "wood",
+  212:                 "paper",
+  213:             )
+  214:         ):
+  215:             add(
+  216:                 "Foley artist using props "
+  217:                 "movie sound effects studio"
+  218:             )
+  219:             add(
+  220:                 "hands Foley props film "
+  221:                 "sound recording"
+  222:             )
+  223:             add(
+  224:                 "Foley stage objects props "
+  225:                 "sound effects"
+  226:             )
+  227: 
+  228:         elif any(
+  229:             word in beat_words
+  230:             for word in (
+  231:                 "adr",
+  232:                 "dialogue",
+  233:                 "dialog",
+  234:                 "voice",
+  235:                 "actor",
+  236:                 "speech",
+  237:                 "line",
+  238:                 "lines",
+  239:             )
+  240:         ):
+  241:             add(
+  242:                 "actor ADR dialogue recording "
+  243:                 "film microphone studio"
+  244:             )
+  245:             add(
+  246:                 "film ADR booth actor "
+  247:                 "dialogue microphone"
+  248:             )
+  249:             add(
+  250:                 "movie dialogue replacement "
+  251:                 "recording studio"
+  252:             )
+  253: 
+  254:         elif any(
+  255:             word in beat_words
+  256:             for word in (
+  257:                 "edit",
+  258:                 "editing",
+  259:                 "editor",
+  260:                 "post",
+  261:                 "timeline",
+  262:                 "waveform",
+  263:                 "mix",
+  264:                 "mixing",
+  265:                 "layer",
+  266:                 "layers",
+  267:             )
+  268:         ):
+  269:             add(
+  270:                 "film sound editor audio waveform "
+  271:                 "post production workstation"
+  272:             )
+  273:             add(
+  274:                 "movie sound design editing "
+  275:                 "timeline workstation"
+  276:             )
+  277:             add(
+  278:                 "film audio post production "
+  279:                 "sound editor mixing"
+  280:             )
+  281: 
+  282:         elif any(
+  283:             word in beat_words
+  284:             for word in (
+  285:                 "microphone",
+  286:                 "mic",
+  287:                 "record",
+  288:                 "recorded",
+  289:                 "recording",
+  290:                 "studio",
+  291:             )
+  292:         ):
+  293:             add(
+  294:                 "Foley artist recording movie "
+  295:                 "sound effects microphone"
+  296:             )
+  297:             add(
+  298:                 "film Foley recording stage "
+  299:                 "microphone sound effects"
+  300:             )
+  301:             add(
+  302:                 "professional Foley performer "
+  303:                 "film sound studio"
+  304:             )
+  305: 
+  306:         elif any(
+  307:             word in beat_words
+  308:             for word in (
+  309:                 "ambient",
+  310:                 "ambience",
+  311:                 "environment",
+  312:                 "outside",
+  313:                 "field",
+  314:                 "nature",
+  315:                 "background",
+  316:             )
+  317:         ):
+  318:             add(
+  319:                 "film field recording ambience "
+  320:                 "professional microphone"
+  321:             )
+  322:             add(
+  323:                 "sound recordist field recording "
+  324:                 "movie ambience"
+  325:             )
+  326: 
+  327:         # ====================================================
+  328:         # USE THE PLANNER'S EXACT VISUAL REQUIREMENT
+  329:         #
+  330:         # Keep it concrete by adding the filmmaking context.
+  331:         # ====================================================
+  332: 
+  333:         if visual_requirement:
+  334:             add(
+  335:                 visual_requirement
+  336:                 + " film Foley sound effects"
+  337:             )
+  338: 
+  339:         if search_query:
+  340:             add(
+  341:                 search_query
+  342:                 + " film Foley"
+  343:             )
+  344: 
+  345:         # ====================================================
+  346:         # SAFE DOMAIN FALLBACK
+  347:         #
+  348:         # Deliberately NOT:
+  349:         #   recording room
+  350:         #   content creator
+  351:         #   studio person
+  352:         #
+  353:         # Those searches produced the ring-light imagery.
+  354:         # ====================================================
+  355: 
+  356:         add(
+  357:             "Foley artist performing "
+  358:             "movie sound effects studio"
+  359:         )
+  360: 
+  361:         add(
+  362:             "film Foley stage professional "
+  363:             "sound effects recording"
+  364:         )
+  365: 
+  366:         # Only expose the strongest variants to the provider.
+  367:         # This preserves bounded provider/API work.
+  368:         return queries[:3]
+  369: '''
+  370: 
+  371:     replacements["_master_metadata_score"] = '''
+  372:     @classmethod
+  373:     def _master_metadata_score(
+  374:         cls,
+  375:         *,
+  376:         asset,
+  377:         query,
+  378:         topic,
+  379:     ):
+  380:         """
+  381:         REFERENCE_VISUAL_V5
+  382: 
+  383:         Score literal metadata correspondence.
+  384: 
+  385:         Query/beat correspondence dominates topic-level overlap.
+  386:         """
+  387: 
+  388:         def normalize(value):
+  389:             return " ".join(
+  390:                 str(value or "").lower().split()
+  391:             )
+  392: 
+  393:         def token_set(value):
+  394:             return {
+  395:                 token.strip(
+  396:                     ".,:;!?()[]{}-_/"
+  397:                 )
+  398:                 for token in normalize(value).split()
+  399:                 if len(
+  400:                     token.strip(
+  401:                         ".,:;!?()[]{}-_/"
+  402:                     )
+  403:                 ) >= 3
+  404:             }
+  405: 
+  406:         metadata_parts = []
+  407: 
+  408:         for attr in (
+  409:             "title",
+  410:             "description",
+  411:             "source_url",
+  412:             "asset_id",
+  413:             "file_path",
+  414:             "local_path",
+  415:             "source_name",
+  416:         ):
+  417:             value = getattr(
+  418:                 asset,
+  419:                 attr,
+  420:                 "",
+  421:             )
+  422: 
+  423:             if value:
+  424:                 metadata_parts.append(
+  425:                     str(value)
+  426:                 )
+  427: 
+  428:         metadata = normalize(
+  429:             " ".join(metadata_parts)
+  430:         )
+  431: 
+  432:         if not metadata:
+  433:             return 0.0
+  434: 
+  435:         query_tokens = token_set(query)
+  436:         topic_tokens = token_set(topic)
+  437:         metadata_tokens = token_set(metadata)
+  438: 
+  439:         if not metadata_tokens:
+  440:             return 0.0
+  441: 
+  442:         query_overlap = len(
+  443:             query_tokens & metadata_tokens
+  444:         )
+  445: 
+  446:         topic_overlap = len(
+  447:             topic_tokens & metadata_tokens
+  448:         )
+  449: 
+  450:         query_score = (
+  451:             query_overlap
+  452:             / max(
+  453:                 1,
+  454:                 len(query_tokens),
+  455:             )
+  456:         )
+  457: 
+  458:         topic_score = (
+  459:             topic_overlap
+  460:             / max(
+  461:                 1,
+  462:                 len(topic_tokens),
+  463:             )
+  464:         )
+  465: 
+  466:         # Literal visual intent matters substantially more than
+  467:         # merely matching the broad topic.
+  468:         score = (
+  469:             query_score * 0.86
+  470:             + topic_score * 0.14
+  471:         )
+  472: 
+  473:         # Domain evidence.
+  474:         domain_tokens = {
+  475:             "foley",
+  476:             "film",
+  477:             "movie",
+  478:             "cinema",
+  479:             "sound",
+  480:             "audio",
+  481:             "microphone",
+  482:             "recording",
+  483:             "editor",
+  484:             "editing",
+  485:             "production",
+  486:             "footsteps",
+  487:             "props",
+  488:             "dialogue",
+  489:             "waveform",
+  490:             "mixing",
+  491:         }
+  492: 
+  493:         domain_overlap = len(
+  494:             metadata_tokens & domain_tokens
+  495:         )
+  496: 
+  497:         if domain_overlap >= 3:
+  498:             score += 0.12
+  499: 
+  500:         elif domain_overlap >= 2:
+  501:             score += 0.07
+  502: 
+  503:         elif domain_overlap == 1:
+  504:             score += 0.025
+  505: 
+  506:         # Highly undesirable imagery discovered in the actual
+  507:         # V3/V4 benchmark renders.
+  508:         negative_tokens = {
+  509:             "selfie",
+  510:             "vlog",
+  511:             "vlogger",
+  512:             "blogger",
+  513:             "webcam",
+  514:             "streamer",
+  515:             "streaming",
+  516:             "influencer",
+  517:             "portrait",
+  518:             "fashion",
+  519:             "makeup",
+  520:             "ringlight",
+
+==============================
+=== V5 INSTALLER TRANSACTION AND ASSERTIONS ===
+=== .\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py lines 880-1030 ===
+==============================
+  880:     # --------------------------------------------------------
+  881: 
+  882:     tree = ast.parse(patched)
+  883: 
+  884:     cls = next(
+  885:         node
+  886:         for node in tree.body
+  887:         if isinstance(node, ast.ClassDef)
+  888:         and node.name == "VideoPipeline"
+  889:     )
+  890: 
+  891:     methods = {
+  892:         node.name: node
+  893:         for node in cls.body
+  894:         if isinstance(
+  895:             node,
+  896:             (
+  897:                 ast.FunctionDef,
+  898:                 ast.AsyncFunctionDef,
+  899:             ),
+  900:         )
+  901:     }
+  902: 
+  903:     for name in TARGET_METHODS:
+  904: 
+  905:         if name not in methods:
+  906:             raise RuntimeError(
+  907:                 f"Patched helper missing: {name}"
+  908:             )
+  909: 
+  910:         node = methods[name]
+  911: 
+  912:         count = sum(
+  913:             1
+  914:             for decorator
+  915:             in node.decorator_list
+  916:             if isinstance(
+  917:                 decorator,
+  918:                 ast.Name,
+  919:             )
+  920:             and decorator.id
+  921:             == "classmethod"
+  922:         )
+  923: 
+  924:         if count != 1:
+  925:             raise RuntimeError(
+  926:                 f"{name}: @classmethod count={count}"
+  927:             )
+  928: 
+  929:         if len(
+  930:             node.decorator_list
+  931:         ) != 1:
+  932:             raise RuntimeError(
+  933:                 f"{name}: unexpected decorator stack."
+  934:             )
+  935: 
+  936:     required = (
+  937:         "REFERENCE_VISUAL_V5 = True",
+  938:         "Foley artist recording footsteps",
+  939:         "Foley artist using props",
+  940:         "actor ADR dialogue recording",
+  941:         "film sound editor audio waveform",
+  942:         "film field recording ambience",
+  943:         "query_score * 0.86",
+  944:         "negative_overlap * 0.45",
+  945:         "semantic_score >= 0.30",
+  946:         "semantic_score >= 0.36",
+  947:         "self.asset_collector.authorize",
+  948:         "BLOCK5_VISUAL_QA_BEGIN",
+  949:         "BLOCK5_VISUAL_QA_END",
+  950:     )
+  951: 
+  952:     for marker in required:
+  953:         if marker not in patched:
+  954:             raise RuntimeError(
+  955:                 "V5 verification marker missing: "
+  956:                 + marker
+  957:             )
+  958: 
+  959:     PIPELINE.write_text(
+  960:         patched,
+  961:         encoding="utf-8",
+  962:     )
+  963: 
+  964:     print(
+  965:         "[PASS] Reference Visual V5 installed."
+  966:     )
+  967:     print(
+  968:         "[PASS] Literal Foley mechanism queries installed."
+  969:     )
+  970:     print(
+  971:         "[PASS] Footsteps acquisition installed."
+  972:     )
+  973:     print(
+  974:         "[PASS] Prop-action acquisition installed."
+  975:     )
+  976:     print(
+  977:         "[PASS] ADR/dialogue acquisition installed."
+  978:     )
+  979:     print(
+  980:         "[PASS] Sound-editing acquisition installed."
+  981:     )
+  982:     print(
+  983:         "[PASS] Field-recording acquisition installed."
+  984:     )
+  985:     print(
+  986:         "[PASS] Generic creator imagery strongly penalized."
+  987:     )
+  988:     print(
+  989:         "[PASS] Immediate-repeat penalty installed."
+  990:     )
+  991:     print(
+  992:         "[PASS] Semantic rejection preserved."
+  993:     )
+  994:     print(
+  995:         "[PASS] Rights authorization preserved."
+  996:     )
+  997:     print(
+  998:         "[PASS] Block 5 preserved."
+  999:     )
+ 1000: 
+ 1001: except Exception as exc:
+ 1002: 
+ 1003:     shutil.copy2(
+ 1004:         BACKUP,
+ 1005:         PIPELINE,
+ 1006:     )
+ 1007: 
+ 1008:     print(
+ 1009:         f"[ROLLBACK] "
+ 1010:         f"{type(exc).__name__}: {exc}"
+ 1011:     )
+ 1012: 
+ 1013:     print(
+ 1014:         "[PASS] Pre-V5 source restored."
+ 1015:     )
+ 1016: 
+ 1017:     sys.exit(2)
+
+=== DESCRIPTOR / METHOD LOCATIONS ===
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:47:     # MASTER_VISUAL_ACQUISITION_V2
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:51:     SEMANTIC_VISUAL_V4 = True
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:52:     REFERENCE_VISUAL_V5 = True
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:79:     # MASTER_VISUAL_HELPERS_V2
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:81:     @staticmethod
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:129:     @staticmethod
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:182:     @classmethod
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:190:         REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:277:                 "footsteps",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:286:                 "Foley artist recording footsteps "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:290:                 "film Foley footsteps shoes "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:294:                 "Foley performer footsteps "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:302:                 "props",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:316:                 "Foley artist using props "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:320:                 "hands Foley props film "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:324:                 "Foley stage objects props "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:331:                 "adr",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:342:                 "actor ADR dialogue recording "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:346:                 "film ADR booth actor "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:358:                 "editing",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:374:                 "movie sound design editing "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:419:                 "film field recording ambience "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:423:                 "sound recordist field recording "
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:471:     @classmethod
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:480:         REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:583:             "editing",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:585:             "footsteps",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:586:             "props",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:645:     @classmethod
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:656:         REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:695:             "editing",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:697:             "footsteps",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:699:             "props",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:701:             "adr",
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1426:                     # SEMANTIC_VISUAL_V4:
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1616:         # BLOCK5_VISUAL_QA_BEGIN
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1759:         block5_visual_metrics = {
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1776:         # BLOCK5_VISUAL_QA_END
+C:\Users\hp\jarvis.ai\backend\services\pipelines\video_pipeline.py:1830:                 "visual_quality": block5_visual_metrics,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:32:     "REFERENCE_VISUAL_V5",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:52:         classmethod,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:55:             f"{name} is not a classmethod."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:60:         classmethod,
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:63:             f"{name} has nested classmethod."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:83:         "footsteps sound effects"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:86:         "artist recreating footsteps"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:89:         "show how footsteps are recreated"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:95:         "movie sound editing"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:105: class ADRBeat:
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:137: adr_queries = (
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:143:         beat=ADRBeat(),
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:152:         "Footstep visual routing failed."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:158:         or "editing" in query.lower()
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:163:         "Editing visual routing failed."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:168:         "adr" in query.lower()
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:171:     for query in adr_queries
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:174:         "ADR visual routing failed."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:178:     "[PASS] Footstep visual routing."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:182:     "[PASS] Sound-editing visual routing."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:186:     "[PASS] ADR visual routing."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:199:     "[INFO] Editing queries:"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:208:     "[INFO] ADR queries:"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\verify_reference_visual_v5.py:211: for query in adr_queries:
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:41:     if "SEMANTIC_VISUAL_V4 = True" not in source:
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:46:     if "MASTER_VISUAL_ACQUISITION_V2" not in source:
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:75:     # prevents the duplicate-classmethod defect encountered
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:82:     @classmethod
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:90:         REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:177:                 "footsteps",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:186:                 "Foley artist recording footsteps "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:190:                 "film Foley footsteps shoes "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:194:                 "Foley performer footsteps "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:202:                 "props",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:216:                 "Foley artist using props "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:220:                 "hands Foley props film "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:224:                 "Foley stage objects props "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:231:                 "adr",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:242:                 "actor ADR dialogue recording "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:246:                 "film ADR booth actor "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:258:                 "editing",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:274:                 "movie sound design editing "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:319:                 "film field recording ambience "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:323:                 "sound recordist field recording "
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:372:     @classmethod
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:381:         REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:484:             "editing",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:486:             "footsteps",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:487:             "props",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:547:     @classmethod
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:558:         REFERENCE_VISUAL_V5
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:597:             "editing",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:599:             "footsteps",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:601:             "props",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:603:             "adr",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:800:     # Start at earliest decorator so old @classmethod lines are
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:859:     if "REFERENCE_VISUAL_V5 = True" not in patched:
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:862:             "    SEMANTIC_VISUAL_V4 = True"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:874:             + "    REFERENCE_VISUAL_V5 = True",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:921:             == "classmethod"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:926:                 f"{name}: @classmethod count={count}"
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:937:         "REFERENCE_VISUAL_V5 = True",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:938:         "Foley artist recording footsteps",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:939:         "Foley artist using props",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:940:         "actor ADR dialogue recording",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:942:         "film field recording ambience",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:948:         "BLOCK5_VISUAL_QA_BEGIN",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:949:         "BLOCK5_VISUAL_QA_END",
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:971:         "[PASS] Footsteps acquisition installed."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:977:         "[PASS] ADR/dialogue acquisition installed."
+C:\Users\hp\jarvis.ai\generated\diagnostics\reference_visual_v5_20260919_145853\install_reference_visual_v5.py:980:         "[PASS] Sound-editing acquisition installed."
+
+=== END ===

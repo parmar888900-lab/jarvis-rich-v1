@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:05,782
+Imagine a world where actors can be placed anywhere — green screens make it possible!
+
+2
+00:00:05,782 --> 00:00:21,281
+In live weather forecasts, presenters stand in front of CGI maps, thanks to chroma keying. Chroma key compositing, or chroma keying, is a visual-effects and post-production technique for compositing (layering) two or more images or video streams together based on colour hues (chroma range).
+
+3
+00:00:21,281 --> 00:00:26,587
+In movies and video games, this technique allows for seamless blending of real and digital elements.
+
+4
+00:00:26,587 --> 00:00:31,835
+With blue or green backgrounds, subjects are seamlessly placed into different environments.

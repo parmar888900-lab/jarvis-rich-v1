@@ -1,0 +1,63 @@
+{
+    "title": "Why airplane windows are rounded instead of square",
+    "topic": "Why airplane windows are rounded instead of square",
+    "genre": "science_engineering",
+    "content_id": "dad77235-28b1-4d2a-a2d1-d2cc055dbd8d",
+    "content_strategy": "evergreen_storytelling",
+    "requires_trend": false,
+    "production_selection": {
+        "eligible": true,
+        "selected": true,
+        "production_score": 87.9,
+        "curiosity_score": 88.0,
+        "story_strength": 82.0,
+        "visual_supply": 89.0,
+        "evergreen_value": 94.0,
+        "credibility": 90.0,
+        "channel_fit": 86.0,
+        "reason": "Evergreen topic passed Rich V1 story and production criteria.",
+        "rejection_reasons": []
+    },
+    "content_format": {
+        "format_name": "visual_explainer",
+        "target_duration_min": 35.0,
+        "target_duration_max": 65.0,
+        "preferred_media": [
+            "licensed_video",
+            "licensed_image",
+            "diagram",
+            "archive_media"
+        ],
+        "narration_mode": "voiceover",
+        "pacing": "information_density",
+        "rights_gate_required": false
+    },
+    "research": "An aircraft cabin is the section of an aircraft in which passengers travel. Most modern commercial aircraft are pressurized, as cruising altitudes are high enough such that the surrounding atmosphere is too thin for passengers and crew to breathe.\nIn commercial air travel, particularly in airliners, cabins may be divided into several parts. These can include travel class sections in medium and large aircraft, areas for flight attendants, the galley, and storage for in-flight service. Seats are mostly arranged in rows and aisles. The higher the travel class, the more space is provided. Cabins of the different travel classes are often divided by curtains, sometimes called class dividers. Passengers are not usually allowed to visit higher travel class cabins in commercial flights.\nSome aircraft cabins contain passenger entertainment systems. Short and medium haul cabins tend to have no or shared screens whereas long and ultra-long haul flights often contain personal screens. The fuselage (; from the French fusel\u00e9 \"spindle-shaped\") is an aircraft's main body section. It holds crew, passengers, or cargo. In single-engine aircraft, it will usually contain an engine as well, although in some amphibious aircraft the single engine is mounted on a pylon attached to the fuselage, which in turn is used as a floating hull. The fuselage also serves to position the control and stabilization surfaces in specific relationships to lifting surfaces, which is required for aircraft stability and maneuverability.\n\nAn aircraft cabin is the section of an aircraft in which passengers travel. Most modern commercial aircraft are pressurized, as cruising altitudes are high enough such that the surrounding atmosphere is too thin for passengers and crew to breathe.\nIn commercial air travel, particularly in airliners, cabins may be divided into several parts. These can include travel class sections in medium and large aircraft, areas for flight attendants, the galley, and storage for in-flight service. Seats are mostly arranged in rows and aisles. The higher the travel class, the more space is provided. Cabins of the different travel classes are often divided by curtains, sometimes called class dividers. Passengers are not usually allowed to visit higher travel class cabins in commercial flights.\nSome aircraft cabins contain passenger entertainment systems. Short and medium haul cabins tend to have no or shared screens whereas long and ultra-long haul flights often contain personal screens.\n\nThe fuselage (; from the French fusel\u00e9 \"spindle-shaped\") is an aircraft's main body section. It holds crew, passengers, or cargo. In single-engine aircraft, it will usually contain an engine as well, although in some amphibious aircraft the single engine is mounted on a pylon attached to the fuselage, which in turn is used as a floating hull. The fuselage also serves to position the control and stabilization surfaces in specific relationships to lifting surfaces, which is required for aircraft stability and maneuverability.",
+    "knowledge": {
+        "topic": "Why airplane windows are rounded instead of square",
+        "summary": "An aircraft cabin is the section of an aircraft in which passengers travel. Most modern commercial aircraft are pressurized, as cruising altitudes are high enough such that the surrounding atmosphere is too thin for passengers and crew to breathe.\nIn commercial air travel, particularly in airliners, cabins may be divided into several parts. These can include travel class sections in medium and large aircraft, areas for flight attendants, the galley, and storage for in-flight service. Seats are mostly arranged in rows and aisles. The higher the travel class, the more space is provided. Cabins of the different travel classes are often divided by curtains, sometimes called class dividers. Passengers are not usually allowed to visit higher travel class cabins in commercial flights.\nSome aircraft cabins contain passenger entertainment systems. Short and medium haul cabins tend to have no or shared screens whereas long and ultra-long haul flights often contain personal screens. The fuselage (; from the French fusel\u00e9 \"spindle-shaped\") is an aircraft's main body section. It holds crew, passengers, or cargo. In single-engine aircraft, it will usually contain an engine as well, although in some amphibious aircraft the single engine is mounted on a pylon attached to the fuselage, which in turn is used as a floating hull. The fuselage also serves to position the control and stabilization surfaces in specific relationships to lifting surfaces, which is required for aircraft stability and maneuverability.",
+        "facts": [
+            "An aircraft cabin is the section of an aircraft in which passengers travel. Most modern commercial aircraft are pressurized, as cruising altitudes are high enough such that the surrounding atmosphere is too thin for passengers and crew to breathe.\nIn commercial air travel, particularly in airliners, cabins may be divided into several parts. These can include travel class sections in medium and large aircraft, areas for flight attendants, the galley, and storage for in-flight service. Seats are mostly arranged in rows and aisles. The higher the travel class, the more space is provided. Cabins of the different travel classes are often divided by curtains, sometimes called class dividers. Passengers are not usually allowed to visit higher travel class cabins in commercial flights.\nSome aircraft cabins contain passenger entertainment systems. Short and medium haul cabins tend to have no or shared screens whereas long and ultra-long haul flights often contain personal screens.",
+            "The fuselage (; from the French fusel\u00e9 \"spindle-shaped\") is an aircraft's main body section. It holds crew, passengers, or cargo. In single-engine aircraft, it will usually contain an engine as well, although in some amphibious aircraft the single engine is mounted on a pylon attached to the fuselage, which in turn is used as a floating hull. The fuselage also serves to position the control and stabilization surfaces in specific relationships to lifting surfaces, which is required for aircraft stability and maneuverability."
+        ],
+        "keywords": [],
+        "sources": [
+            {
+                "title": "Aircraft cabin",
+                "content": "An aircraft cabin is the section of an aircraft in which passengers travel. Most modern commercial aircraft are pressurized, as cruising altitudes are high enough such that the surrounding atmosphere is too thin for passengers and crew to breathe.\nIn commercial air travel, particularly in airliners, cabins may be divided into several parts. These can include travel class sections in medium and large aircraft, areas for flight attendants, the galley, and storage for in-flight service. Seats are mostly arranged in rows and aisles. The higher the travel class, the more space is provided. Cabins of the different travel classes are often divided by curtains, sometimes called class dividers. Passengers are not usually allowed to visit higher travel class cabins in commercial flights.\nSome aircraft cabins contain passenger entertainment systems. Short and medium haul cabins tend to have no or shared screens whereas long and ultra-long haul flights often contain personal screens.",
+                "source": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Aircraft_cabin",
+                "confidence": 0.95
+            },
+            {
+                "title": "Fuselage",
+                "content": "The fuselage (; from the French fusel\u00e9 \"spindle-shaped\") is an aircraft's main body section. It holds crew, passengers, or cargo. In single-engine aircraft, it will usually contain an engine as well, although in some amphibious aircraft the single engine is mounted on a pylon attached to the fuselage, which in turn is used as a floating hull. The fuselage also serves to position the control and stabilization surfaces in specific relationships to lifting surfaces, which is required for aircraft stability and maneuverability.",
+                "source": "Wikipedia",
+                "url": "https://en.wikipedia.org/wiki/Fuselage",
+                "confidence": 0.95
+            }
+        ],
+        "score": 0.0,
+        "category": "Evergreen"
+    }
+}

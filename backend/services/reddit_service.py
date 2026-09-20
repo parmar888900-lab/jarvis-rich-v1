@@ -2,14 +2,14 @@ import requests
 
 
 class RedditService:
-    BASE_URL = "https://www.reddit.com"
+    BASE_URL = "https://api.reddit.com"
 
     HEADERS = {
-        "User-Agent": "JarvisAI/1.0"
+        "User-Agent": "windows:jarvis.ai:v1.0 (by /u/jarvis_ai_bot)"
     }
 
     def get_top_posts(self, subreddit="AskReddit", limit=25):
-        url = f"{self.BASE_URL}/r/{subreddit}/top.json?t=day&limit={limit}"
+        url = f"{self.BASE_URL}/r/{subreddit}/top?t=day&limit={limit}"
 
         response = requests.get(
             url,

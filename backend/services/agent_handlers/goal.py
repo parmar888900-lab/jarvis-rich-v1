@@ -1,4 +1,4 @@
-﻿"""Goal agent handler for Jarvis target management."""
+"""Goal agent handler for Jarvis target management."""
 
 from datetime import datetime
 

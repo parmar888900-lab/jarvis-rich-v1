@@ -1,0 +1,34 @@
+[
+    {
+        "scene": 1,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Jennifer_Connelly_2019_3.png",
+        "image_path": "generated\\packages\\Why_Blockbuster_Movies_Use_Previsualization_Before_Filming\\images\\scene_001.png",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 2,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:White_main_sequence_star_of_spectral_class_A.png",
+        "image_path": "generated\\packages\\Why_Blockbuster_Movies_Use_Previsualization_Before_Filming\\images\\scene_002.png",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 3,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:A_Wilde_time_3.jpg",
+        "image_path": "generated\\packages\\Why_Blockbuster_Movies_Use_Previsualization_Before_Filming\\images\\scene_003.jpg",
+        "width": null,
+        "height": null
+    },
+    {
+        "scene": 4,
+        "provider": "Wikimedia Commons",
+        "prompt": "https://commons.wikimedia.org/wiki/File:Jennifer_Connelly_2019_3.png",
+        "image_path": "generated\\packages\\Why_Blockbuster_Movies_Use_Previsualization_Before_Filming\\images\\scene_004.png",
+        "width": null,
+        "height": null
+    }
+]

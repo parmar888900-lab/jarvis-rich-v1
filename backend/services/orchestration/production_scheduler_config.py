@@ -1,4 +1,4 @@
-﻿"""Configuration for autonomous production scheduling."""
+"""Configuration for autonomous production scheduling."""
 
 import os
 
