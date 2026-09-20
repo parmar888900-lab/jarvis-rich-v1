@@ -355,6 +355,16 @@ class ProductionOrchestrator:
                 result=result,
             )
 
+            # Public publishing requires separate, explicit account-owner
+            # authorization. Successful production/private upload is not it.
+            import os
+            if os.environ.get("JARVIS_PUBLIC_PUBLISH_ENABLED", "").strip().lower() != "true":
+                result["release"] = {
+                    "status": "disabled",
+                    "reason": "Public publishing is disabled; explicit authorization is required.",
+                }
+                return result
+
             # Autonomous production is the trusted approval
             # boundary. The existing release policy still
             # validates the completed cycle, score, upload

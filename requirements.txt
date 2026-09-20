@@ -7,7 +7,7 @@ aiosqlite==0.20.0
 pydantic==2.10.3
 pydantic-settings==2.7.0
 python-multipart==0.0.20
-httpx==0.28.1
+httpx[socks]==0.28.1
 python-dotenv==1.0.1
 
 # Testing
@@ -27,3 +27,12 @@ imageio-ffmpeg==0.6.0
 google-api-python-client==2.199.0
 google-auth-oauthlib==1.4.1
 google-auth-httplib2==0.4.2
+
+
+# Research and visual-semantic matching (imported by the production pipeline)
+Wikipedia-API==0.8.1
+open-clip-torch>=2.24,<4
+
+# Desktop voice support imported by voice routes
+sounddevice>=0.4,<1
+soundfile>=0.12,<1

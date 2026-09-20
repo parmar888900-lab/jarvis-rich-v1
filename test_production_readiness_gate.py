@@ -167,7 +167,9 @@ async def test_ready_scheduler_preserves_enable_behavior():
 
     assert scheduler.enabled is True
 
-    assert scheduler.running is True
+    # Enabling authorizes DailyProductionBatch; it must not also launch the
+    # legacy interval loop and bypass the daily production quota.
+    assert scheduler.running is False
 
     await scheduler.stop()
 

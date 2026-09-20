@@ -61,11 +61,13 @@ class RuntimeConfig:
     ffmpeg_executable: str
 
     generated_dir: Path
-    media_library_dir: Path
     database_url: str
 
     youtube_token_path: Path
     youtube_client_secret_path: Path
+
+    # Optional for pre-media-library RuntimeConfig callers.
+    media_library_dir: Path = Path("media_library")
 
     # Optional cloud image provider configuration.
     # Defaults preserve compatibility with existing

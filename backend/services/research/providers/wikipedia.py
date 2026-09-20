@@ -13,7 +13,11 @@ class WikipediaProvider(ResearchProvider):
     def __init__(self):
         self.wiki = wikipediaapi.Wikipedia(
             language="en",
-            user_agent="JarvisAI/1.0 (research bot)"
+            user_agent=(
+                "JarvisRichV1/0.1 "
+                "(https://github.com/parmar888900-lab/jarvis-rich-v1; evidence research)"
+            ),
+            timeout=20,
         )
 
     def research(self, topic: str) -> list[dict]:

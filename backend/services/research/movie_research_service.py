@@ -39,6 +39,10 @@ class MovieResearchService:
     }
 
     ANGLE_ALIASES = {
+        "suit-building": {
+            "mark i", "armor", "armour", "winston", "cave",
+            "yinsen", "hammer", "welding", "suit",
+        },
         "mirror dimension": {
             "mirror",
             "dimension",
@@ -96,6 +100,9 @@ class MovieResearchService:
         "from",
         "with",
         "into",
+        "first",
+        "became",
+        "iconic",
     }
 
     def __init__(self) -> None:
@@ -147,6 +154,9 @@ class MovieResearchService:
         angle_terms = self._angle_terms(
             commentary_topic
         )
+        # Film names occur throughout the page and otherwise promote box
+        # office/release facts above evidence about the requested sequence.
+        angle_terms.difference_update(re.findall(r"[a-z0-9]+", movie_title.lower()))
 
         relevant = self._extract_relevant_sentences(
             full_text,
@@ -310,7 +320,6 @@ class MovieResearchService:
 
         return output
 
-    @staticmethod
     @staticmethod
     def build_research_text(
         pack: KnowledgePack,

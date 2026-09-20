@@ -81,14 +81,13 @@ class MovieMediaResolver:
         asset_collector=None,
     ) -> None:
 
-        self.providers = (
-            providers
-            if providers is not None
-            else [
-                WikimediaCommonsProvider(),
-                PexelsProvider(),
-            ]
-        )
+        if providers is not None:
+            self.providers = providers
+        else:
+            import os
+            self.providers = [WikimediaCommonsProvider()]
+            if os.environ.get("PEXELS_API_KEY", "").strip():
+                self.providers.append(PexelsProvider())
 
         self.asset_collector = (
             asset_collector

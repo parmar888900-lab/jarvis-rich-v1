@@ -1,50 +1,31 @@
-"""Voice-assistant services for Jarvis."""
+"""Voice services, loaded on demand so headless production needs no audio device."""
+from importlib import import_module
 
-from backend.services.voice.confirmation import (
-    VoiceConfirmationDecision,
-    VoiceConfirmationManager,
-)
+_EXPORTS = {
+    'VoiceAssistant': 'assistant',
+    'VoiceAssistantResult': 'assistant',
+    'VoiceAssistantResponse': 'assistant',
+    'VoiceConfirmationDecision': 'confirmation',
+    'VoiceConfirmationManager': 'confirmation',
+    'AudioCapture': 'audio_capture',
+    'VoiceCommandExecutor': 'command_executor',
+    'VoiceExecutionResult': 'command_executor',
+    'VoiceCommand': 'command_router',
+    'VoiceCommandRouter': 'command_router',
+    'WhisperTranscriber': 'transcriber',
+    'WakePhraseMatch': 'wake_phrase',
+    'WakePhraseParser': 'wake_phrase',
+    'AudioPlayer': 'audio_player',
+    'VoiceResponseFormatter': 'response_formatter',
+    'VoiceResponseSpeaker': 'response_speaker',
+}
+__all__ = list(_EXPORTS)
 
-from backend.services.voice.assistant import (
-    VoiceAssistant,
-    VoiceAssistantResult,
-    VoiceAssistantResponse,
-)
-from backend.services.voice.audio_capture import (
-    AudioCapture,
-)
-from backend.services.voice.command_executor import (
-    VoiceCommandExecutor,
-    VoiceExecutionResult,
-)
-from backend.services.voice.command_router import (
-    VoiceCommand,
-    VoiceCommandRouter,
-)
-from backend.services.voice.transcriber import (
-    WhisperTranscriber,
-)
-from backend.services.voice.wake_phrase import (
-    WakePhraseMatch,
-    WakePhraseParser,
-)
 
-__all__ = [
-    "VoiceAssistant",
-    "VoiceAssistantResult",
-    "VoiceCommandExecutor",
-    "VoiceExecutionResult",
-    "VoiceCommand",
-    "VoiceCommandRouter",
-    "AudioCapture",
-    "WakePhraseMatch",
-    "WakePhraseParser",
-    "WhisperTranscriber",
-    "VoiceAssistantResponse",
-    "VoiceConfirmationDecision",
-    "VoiceConfirmationManager",
-]
-
-from backend.services.voice.audio_player import AudioPlayer
-from backend.services.voice.response_formatter import VoiceResponseFormatter
-from backend.services.voice.response_speaker import VoiceResponseSpeaker
+def __getattr__(name):
+    module = _EXPORTS.get(name)
+    if module is None:
+        raise AttributeError(name)
+    value = getattr(import_module(f'{__name__}.{module}'), name)
+    globals()[name] = value
+    return value
