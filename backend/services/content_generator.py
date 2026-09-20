@@ -127,7 +127,10 @@ class ContentGenerator:
             json_mode=True,
         )
 
-        data = self._extract_json(raw)
+        data = self._normalize_response_schema(
+            self._extract_json(raw),
+            topic=topic,
+        )
 
         is_movie = self._is_movie_fact_generation(
             format_name=format_name, reference_format=reference_format,
@@ -167,8 +170,11 @@ class ContentGenerator:
                 json_mode=True,
             )
 
-            retry_data = self._extract_json(
-                retry_raw
+            retry_data = self._normalize_response_schema(
+                self._extract_json(
+                    retry_raw
+                ),
+                topic=topic,
             )
 
 
@@ -2176,6 +2182,11 @@ SCRIPT RULES:
 26. Verify every line is 29 words or fewer before responding.
 """
 
+        system_prompt = system_prompt.replace(
+            "{reference_instruction}",
+            reference_instruction,
+        )
+
         retry_instruction = ""
 
         if retry:
@@ -2377,6 +2388,39 @@ Return only the JSON object.
 
         return True
 
+    @staticmethod
+    def _normalize_response_schema(
+        data: dict,
+        *,
+        topic: str,
+    ) -> dict:
+        """Repair harmless JSON-key drift without inventing narration."""
+
+        if not isinstance(data, dict):
+            return {}
+
+        normalized = dict(data)
+
+        if not isinstance(normalized.get("script_lines"), list):
+            for key in ("script", "narration_lines", "lines"):
+                candidate = normalized.get(key)
+                if isinstance(candidate, list):
+                    normalized["script_lines"] = list(candidate)
+                    break
+
+        if not str(normalized.get("title", "")).strip():
+            normalized["title"] = str(topic).strip()
+
+        hashtags = normalized.get("hashtags")
+        if not isinstance(hashtags, list) or len(hashtags) < 3:
+            normalized["hashtags"] = [
+                "#Science",
+                "#Engineering",
+                "#Shorts",
+            ]
+
+        return normalized
+
     def _is_valid_content(
         self,
         data: dict,
@@ -2390,6 +2434,15 @@ Return only the JSON object.
         word_count = self._word_count(
             data
         )
+
+        if any(
+            len(str(line).split()) > 29
+            for line in data.get("script_lines", [])
+        ):
+            logger.warning(
+                "Script per-line length validation failed."
+            )
+            return False
 
         if not (
             self.MIN_WORDS
@@ -2526,7 +2579,6 @@ Return only the JSON object.
             )
 
         return {}
-
 
 
 

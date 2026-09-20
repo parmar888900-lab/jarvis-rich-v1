@@ -13,6 +13,9 @@ from backend.services.research.knowledge_pack import (
 from backend.services.research.providers.wikipedia import (
     WikipediaProvider,
 )
+from backend.services.research.providers.nasa_images import (
+    NasaImagesResearchProvider,
+)
 from backend.services.research.research_memory import (
     ResearchMemory,
 )
@@ -33,6 +36,12 @@ class EvergreenResearchService:
     # the existing Wikipedia provider and evidence contract.
     # MASTER_RESEARCH_SPECIFICITY_V2
     RESEARCH_ALIASES = {
+        "james webb": [
+            "James Webb Space Telescope mirror unfolding",
+            "James Webb Space Telescope",
+            "Optical Telescope Element",
+            "Segmented mirror",
+        ],
         "sound effect": [
             "Foley (filmmaking)",
             "Sound effect",
@@ -140,6 +149,7 @@ class EvergreenResearchService:
 
     def __init__(self) -> None:
         self.wikipedia = WikipediaProvider()
+        self.nasa = NasaImagesResearchProvider()
         self.memory = ResearchMemory()
         self.confidence = ResearchConfidenceScorer()
 
@@ -179,54 +189,77 @@ class EvergreenResearchService:
         all_content: list[str] = []
         seen_urls: set[str] = set()
 
+        use_nasa = any(
+            trigger in clean_query.lower()
+            for trigger in (
+                "james webb",
+                "jwst",
+                "nasa",
+                "space telescope",
+                "spacecraft",
+            )
+        )
+
+        providers = (
+            [self.nasa, self.wikipedia]
+            if use_nasa
+            else [self.wikipedia]
+        )
+
         for query in queries:
 
-            try:
-                results = (
-                    self.wikipedia.research(
-                        query
+            for provider in providers:
+
+                try:
+                    results = (
+                        provider.research(
+                            query
+                        )
                     )
-                )
-            except Exception as exc:
-                print(
-                    "[EvergreenResearch] Wikipedia "
-                    f"failed for '{query}': {exc}"
-                )
-                continue
-
-            for result in results:
-
-                url = str(
-                    result.get(
-                        "url",
-                        "",
+                except Exception as exc:
+                    print(
+                        "[EvergreenResearch] "
+                        f"{provider.name} failed for "
+                        f"'{query}': {exc}"
                     )
-                ).strip()
-
-                if url and url in seen_urls:
                     continue
 
-                if url:
-                    seen_urls.add(url)
+                for result in results:
 
-                pack.add_source(
-                    result
-                )
+                    url = str(
+                        result.get(
+                            "url",
+                            "",
+                        )
+                    ).strip()
 
-                content = str(
-                    result.get(
-                        "content",
-                        "",
-                    )
-                ).strip()
+                    if url and url in seen_urls:
+                        continue
 
-                if content:
-                    pack.add_fact(
-                        content
+                    if url:
+                        seen_urls.add(url)
+
+                    pack.add_source(
+                        result
                     )
-                    all_content.append(
-                        content
-                    )
+
+                    content = str(
+                        result.get(
+                            "content",
+                            "",
+                        )
+                    ).strip()
+
+                    if content:
+                        pack.add_fact(
+                            content
+                        )
+                        all_content.append(
+                            content
+                        )
+
+                if len(pack.sources) >= 4:
+                    break
 
             # MASTER_RESEARCH_SPECIFICITY_V2:
             # retain a bounded evidence set while allowing
@@ -302,10 +335,15 @@ class EvergreenResearchService:
         # The exact premise must remain the highest-priority
         # research request. Previously aliases could replace it
         # completely, which encouraged broad background evidence.
+        # Domain aliases name authoritative encyclopedia subjects and
+        # must outrank one-word concept fallbacks. Otherwise a title
+        # such as "James Webb ... Gold Mirror" can resolve to the
+        # article about elemental gold before Jarvis ever reaches the
+        # telescope evidence.
         ordered = (
             exact_queries
-            + concept_queries
             + alias_queries
+            + concept_queries
         )
 
         generic_terms = {
@@ -394,8 +432,27 @@ class EvergreenResearchService:
 
         exact = unique[0]
 
-        remainder = sorted(
-            unique[1:],
+        alias_keys = {
+            " ".join(str(query).split()).casefold()
+            for query in alias_queries
+            if str(query).strip()
+        }
+        priority_aliases = [
+            query
+            for query in unique[1:]
+            if query.casefold() in alias_keys
+        ]
+        other_queries = [
+            query
+            for query in unique[1:]
+            if query.casefold() not in alias_keys
+            and (
+                not priority_aliases
+                or len(query.split()) >= 2
+            )
+        ]
+        remainder = priority_aliases + sorted(
+            other_queries,
             key=query_quality,
             reverse=True,
         )
