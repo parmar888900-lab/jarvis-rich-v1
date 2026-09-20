@@ -43,6 +43,17 @@ def _read_path(
     ).expanduser()
 
 
+def _read_int(
+    name: str,
+    *,
+    default: int,
+) -> int:
+    try:
+        return max(512, int(os.getenv(name, str(default))))
+    except (TypeError, ValueError):
+        return default
+
+
 @dataclass(frozen=True)
 class RuntimeConfig:
     """Machine-specific provider configuration."""
@@ -87,6 +98,7 @@ class RuntimeConfig:
         "@cf/meta/"
         "llama-3.1-8b-instruct-fast"
     )
+    ollama_num_ctx: int = 8192
 
     @classmethod
     def from_environment(
@@ -149,6 +161,10 @@ class RuntimeConfig:
                     "@cf/meta/"
                     "llama-3.1-8b-instruct-fast"
                 ),
+            ),
+            ollama_num_ctx=_read_int(
+                "JARVIS_OLLAMA_NUM_CTX",
+                default=8192,
             ),
             piper_executable=_read_path(
                 "JARVIS_PIPER_EXECUTABLE",

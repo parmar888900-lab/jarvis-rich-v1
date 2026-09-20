@@ -2500,9 +2500,16 @@ class VideoPipeline:
         trend_content_format = trend.get("content_format", {})
         if not isinstance(trend_content_format, dict):
             trend_content_format = {}
+        source_reference_profile = trend_content_format.get(
+            "reference_profile",
+            {},
+        )
+        if not isinstance(source_reference_profile, dict):
+            source_reference_profile = {}
         v62_format_name = str(
-            trend_content_format.get("format_name", "")
+            source_reference_profile.get("format_name", "")
             or genre
+            or trend_content_format.get("format_name", "")
             or trend.get("format_name", "")
             or trend.get("format", "")
             or ""
@@ -2803,7 +2810,6 @@ class VideoPipeline:
             "video": video,
             "status": "success",
         }
-
 
 
 

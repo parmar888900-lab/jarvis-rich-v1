@@ -119,6 +119,10 @@ async def test_ollama_contract():
             "payload"
         ]["format"] == "json"
 
+        assert request_seen[
+            "payload"
+        ]["options"]["num_ctx"] == 8192
+
         print(
             "PASS: Ollama chat contract preserved."
         )

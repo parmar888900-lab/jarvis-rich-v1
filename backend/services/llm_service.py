@@ -167,6 +167,9 @@ class LLMService:
             "model": selected_model,
             "prompt": prompt,
             "stream": False,
+            "options": {
+                "num_ctx": self.config.ollama_num_ctx,
+            },
         }
 
         if json_mode:
