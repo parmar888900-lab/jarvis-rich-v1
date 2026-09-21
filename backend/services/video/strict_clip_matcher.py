@@ -58,6 +58,13 @@ class StrictClipMatcher:
 
     NEGATIVE_WEIGHT = 0.55
 
+    # Semantic similarity cannot rescue an almost-empty frame.  NASA and
+    # archive documentaries often contain black title cards or pillarboxed
+    # inserts that CLIP still associates with the narrated topic.  Those
+    # frames are technically relevant but viewer-facing failures in a Short.
+    DARK_LUMA_THRESHOLD = 18
+    MIN_VISIBLE_PIXEL_FRACTION = 0.22
+
     def __init__(
         self,
         *,
@@ -99,6 +106,11 @@ class StrictClipMatcher:
         embeddings = []
 
         for clip in clips:
+
+            if not self._preview_has_usable_visual_density(
+                clip.preview_path
+            ):
+                continue
 
             embedding = (
                 self._image_embedding(
@@ -308,6 +320,47 @@ class StrictClipMatcher:
             )
 
         return output
+
+    @classmethod
+    def _preview_has_usable_visual_density(
+        cls,
+        path_value: str,
+    ) -> bool:
+        """Reject near-empty title cards before semantic matching."""
+
+        path = Path(path_value)
+
+        if not path.exists():
+            return False
+
+        try:
+            with Image.open(path) as source:
+                grayscale = source.convert("L")
+                histogram = grayscale.histogram()
+
+            total_pixels = sum(histogram)
+
+            if total_pixels <= 0:
+                return False
+
+            dark_pixels = sum(
+                histogram[
+                    : cls.DARK_LUMA_THRESHOLD + 1
+                ]
+            )
+
+            visible_fraction = (
+                1.0
+                - dark_pixels / total_pixels
+            )
+
+            return (
+                visible_fraction
+                >= cls.MIN_VISIBLE_PIXEL_FRACTION
+            )
+
+        except Exception:
+            return False
 
     def _ensure_model(
         self,
