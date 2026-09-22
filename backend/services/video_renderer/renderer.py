@@ -35,6 +35,38 @@ class VideoRenderer:
     HEIGHT = 1920
     FPS = 30
 
+    @staticmethod
+    def _expand_source_window(
+        *,
+        start_time: float,
+        end_time: float,
+        source_duration: float,
+        required_duration: float,
+    ) -> tuple[float, float]:
+        """Extend a matched window without freezing or time-stretching.
+
+        Prefer later frames, then backfill from before the semantic match
+        when the match is close to the end of its authorized source.
+        """
+
+        start = max(0.0, float(start_time))
+        source_end = max(0.0, float(source_duration))
+        end = min(source_end, max(start, float(end_time)))
+        required = max(0.0, float(required_duration))
+
+        missing = required - (end - start)
+        if missing <= 0.0:
+            return start, end
+
+        forward = min(missing, source_end - end)
+        end += forward
+        missing -= forward
+
+        if missing > 0.0:
+            start = max(0.0, start - missing)
+
+        return start, end
+
     def __init__(
         self,
         runtime_config: RuntimeConfig | None = None,
@@ -552,6 +584,17 @@ class VideoRenderer:
                                             + cut_duration,
                                         )
                                     ),
+                                )
+
+                                start_time, end_time = (
+                                    self._expand_source_window(
+                                        start_time=start_time,
+                                        end_time=end_time,
+                                        source_duration=float(
+                                            source_video.duration
+                                        ),
+                                        required_duration=cut_duration,
+                                    )
                                 )
 
                                 if (
