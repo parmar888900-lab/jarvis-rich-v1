@@ -1502,6 +1502,16 @@ class VideoPipeline:
                             match.duration
                         ),
 
+                    "preview_path":
+                        str(
+                            match.preview_path
+                        ),
+
+                    "presentation_mode":
+                        str(
+                            match.presentation_mode
+                        ),
+
                     "positive_score":
                         float(
                             match.positive_score

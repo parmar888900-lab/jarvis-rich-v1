@@ -16,6 +16,7 @@ from backend.services.video_renderer.moviepy_runtime import (
 
 from moviepy import (
     AudioFileClip,
+    ColorClip,
     CompositeVideoClip,
     ImageClip,
     VideoFileClip,
@@ -262,6 +263,49 @@ class VideoRenderer:
                 )
             )
         )
+
+    def _fit_context_safe_visual(
+        self,
+        clip,
+        duration: float,
+    ):
+        """Preserve annotated wide-frame context above the caption band."""
+
+        source_width, source_height = clip.size
+        if source_width <= 0 or source_height <= 0:
+            raise RuntimeError("Invalid source video dimensions.")
+
+        safe_duration = max(0.05, float(duration))
+        background = (
+            self._fit_visual(clip, safe_duration)
+            .with_opacity(0.32)
+        )
+        shade = (
+            ColorClip(
+                size=(self.WIDTH, self.HEIGHT),
+                color=(0, 0, 0),
+                duration=safe_duration,
+            )
+            .with_opacity(0.38)
+        )
+
+        foreground_scale = min(
+            self.WIDTH / float(source_width),
+            900.0 / float(source_height),
+        )
+        foreground_width = max(1, int(round(source_width * foreground_scale)))
+        foreground_height = max(1, int(round(source_height * foreground_scale)))
+        foreground = (
+            clip
+            .resized((foreground_width, foreground_height))
+            .with_duration(safe_duration)
+            .with_position(("center", 150))
+        )
+
+        return CompositeVideoClip(
+            [background, shade, foreground],
+            size=(self.WIDTH, self.HEIGHT),
+        ).with_duration(safe_duration)
 
     async def render(
         self,
@@ -688,12 +732,21 @@ class VideoRenderer:
                                             )
                                         )
 
-                                        clip = (
-                                            self._fit_visual(
+                                        if str(
+                                            video_spec.get(
+                                                "presentation_mode",
+                                                "cover",
+                                            )
+                                        ) == "contain_safe_area":
+                                            clip = self._fit_context_safe_visual(
                                                 moving_clip,
                                                 cut_duration,
                                             )
-                                        )
+                                        else:
+                                            clip = self._fit_visual(
+                                                moving_clip,
+                                                cut_duration,
+                                            )
 
                                     else:
 

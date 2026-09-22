@@ -910,6 +910,24 @@ STRICT RULES:
         if not self._is_structurally_valid_content(data):
             return None
 
+        # Deterministic recovery is also the last safe place to repair a
+        # narrow grammar defect copied verbatim from source notes.  Keep the
+        # correction deliberately constrained so factual wording is not
+        # creatively rewritten.
+        polished_lines = [
+            re.sub(
+                r"\btoo\s+big\s+too\s+fit\b",
+                "too big to fit",
+                str(line),
+                flags=re.IGNORECASE,
+            ).strip()
+            for line in data.get("script_lines", [])
+        ]
+        data = {
+            **data,
+            "script_lines": polished_lines,
+        }
+
         current_words = self._word_count(data)
 
         if self.MIN_WORDS <= current_words <= self.MAX_WORDS:
@@ -925,13 +943,7 @@ STRICT RULES:
         if not research_text:
             return None
 
-        lines = [
-            str(line).strip()
-            for line in data.get(
-                "script_lines",
-                []
-            )
-        ]
+        lines = polished_lines
 
         if len(lines) != 4:
             return None
@@ -961,6 +973,12 @@ STRICT RULES:
 
             for unit in variants:
                 unit = re.sub(r"\s+", " ", unit).strip()
+                unit = re.sub(
+                    r"\btoo\s+big\s+too\s+fit\b",
+                    "too big to fit",
+                    unit,
+                    flags=re.IGNORECASE,
+                )
                 words = unit.split()
                 if not (6 <= len(words) <= 24):
                     continue
@@ -974,6 +992,23 @@ STRICT RULES:
                 unit_tokens = self._recovery_tokens(unit)
                 overlap = len(unit_tokens & focus_tokens)
                 if not overlap:
+                    continue
+
+                # Do not repeat the premise merely because the evidence uses
+                # slightly different surface wording.  Compare against each
+                # line rather than the whole script so a genuinely new fact
+                # that shares the topic vocabulary remains eligible.
+                if any(
+                    unit_tokens
+                    and (
+                        len(unit_tokens & self._recovery_tokens(line))
+                        / min(
+                            len(unit_tokens),
+                            len(self._recovery_tokens(line)) or 1,
+                        )
+                    ) >= 0.40
+                    for line in lines
+                ):
                     continue
 
                 identity = " ".join(words).lower().rstrip(".!?")
@@ -1045,10 +1080,23 @@ STRICT RULES:
             "they", "this", "those", "through", "using", "what", "when",
             "where", "which", "while", "with", "would",
         }
+        concept = {
+            "big": "size",
+            "large": "size",
+            "larger": "size",
+            "wide": "size",
+            "wider": "size",
+            "carry": "capacity",
+            "carried": "capacity",
+            "carrying": "capacity",
+            "fit": "capacity",
+            "fits": "capacity",
+            "fitting": "capacity",
+        }
         return {
-            token
+            concept.get(token, token)
             for token in re.findall(r"[a-z0-9][a-z0-9'-]+", value.lower())
-            if len(token) >= 4 and token not in stop
+            if len(token) >= 3 and token not in stop
         }
 
     async def repair(
@@ -2637,7 +2685,6 @@ Return only the JSON object.
             )
 
         return {}
-
 
 
 

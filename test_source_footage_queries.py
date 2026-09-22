@@ -13,6 +13,8 @@ def test_science_topic_title_is_normalized_for_archive_search():
     assert queries[0] == (
         "James Webb Space Telescope mirror unfolding"
     )
+    assert "James Webb Space Telescope mirror alignment" in queries
+    assert "James Webb Space Telescope launch deployment" in queries
     assert len(queries) == len(set(query.lower() for query in queries))
 
 

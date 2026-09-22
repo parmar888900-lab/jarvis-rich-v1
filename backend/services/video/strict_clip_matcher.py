@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
+import csv
+import io
+import shutil
+import subprocess
 
 import open_clip
 import torch
@@ -35,6 +39,7 @@ class StrictMatchedClip:
     positive_score: float
     negative_score: float
     final_score: float
+    presentation_mode: str = "cover"
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -64,6 +69,9 @@ class StrictClipMatcher:
     # frames are technically relevant but viewer-facing failures in a Short.
     DARK_LUMA_THRESHOLD = 18
     MIN_VISIBLE_PIXEL_FRACTION = 0.22
+
+    ANNOTATION_MIN_CONFIDENCE = 45.0
+    ANNOTATION_EDGE_BAND_FRACTION = 0.35
 
     def __init__(
         self,
@@ -316,6 +324,11 @@ class StrictClipMatcher:
                         final,
                         4,
                     ),
+                    presentation_mode=(
+                        self._preview_presentation_mode(
+                            clip.preview_path
+                        )
+                    ),
                 )
             )
 
@@ -361,6 +374,99 @@ class StrictClipMatcher:
 
         except Exception:
             return False
+
+    @classmethod
+    def _annotation_risk_from_tsv(
+        cls,
+        tsv_text: str,
+        *,
+        width: int,
+        height: int,
+    ) -> bool:
+        """Detect readable source text near crop-sensitive frame edges."""
+
+        if width <= 0 or height <= 0:
+            return False
+
+        words = []
+        try:
+            rows = csv.DictReader(
+                io.StringIO(str(tsv_text or "")),
+                delimiter="\t",
+            )
+            for row in rows:
+                text = str(row.get("text", "")).strip()
+                if len("".join(c for c in text if c.isalnum())) < 2:
+                    continue
+                try:
+                    confidence = float(row.get("conf", "-1"))
+                    top = int(row.get("top", "0"))
+                    box_height = int(row.get("height", "0"))
+                except (TypeError, ValueError):
+                    continue
+                if confidence < cls.ANNOTATION_MIN_CONFIDENCE:
+                    continue
+                center_y = top + box_height / 2.0
+                words.append(center_y)
+        except Exception:
+            return False
+
+        if len(words) < 2:
+            return False
+
+        upper_limit = height * cls.ANNOTATION_EDGE_BAND_FRACTION
+        lower_limit = height * (1.0 - cls.ANNOTATION_EDGE_BAND_FRACTION)
+        edge_words = sum(
+            1
+            for center_y in words
+            if center_y <= upper_limit or center_y >= lower_limit
+        )
+        return edge_words >= 2
+
+    @classmethod
+    def _preview_presentation_mode(cls, path_value: str) -> str:
+        """Choose context-safe framing when OCR finds edge annotations.
+
+        Tesseract is optional. Missing OCR capability preserves the existing
+        cover behavior instead of blocking production.
+        """
+
+        executable = shutil.which("tesseract")
+        path = Path(path_value)
+        if not executable or not path.exists():
+            return "cover"
+
+        try:
+            with Image.open(path) as source:
+                width, height = source.size
+
+            completed = subprocess.run(
+                [
+                    executable,
+                    str(path),
+                    "stdout",
+                    "--psm",
+                    "11",
+                    "tsv",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=12,
+            )
+            if completed.returncode != 0:
+                return "cover"
+
+            if cls._annotation_risk_from_tsv(
+                completed.stdout,
+                width=width,
+                height=height,
+            ):
+                return "contain_safe_area"
+        except Exception:
+            return "cover"
+
+        return "cover"
 
     def _ensure_model(
         self,

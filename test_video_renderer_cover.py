@@ -29,6 +29,19 @@ def test_fit_visual_is_cropped_to_output_canvas():
         source.close()
 
 
+def test_context_safe_visual_preserves_vertical_output_canvas():
+    renderer = VideoRenderer()
+    source = ColorClip(size=(1920, 1080), color=(30, 90, 160), duration=1.0)
+    clip = renderer._fit_context_safe_visual(source, duration=1.0)
+
+    try:
+        assert clip.size == (renderer.WIDTH, renderer.HEIGHT)
+        assert clip.duration == 1.0
+    finally:
+        clip.close()
+        source.close()
+
+
 def test_short_match_extends_forward_to_fill_beat():
     start, end = VideoRenderer._expand_source_window(
         start_time=10.0,

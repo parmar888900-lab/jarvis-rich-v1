@@ -87,3 +87,27 @@ def test_main_path_recovers_first_short_draft_without_second_llm_call():
     assert fake.calls == 1
     assert 75 <= sum(len(line.split()) for line in result.script_lines) <= 110
     assert all(len(line.split()) <= 29 for line in result.script_lines)
+
+
+def test_recovery_repairs_typo_and_does_not_repeat_launch_fit_premise():
+    draft = {
+        "title": "Why Webb unfolds",
+        "hashtags": ["#Science", "#Engineering", "#Space"],
+        "script_lines": [
+            "Webb's gold mirror is wider than any launch rocket can carry.",
+            "NASA built its eighteen segments to fold for launch.",
+            "After separation, motors and hinges deploy the observatory.",
+            "Alignment lets Webb collect infrared light from deep space.",
+        ],
+    }
+    research_with_typo = RESEARCH.replace("too big to fit", "too big too fit")
+
+    recovered = ContentGenerator()._recover_generation_length(
+        data=draft,
+        research=research_with_typo,
+    )
+
+    assert recovered is not None
+    script = " ".join(recovered["script_lines"]).lower()
+    assert "too big too fit" not in script
+    assert "in its full configuration" not in script

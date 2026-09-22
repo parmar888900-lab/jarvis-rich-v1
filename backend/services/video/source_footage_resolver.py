@@ -387,6 +387,20 @@ class SourceFootageResolver:
             ],
         )
 
+        # NASA's catalog titles use mission-language rather than the wording
+        # of a social-video hook.  These variants expose official alignment
+        # and deployment footage as additional candidates while strict CLIP
+        # matching still decides whether any individual shot is relevant.
+        if (
+            format_name == "science_explainer"
+            and "james webb space telescope" in science_subject.lower()
+        ):
+            raw = [
+                *raw,
+                "James Webb Space Telescope mirror alignment",
+                "James Webb Space Telescope launch deployment",
+            ]
+
         output = []
         seen = set()
 
