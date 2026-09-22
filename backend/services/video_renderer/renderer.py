@@ -112,6 +112,12 @@ class VideoRenderer:
         return (
             clip
             .resized((target_width, target_height))
+            .cropped(
+                x_center=target_width / 2.0,
+                y_center=target_height / 2.0,
+                width=self.WIDTH,
+                height=self.HEIGHT,
+            )
             .with_duration(max(0.05, float(duration)))
             .with_position(("center", "center"))
         )
@@ -158,6 +164,12 @@ class VideoRenderer:
                     target_width,
                     target_height,
                 )
+            )
+            .cropped(
+                x_center=target_width / 2.0,
+                y_center=target_height / 2.0,
+                width=self.WIDTH,
+                height=self.HEIGHT,
             )
             .with_duration(
                 max(
