@@ -36,6 +36,52 @@ class VideoRenderer:
     FPS = 30
 
     @staticmethod
+    def _fill_authoritative_video_gaps(
+        matches: dict[int, dict],
+        *,
+        total_beats: int,
+        minimum_coverage: float = 0.75,
+    ) -> dict[int, dict]:
+        """Fill isolated gaps only inside a dense single-source sequence."""
+
+        output = dict(matches)
+        if total_beats <= 0 or not output:
+            return output
+
+        valid = {
+            index: spec
+            for index, spec in output.items()
+            if 1 <= index <= total_beats
+            and isinstance(spec, dict)
+            and str(spec.get("source_path", "")).strip()
+        }
+        if len(valid) / float(total_beats) < minimum_coverage:
+            return output
+
+        source_paths = {
+            str(spec["source_path"]).strip()
+            for spec in valid.values()
+        }
+        if len(source_paths) != 1:
+            return output
+
+        source_indexes = sorted(valid)
+        for beat_index in range(1, total_beats + 1):
+            if beat_index in valid:
+                continue
+
+            nearest = min(
+                source_indexes,
+                key=lambda index: (abs(index - beat_index), index),
+            )
+            continuity_spec = dict(valid[nearest])
+            continuity_spec["beat_index"] = beat_index
+            continuity_spec["match_mode"] = "authoritative_continuity_fill"
+            output[beat_index] = continuity_spec
+
+        return output
+
+    @staticmethod
     def _expand_source_window(
         *,
         start_time: float,
@@ -292,6 +338,11 @@ class VideoRenderer:
                 dict,
             )
         }
+
+        beat_video_lookup = self._fill_authoritative_video_gaps(
+            beat_video_lookup,
+            total_beats=len(visual_beats or []),
+        )
 
         base_video = None
         final_video = None

@@ -63,3 +63,48 @@ def test_too_short_source_window_remains_bounded():
 
     assert start == 0.0
     assert end == 1.0
+
+
+def test_dense_single_source_matches_fill_isolated_gaps():
+    matches = {
+        index: {"beat_index": index, "source_path": "nasa.mp4"}
+        for index in range(1, 9)
+        if index not in {4, 7}
+    }
+
+    filled = VideoRenderer._fill_authoritative_video_gaps(
+        matches,
+        total_beats=8,
+    )
+
+    assert set(filled) == set(range(1, 9))
+    assert filled[4]["match_mode"] == "authoritative_continuity_fill"
+    assert filled[7]["source_path"] == "nasa.mp4"
+
+
+def test_sparse_matches_do_not_fill_gaps():
+    matches = {
+        1: {"beat_index": 1, "source_path": "source.mp4"},
+        4: {"beat_index": 4, "source_path": "source.mp4"},
+    }
+
+    assert VideoRenderer._fill_authoritative_video_gaps(
+        matches,
+        total_beats=8,
+    ) == matches
+
+
+def test_mixed_sources_do_not_fill_gaps():
+    matches = {
+        index: {
+            "beat_index": index,
+            "source_path": "a.mp4" if index < 5 else "b.mp4",
+        }
+        for index in range(1, 9)
+        if index != 4
+    }
+
+    assert 4 not in VideoRenderer._fill_authoritative_video_gaps(
+        matches,
+        total_beats=8,
+    )
