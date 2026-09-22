@@ -8,13 +8,13 @@ from moviepy import TextClip
 class SubtitleRenderer:
 
     # Tuned for 1080x1920 vertical Shorts.
-    FONT_SIZE = 74
-    WIDTH = 860
-    Y_POSITION = 1120
+    FONT_SIZE = 96
+    WIDTH = 920
+    Y_POSITION = 1060
 
     TEXT_COLOR = "white"
     STROKE_COLOR = "black"
-    STROKE_WIDTH = 5
+    STROKE_WIDTH = 7
 
     WORDS_PER_PHRASE = 3
 
