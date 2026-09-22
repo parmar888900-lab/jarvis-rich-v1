@@ -644,7 +644,13 @@ class VideoRenderer:
                                         source_duration=float(
                                             source_video.duration
                                         ),
-                                        required_duration=cut_duration,
+                                        # Leave a small decode/timebase pad so
+                                        # MoviePy rounding cannot turn a valid
+                                        # continuous source window into an
+                                        # unrelated still fallback.
+                                        required_duration=(
+                                            cut_duration + 0.05
+                                        ),
                                     )
                                 )
 

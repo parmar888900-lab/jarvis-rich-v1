@@ -41,6 +41,18 @@ def test_short_match_extends_forward_to_fill_beat():
     assert end == 12.75
 
 
+def test_window_can_include_decode_timebase_padding():
+    start, end = VideoRenderer._expand_source_window(
+        start_time=10.0,
+        end_time=12.0,
+        source_duration=30.0,
+        required_duration=2.80,
+    )
+
+    assert start == 10.0
+    assert end == 12.8
+
+
 def test_match_near_source_end_backfills_required_duration():
     start, end = VideoRenderer._expand_source_window(
         start_time=28.0,
