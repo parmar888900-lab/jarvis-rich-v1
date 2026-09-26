@@ -18,7 +18,11 @@ aiohttp==3.14.3
 piper-tts==1.7.0
 openai-whisper==20250625
 torch==2.13.0
-numpy==2.5.2
+# Keep Whisper's native timing stack reproducible. numba 0.67/llvmlite 0.49
+# crashes on the current CPU runtime before captions can fall back safely.
+numpy==2.4.6
+numba==0.65.1
+llvmlite==0.47.0
 moviepy==2.2.1
 imageio==2.37.4
 imageio-ffmpeg==0.6.0
