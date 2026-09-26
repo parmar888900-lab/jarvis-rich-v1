@@ -75,6 +75,51 @@ class VideoPipeline:
     SEMANTIC_VISUAL_V4 = True
     REFERENCE_VISUAL_V5 = True
 
+    @staticmethod
+    def _final_visual_identities(
+        *,
+        beat_assets: list,
+        video_matches: list[dict],
+    ) -> list[str]:
+        """Return identities for the visuals the renderer will display.
+
+        Strict video matches replace beat fallback images.  Measure those
+        matched shot windows (including conservative continuity fills), not
+        the hidden fallback stills, so the pre-render diversity gate evaluates
+        the final viewer-facing timeline.
+        """
+
+        total_beats = len(beat_assets)
+        video_lookup = {
+            int(spec.get("beat_index", -1)): spec
+            for spec in video_matches
+            if isinstance(spec, dict)
+        }
+        video_lookup = VideoRenderer._fill_authoritative_video_gaps(
+            video_lookup,
+            total_beats=total_beats,
+        )
+
+        identities = []
+        for beat_index, asset in enumerate(beat_assets, start=1):
+            spec = video_lookup.get(beat_index)
+            source_path = str((spec or {}).get("source_path", "")).strip()
+            if source_path:
+                identities.append(
+                    "video::"
+                    + source_path
+                    + "::"
+                    + str(spec.get("clip_id", ""))
+                    + "::"
+                    + f"{float(spec.get('start_time', 0.0)):.3f}:"
+                    + f"{float(spec.get('end_time', 0.0)):.3f}"
+                )
+                continue
+
+            identities.append(media_provenance_identity(asset))
+
+        return identities
+
     def __init__(self):
 
         self.generator = ContentGenerator()
@@ -2643,13 +2688,10 @@ class VideoPipeline:
         # any rights/evidence requirement. It only evaluates the
         # final authorized beat sequence before expensive render.
 
-        def _block5_asset_identity(asset):
-            return media_provenance_identity(asset)
-
-        block5_identities = [
-            _block5_asset_identity(asset)
-            for asset in beat_render_assets
-        ]
+        block5_identities = self._final_visual_identities(
+            beat_assets=beat_render_assets,
+            video_matches=v61_video_matches,
+        )
 
         if (
             not block5_identities
