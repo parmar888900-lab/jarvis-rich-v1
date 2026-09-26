@@ -17,6 +17,7 @@ from backend.services.video_renderer.moviepy_runtime import (
 from moviepy import (
     AudioFileClip,
     ColorClip,
+    CompositeAudioClip,
     CompositeVideoClip,
     ImageClip,
     VideoFileClip,
@@ -28,6 +29,7 @@ from backend.services.storyboard.scene import Scene
 from backend.services.image_generation.models import GeneratedImage
 from backend.services.video.caption_aligner import CaptionAligner
 from backend.services.video_renderer.subtitle_renderer import SubtitleRenderer
+from backend.services.video.sound_design import OriginalSoundDesigner
 
 
 class VideoRenderer:
@@ -173,6 +175,10 @@ class VideoRenderer:
 
         self.caption_aligner = (
             CaptionAligner()
+        )
+
+        self.sound_designer = OriginalSoundDesigner(
+            runtime_config=config,
         )
 
     def _cover_image_clip(
@@ -416,6 +422,10 @@ class VideoRenderer:
 
         base_video = None
         final_video = None
+        sound_bed = None
+        mixed_audio = None
+        sound_design = {"enabled": False}
+        sound_cues = [0.0]
 
         caption_mode = "whisper"
 
@@ -603,6 +613,12 @@ class VideoRenderer:
                     / raw_total
                     for duration in raw_durations
                 ]
+
+                elapsed = 0.0
+                sound_cues = [0.0]
+                for duration in scaled_durations[:-1]:
+                    elapsed += duration
+                    sound_cues.append(round(elapsed, 3))
 
                 for beat_index, (
                     beat,
@@ -972,9 +988,20 @@ class VideoRenderer:
                 ),
             )
 
+            sound_design = self.sound_designer.generate(
+                narration_path=str(audio_path),
+                duration=audio_duration,
+                cue_times=sound_cues,
+            )
+            sound_bed = AudioFileClip(sound_design["audio_path"])
+            mixed_audio = CompositeAudioClip([
+                audio,
+                sound_bed.with_duration(audio_duration),
+            ])
+
             final_video = (
                 final_video
-                .with_audio(audio)
+                .with_audio(mixed_audio)
                 .with_duration(
                     audio_duration
                 )
@@ -1027,6 +1054,12 @@ class VideoRenderer:
                 except Exception:
                     pass
 
+            if mixed_audio is not None:
+                mixed_audio.close()
+
+            if sound_bed is not None:
+                sound_bed.close()
+
             audio.close()
 
         return {
@@ -1071,4 +1104,5 @@ class VideoRenderer:
             ),
             "caption_phrase_target_words": 3,
             "visual_framing": "aspect_preserving_cover",
+            "sound_design": sound_design,
         }
