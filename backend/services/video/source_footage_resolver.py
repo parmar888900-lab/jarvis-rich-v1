@@ -298,8 +298,18 @@ class SourceFootageResolver:
                 clean,
                 flags=re.IGNORECASE,
             )
+            # Social hooks often attribute an official mission as
+            # "NASA's ...".  The NASA catalogue indexes the mission title,
+            # not the possessive hook wording, so remove only this leading
+            # agency attribution before building archive queries.
             science_subject = re.sub(
-                r"\bmust\s+unfold\b",
+                r"^nasa(?:['’]s)?\s+",
+                "",
+                science_subject,
+                flags=re.IGNORECASE,
+            )
+            science_subject = re.sub(
+                r"\b(?:must\s+unfold|unfolds)\b",
                 "unfolding",
                 science_subject,
                 flags=re.IGNORECASE,
@@ -398,6 +408,7 @@ class SourceFootageResolver:
             raw = [
                 *raw,
                 "James Webb Space Telescope mirror alignment",
+                "Webb secondary mirror deploy",
                 "James Webb Space Telescope launch deployment",
             ]
 
