@@ -1,5 +1,6 @@
 from backend.services.video.media_asset import MediaAsset, media_provenance_identity
 from backend.services.pipelines.video_pipeline import VideoPipeline
+from backend.services.video_renderer.renderer import VideoRenderer
 
 
 def test_duplicate_downloads_keep_one_provenance_identity():
@@ -42,6 +43,31 @@ def test_visual_gate_counts_matched_shots_instead_of_hidden_fallbacks():
     identities = VideoPipeline._final_visual_identities(
         beat_assets=beat_assets,
         video_matches=video_matches,
+    )
+
+    assert len(set(identities)) == 4
+    assert all(identity.startswith("video::") for identity in identities)
+
+
+def test_renderer_gate_counts_final_matched_shots_too():
+    fallback = {
+        "source_url": "https://example.test/one-fallback",
+        "file_path": "/tmp/fallback.jpg",
+    }
+    matches = {
+        index: {
+            "beat_index": index,
+            "clip_id": f"shot-{index}",
+            "source_path": "/tmp/nasa.mp4",
+            "start_time": float(index * 3),
+            "end_time": float(index * 3 + 3),
+        }
+        for index in range(1, 5)
+    }
+
+    identities = VideoRenderer._final_visual_identities(
+        beat_images=[fallback] * 4,
+        video_lookup=matches,
     )
 
     assert len(set(identities)) == 4

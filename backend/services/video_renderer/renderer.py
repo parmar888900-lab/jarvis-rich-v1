@@ -37,6 +37,32 @@ class VideoRenderer:
     FPS = 30
 
     @staticmethod
+    def _final_visual_identities(
+        *,
+        beat_images: list,
+        video_lookup: dict[int, dict],
+    ) -> list[str]:
+        """Identify the visuals that will actually reach the viewer."""
+
+        identities = []
+        for beat_index, image in enumerate(beat_images, start=1):
+            spec = video_lookup.get(beat_index)
+            source_path = str((spec or {}).get("source_path", "")).strip()
+            if source_path:
+                identities.append(
+                    "video::"
+                    + source_path
+                    + "::"
+                    + str(spec.get("clip_id", ""))
+                    + "::"
+                    + f"{float(spec.get('start_time', 0.0)):.3f}:"
+                    + f"{float(spec.get('end_time', 0.0)):.3f}"
+                )
+            else:
+                identities.append(media_provenance_identity(image))
+        return identities
+
+    @staticmethod
     def _fill_authoritative_video_gaps(
         matches: dict[int, dict],
         *,
@@ -424,10 +450,12 @@ class VideoRenderer:
                 # Stage2B will not render a sequence dominated by
                 # repeated physical images.
 
-                def block5_identity(image):
-                    return media_provenance_identity(image)
-
-                block5_paths = [block5_identity(image) for image in beat_images]
+                # Strict matched video windows replace their fallback images.
+                # Evaluate the final timeline, not hidden fallback stills.
+                block5_paths = self._final_visual_identities(
+                    beat_images=beat_images,
+                    video_lookup=beat_video_lookup,
+                )
 
                 block5_path_counts = {}
 
