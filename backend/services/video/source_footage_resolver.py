@@ -150,12 +150,20 @@ class SourceFootageResolver:
 
                 try:
 
+                    # NASA query variants deliberately provide source
+                    # diversity.  One authoritative result per variant avoids
+                    # repeatedly downloading oversized runner-up documentaries
+                    # before reaching the next, more specific mission query.
+                    provider_limit = (
+                        1
+                        if isinstance(provider, NasaVideoProvider)
+                        else self.PRIMARY_LIMIT_PER_QUERY
+                    )
+
                     found = await provider.search_and_download(
                         query=query,
                         content_id=content_id,
-                        limit=(
-                            self.PRIMARY_LIMIT_PER_QUERY
-                        ),
+                        limit=provider_limit,
                     )
 
                 except Exception:
