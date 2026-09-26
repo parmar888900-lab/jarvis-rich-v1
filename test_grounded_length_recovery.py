@@ -111,3 +111,8 @@ def test_recovery_repairs_typo_and_does_not_repeat_launch_fit_premise():
     script = " ".join(recovered["script_lines"]).lower()
     assert "too big too fit" not in script
     assert "in its full configuration" not in script
+    assert "administrator of nasa" not in script
+    assert script.count("hexagonal mirror segments") <= 1
+    assert ContentGenerator._recovery_tokens("eighteen") == (
+        ContentGenerator._recovery_tokens("18")
+    )

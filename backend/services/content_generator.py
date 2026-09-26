@@ -986,6 +986,32 @@ STRICT RULES:
                     ("and ", "but ", "which ", "that ", "while ", "because ")
                 ):
                     continue
+                # Entity-name collisions in broad research can surface an
+                # unrelated biographical aside (for example, the person a
+                # spacecraft was named after).  These inserted "X, who was"
+                # clauses are weak spoken facts and unsafe length filler.
+                if re.search(
+                    r",\s*who\s+(?:is|was|served|became|worked)\b",
+                    unit,
+                    flags=re.IGNORECASE,
+                ):
+                    continue
+                if re.search(
+                    r"\b(?:media|press|virtual)\s+briefing\b"
+                    r"|\bbriefing participants?\b"
+                    r"|\bfor more information\b"
+                    r"|\bthis (?:video|presentation)\b"
+                    r"|\bvisit:\s*"
+                    r"|\bmanaged\b.{0,50}\bdevelopment\b"
+                    r"|\bpartnered with\b"
+                    r"|\bwill reveal\b.{0,60}\bdiscoveries\b"
+                    r"|\bwas launched on\s+\d{1,2}\s+"
+                    r"(?:january|february|march|april|may|june|july|"
+                    r"august|september|october|november|december)\s+\d{4}\b",
+                    unit,
+                    flags=re.IGNORECASE,
+                ):
+                    continue
                 if unit.lower() in existing_text:
                     continue
 
@@ -1025,11 +1051,28 @@ STRICT RULES:
 
         candidate_lines = list(lines)
         total_words = current_words
-        target_words = min(92, self.MAX_WORDS)
+        # Reach a complete short without padding a sound draft toward an
+        # arbitrary long target.  Past the valid floor, weaker evidence units
+        # are more likely to be tangential source metadata than useful story.
+        target_words = min(82, self.MAX_WORDS)
 
         for _, _, unit in safe_units:
             unit_words = len(unit.split())
             if total_words + unit_words > self.MAX_WORDS:
+                continue
+
+            unit_tokens = self._recovery_tokens(unit)
+            if any(
+                unit_tokens
+                and (
+                    len(unit_tokens & self._recovery_tokens(line))
+                    / min(
+                        len(unit_tokens),
+                        len(self._recovery_tokens(line)) or 1,
+                    )
+                ) >= 0.40
+                for line in candidate_lines
+            ):
                 continue
 
             eligible = [
@@ -1040,7 +1083,6 @@ STRICT RULES:
             if not eligible:
                 continue
 
-            unit_tokens = self._recovery_tokens(unit)
             line_index = max(
                 eligible,
                 key=lambda index: (
@@ -1081,6 +1123,7 @@ STRICT RULES:
             "where", "which", "while", "with", "would",
         }
         concept = {
+            "eighteen": "18",
             "big": "size",
             "large": "size",
             "larger": "size",
@@ -1096,7 +1139,11 @@ STRICT RULES:
         return {
             concept.get(token, token)
             for token in re.findall(r"[a-z0-9][a-z0-9'-]+", value.lower())
-            if len(token) >= 3 and token not in stop
+            if (
+                token.isdigit()
+                or len(token) >= 4
+                or token in concept
+            ) and token not in stop
         }
 
     async def repair(
@@ -2685,13 +2732,6 @@ Return only the JSON object.
             )
 
         return {}
-
-
-
-
-
-
-
 
 
 
