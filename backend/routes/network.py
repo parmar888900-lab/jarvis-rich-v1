@@ -5,21 +5,39 @@ from pathlib import Path
 import asyncio
 import json
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from backend.database import async_session
 from backend.services.network.status import network_snapshot
+from backend.services.network.controls import apply_control
 from backend.services.remote_auth import require_remote_token
 
 
 router = APIRouter(dependencies=[Depends(require_remote_token)])
 
 
+class ControlRequest(BaseModel):
+    action: str
+    channel_id: str | None = None
+    confirmed: bool = False
+
+
 @router.get("/api/network/status")
 async def get_network_status():
     async with async_session() as db:
         return await network_snapshot(db, storage_path=Path.cwd())
+
+
+@router.post("/api/network/control")
+async def network_control(payload: ControlRequest):
+    try:
+        async with async_session() as db:
+            return await apply_control(db, payload.action, channel_id=payload.channel_id,
+                                       confirmed=payload.confirmed)
+    except (ValueError, LookupError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
 @router.get("/api/network/events")
