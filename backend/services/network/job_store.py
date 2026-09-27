@@ -100,6 +100,8 @@ class JobStore:
         job.worker_id = None
         job.lease_until = None
         job.failure_reason = reason if state in {"FAILED", "HUMAN_ACTION_REQUIRED"} else None
+        job.retry_after = (datetime.now(timezone.utc) + timedelta(
+            seconds=min(3600, 60 * (2 ** min(job.attempt, 6))))) if state == "REPAIR" else None
         if artifact:
             if not all(artifact):
                 raise ValueError("Artifact type and path are required")
@@ -128,6 +130,8 @@ class JobStore:
             job.attempt += 1
             job.state = "FAILED" if job.attempt >= job.max_attempts else "REPAIR"
             job.failure_reason = f"Worker lease expired during {previous}"
+            job.retry_after = (now + timedelta(seconds=min(3600, 60 * (2 ** min(job.attempt, 6))))) \
+                if job.state == "REPAIR" else None
             session.add(NetworkJobEvent(job_id=job.id, from_state=previous,
                                         to_state=job.state, attempt=job.attempt,
                                         reason=job.failure_reason))
