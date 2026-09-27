@@ -1,12 +1,15 @@
 """The real SQLite job record follows the existing production-engine boundary."""
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from backend.models.network_channel import NetworkChannel
 from backend.models.network_job import NetworkJob, NetworkJobEvent
+from backend.models.network_identity import NetworkContentIdentity
 from backend.services.network.channel_registry import ChannelRegistry
 from backend.services.network.job_store import JobStore
+from backend.services.network.originality import OriginalityGate
 from backend.services.network.production_bridge import ProductionBridge
 
 
@@ -24,7 +27,7 @@ class FakeEngine:
 async def test_render_stops_at_qa_without_upload_or_auto_approval(tmp_path):
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'bridge.db'}")
     async with engine.begin() as connection:
-        for model in (NetworkChannel, NetworkJob, NetworkJobEvent):
+        for model in (NetworkChannel, NetworkJob, NetworkJobEvent, NetworkContentIdentity):
             await connection.run_sync(model.__table__.create)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     async with sessions() as session:
@@ -36,7 +39,14 @@ async def test_render_stops_at_qa_without_upload_or_auto_approval(tmp_path):
         job_id = job.id
     video = tmp_path / "complete.mp4"
     video.write_bytes(b"placeholder for filesystem boundary")
-    fake = FakeEngine({"status": "awaiting_qa", "video_path": str(video)})
+    package = tmp_path / "package"
+    package.mkdir()
+    (package / "script.txt").write_text("Webb unfolded its mirror.")
+    (package / "metadata.json").write_text('{"metadata":{"evidence_ids":["NASA:123"]}}')
+    async with sessions() as session:
+        await OriginalityGate().reserve(session, job_id=job_id, topic="Webb mirror")
+    fake = FakeEngine({"status": "awaiting_qa", "video_path": str(video),
+                       "production": {"production_package": {"package_dir": str(package)}}})
     result = await ProductionBridge(sessions, orchestrator=fake).run(job_id, worker_id="worker")
     assert result["status"] == "awaiting_qa"
     assert fake.calls[0].startswith(f"network-{job_id}-attempt-0")
@@ -45,7 +55,20 @@ async def test_render_stops_at_qa_without_upload_or_auto_approval(tmp_path):
         assert saved.state == "QA"
         assert saved.artifacts["render"] == str(video)
         assert saved.lineage["production_cycle"] == fake.calls[0]
+        assert saved.lineage["evidence_ids"] == ["NASA:123"]
+        assert saved.lineage["render_sha256"]
+        identity = await session.scalar(select(NetworkContentIdentity).where(
+            NetworkContentIdentity.job_id == job_id))
+        assert identity.script == "Webb unfolded its mirror."
         assert saved.worker_id is None
+        second = await JobStore().enqueue(session, channel_id=channel.id,
+                                          idempotency_key="other", topic="Mars rotor")
+        await OriginalityGate().reserve(session, job_id=second.id, topic="Mars rotor")
+    await ProductionBridge(sessions, orchestrator=fake).run(second.id, worker_id="worker")
+    async with sessions() as session:
+        second_saved = await session.get(NetworkJob, second.id)
+        assert second_saved.state == "REPAIR"
+        assert second_saved.retry_after is not None
     with pytest.raises(ValueError, match="Only queued"):
         await ProductionBridge(sessions, orchestrator=fake).run(job_id, worker_id="worker")
     await engine.dispose()
@@ -55,7 +78,7 @@ async def test_render_stops_at_qa_without_upload_or_auto_approval(tmp_path):
 async def test_no_action_and_missing_artifact_are_durable(tmp_path):
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'bridge.db'}")
     async with engine.begin() as connection:
-        for model in (NetworkChannel, NetworkJob, NetworkJobEvent):
+        for model in (NetworkChannel, NetworkJob, NetworkJobEvent, NetworkContentIdentity):
             await connection.run_sync(model.__table__.create)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     async with sessions() as session:

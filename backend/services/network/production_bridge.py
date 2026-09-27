@@ -6,10 +6,15 @@ mark perceptual quality approved and it never invokes an upload endpoint.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from backend.models.network_channel import NetworkChannel
+from backend.models.network_identity import NetworkContentIdentity
 from backend.models.network_job import NetworkJob
 from backend.services.network.job_store import JobStore
 
@@ -33,6 +38,9 @@ class ProductionBridge:
                 raise LookupError("Production job not found")
             if job.state not in {"QUEUED", "REPAIR"}:
                 raise ValueError("Only queued or repair jobs may start a production cycle")
+            channel = await session.get(NetworkChannel, job.channel_id)
+            if channel is None or channel.paused or channel.lifecycle_state != "ACTIVE":
+                raise ValueError("Paused or inactive channel cannot execute")
             selected_trend = job.scheduler_decision.get("selected_trend")
             if self._requires_selected_trend and not isinstance(selected_trend, dict):
                 raise ValueError("Network job lacks a channel-vetted selected trend")
@@ -79,6 +87,43 @@ class ProductionBridge:
                                            "FAILED" if job.attempt >= job.max_attempts else "REPAIR",
                                            reason="No verified local render reached QA")
                 return result
+            digest = hashlib.sha256()
+            with Path(path).open("rb") as handle:
+                for block in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(block)
+            video_sha256 = digest.hexdigest()
+            duplicate = await session.scalar(select(NetworkContentIdentity).where(
+                NetworkContentIdentity.render_sha256 == video_sha256,
+                NetworkContentIdentity.job_id != job_id))
+            if duplicate:
+                job.attempt += 1
+                await session.commit()
+                await self.jobs.transition(session, job_id,
+                    "FAILED" if job.attempt >= job.max_attempts else "REPAIR",
+                    reason=f"Duplicate final render conflicts with job {duplicate.job_id}")
+                return result
+            identity = await session.scalar(select(NetworkContentIdentity).where(
+                NetworkContentIdentity.job_id == job_id))
+            if identity:
+                identity.render_sha256 = video_sha256
+                identity.title = str(result.get("selected_trend", {}).get("title") or "") or None
+            package = result.get("production", {}).get("production_package", {})
+            package_dir = Path(package.get("package_dir", "")) if isinstance(package, dict) else None
+            script_hash = None
+            if package_dir and (package_dir / "script.txt").is_file():
+                script = (package_dir / "script.txt").read_text(encoding="utf-8")
+                script_hash = hashlib.sha256(script.encode("utf-8")).hexdigest()
+                if identity:
+                    identity.script = script
+            evidence_ids = []
+            if package_dir and (package_dir / "metadata.json").is_file():
+                metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
+                evidence_ids = metadata.get("metadata", {}).get("evidence_ids", [])
+            await session.commit()
             await self.jobs.transition(session, job_id, "QA", artifact=("render", path),
-                                       lineage={"production_cycle": cycle_id})
+                                       lineage={"production_cycle": cycle_id,
+                                                "render_sha256": video_sha256,
+                                                "package_dir": str(package_dir) if package_dir else None,
+                                                "script_sha256": script_hash,
+                                                "evidence_ids": evidence_ids})
             return result
