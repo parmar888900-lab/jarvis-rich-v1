@@ -49,6 +49,10 @@ Start-ScheduledTask -TaskName JarvisVoice
 ```
 
 At each user logon the three tasks start independently and retry on exit.
+The installer binds each task to the signed-in owner session and permits
+startup while the laptop is on battery. Existing tasks must be reinstalled
+with the command above to receive these settings. Task Scheduler startup
+still requires a real logon/reboot check on this Windows machine.
 Local dashboard: `http://127.0.0.1:8765/dashboard`. A `CONNECTED` badge with
 a recent sample time confirms current status. `STALE DATA`, `RECONNECTING` or
 `OFFLINE` does not mean the displayed sample is current. The AI core, channels,
@@ -77,6 +81,22 @@ job's `artifacts.render` and production package lineage; typical media lives
 in `generated\videos` and `generated\renders`. Inspect real QA results and
 the MP4 before any future release decision. Open `HUMAN ACTION REQUIRED` in
 the dashboard for the exact blocker and resume step.
+
+If an earlier same-day planning attempt recorded zero jobs before a topic
+adapter repair, keep that allocation as audit history. For one private QA
+commissioning job, use the existing active channel ID and a bounded child:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\run_bounded.py --stage network-commission --timeout 300 --heartbeat 15 --log generated\logs\network-commission.log -- .venv\Scripts\python.exe scripts\commission_network_job.py 2fef2173-b5da-43bc-8045-f96eaba8d14b
+.\.venv\Scripts\python.exe scripts\check_jarvis.py
+```
+
+The command selects within the channel's topic rules, researches sources,
+checks measured scores and originality, and persists at most one job for its
+local day. It never changes the prior allocation or enables publishing. The
+running supervisor picks up the queued job; `network-job.log` and the live
+dashboard show its progress. A legitimate weak or unavailable topic leaves
+no job. Do not repeat expensive production outside the supervisor.
 
 ## iPad on the same private LAN
 
