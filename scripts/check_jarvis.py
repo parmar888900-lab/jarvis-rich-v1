@@ -30,5 +30,4 @@ async def main() -> dict:
 
 
 if __name__ == "__main__":
-    os.environ["JARVIS_PUBLIC_PUBLISH_ENABLED"] = "false"
     print(json.dumps(asyncio.run(main()), indent=2))
