@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import tempfile
 import asyncio
+import json
+import sys
 from uuid import uuid4
 from types import SimpleNamespace
 from pathlib import Path
@@ -24,6 +26,7 @@ from backend.services.voice.response_formatter import VoiceResponseFormatter
 from backend.database import async_session
 from backend.services.network.voice_commands import route_network_command
 from backend.services.video.voice_generator import VoiceGenerator
+from backend.services.runtime.execution_watchdog import run_bounded
 
 
 router = APIRouter(
@@ -43,6 +46,25 @@ MAX_REMOTE_AUDIO_BYTES = 20 * 1024 * 1024
 speech_lock = asyncio.Lock()
 wake_parser = WakePhraseParser()
 voice_formatter = VoiceResponseFormatter()
+
+
+def transcribe_remote_audio(audio_path: Path, *, runner=run_bounded) -> dict:
+    """Kill Whisper and FFmpeg descendants on deadline; preserve request audio until cleanup."""
+    output_path = audio_path.with_suffix(audio_path.suffix + ".json")
+    try:
+        result = runner(
+            [sys.executable, str(Path(__file__).resolve().parents[2] / "scripts" /
+                                 "transcribe_audio.py"), str(audio_path), str(output_path),
+             "--model", "tiny.en"],
+            stage="remote-whisper", timeout_seconds=180, heartbeat_seconds=10,
+            terminate_grace_seconds=5,
+            log_path=Path("generated/logs/remote-whisper.log"),
+            cwd=Path(__file__).resolve().parents[2])
+        if result.returncode != 0 or not output_path.is_file():
+            raise RuntimeError("Whisper did not produce a valid transcription")
+        return json.loads(output_path.read_text(encoding="utf-8"))
+    finally:
+        output_path.unlink(missing_ok=True)
 
 
 class RemoteCommandRequest(BaseModel):
@@ -250,10 +272,10 @@ async def remote_voice(
                 temp_file.name
             )
 
-        transcription = await run_in_threadpool(
-            voice_transcriber.transcribe,
-            temp_path,
-        )
+        try:
+            transcription = await run_in_threadpool(transcribe_remote_audio, temp_path)
+        except (RuntimeError, OSError, TimeoutError):
+            raise HTTPException(status_code=503, detail="Bounded speech recognition unavailable") from None
 
         transcript = str(
             transcription.get("text")
