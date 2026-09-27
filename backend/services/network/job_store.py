@@ -19,7 +19,9 @@ ACTIVE_STATES = frozenset({
 TERMINAL_STATES = frozenset({"COMPLETE", "FAILED"})
 ALLOWED = {
     "QUEUED": {"RESEARCHING", "WAITING_FOR_QUOTA", "WAITING_FOR_SCHEDULE", "FAILED"},
-    "RESEARCHING": {"EVIDENCE_READY", "REPAIR", "FAILED", "HUMAN_ACTION_REQUIRED"},
+    # The existing Rich V1 production engine encapsulates its internal stages.
+    # The bridge records only milestones it can actually observe.
+    "RESEARCHING": {"EVIDENCE_READY", "QA", "COMPLETE", "REPAIR", "FAILED", "HUMAN_ACTION_REQUIRED"},
     "EVIDENCE_READY": {"SCRIPTING", "REPAIR", "FAILED"},
     "SCRIPTING": {"SCRIPTED", "REPAIR", "FAILED"},
     "SCRIPTED": {"VISUAL_PLANNING", "REPAIR", "FAILED"},

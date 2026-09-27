@@ -30,6 +30,7 @@ class ProductionOrchestrator:
         cycle_service: ProductionCycleService | None = None,
         session_factory: Any | None = None,
         release_service: Any | None = None,
+        private_upload_enabled: bool = True,
     ) -> None:
         self.commander = commander or Commander()
         self.cycle_service = cycle_service
@@ -38,6 +39,7 @@ class ProductionOrchestrator:
             release_service
             or YoutubeReleaseService()
         )
+        self.private_upload_enabled = private_upload_enabled
 
     async def run_cycle(
         self,
@@ -243,6 +245,26 @@ class ProductionOrchestrator:
                     result,
                 )
 
+                return result
+
+            # Network jobs stop at the local QA boundary. The legacy cycle
+            # retains its existing private-upload behavior by default.
+            if not self.private_upload_enabled:
+                result = {
+                    "cycle_id": cycle_id,
+                    "status": "awaiting_qa",
+                    "selected_trend": trend,
+                    "analysis": analysis,
+                    "production": production,
+                    "video_path": video_path,
+                    "release": {"status": "disabled"},
+                }
+                await self._complete_cycle(
+                    cycle_id,
+                    selected_topic=str(trend.get("title", "")),
+                    production_score=None,
+                    result=result,
+                )
                 return result
 
             generated_content = production.get(
@@ -522,6 +544,5 @@ class ProductionOrchestrator:
                 cycle_id,
                 result=result,
             )
-
 
 
