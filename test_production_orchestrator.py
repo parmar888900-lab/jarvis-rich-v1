@@ -184,6 +184,21 @@ def build_orchestrator(
     )
 
 
+async def test_network_selected_trend_stops_before_private_upload():
+    commander = FakeCommander()
+    orchestrator = ProductionOrchestrator(
+        commander=commander, cycle_service=FakeCycleService(),
+        session_factory=FakeSessionFactory(), private_upload_enabled=False,
+    )
+    trend = {"title": "Webb mirror deployment", "production_selection": {
+        "eligible": True, "selected": True}}
+    result = await orchestrator.run_cycle("network-job-one", selected_trend=trend)
+    assert result["status"] == "awaiting_qa"
+    assert result["video_path"] == "generated/test.mp4"
+    assert result["release"]["status"] == "disabled"
+    assert [call["task"] for call in commander.calls] == ["create_video"]
+
+
 async def test_success():
     commander = FakeCommander()
     cycle_service = FakeCycleService()
