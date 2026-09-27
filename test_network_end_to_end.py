@@ -11,6 +11,7 @@ from backend.models.network_channel import NetworkChannel
 from backend.models.network_control import NetworkControl
 from backend.models.network_identity import NetworkContentIdentity
 from backend.models.network_job import NetworkJob, NetworkJobEvent
+from backend.models.youtube_performance_snapshot import YoutubePerformanceSnapshotRecord
 from backend.services.network.allocation import DailyAllocator
 from backend.services.network.channel_registry import ChannelRegistry
 from backend.services.network.production_bridge import ProductionBridge
@@ -37,7 +38,8 @@ async def test_channel_to_qa_lineage_and_status_survives_restart(tmp_path, monke
     engine = create_async_engine(url)
     async with engine.begin() as connection:
         for model in (NetworkChannel, NetworkJob, NetworkJobEvent, NetworkContentIdentity,
-                      NetworkAllocation, NetworkControl, HumanAction):
+                      NetworkAllocation, NetworkControl, HumanAction,
+                      YoutubePerformanceSnapshotRecord):
             await connection.run_sync(model.__table__.create)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     async with sessions() as db:

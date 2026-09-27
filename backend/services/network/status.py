@@ -14,6 +14,7 @@ from backend.models.network_allocation import NetworkAllocation
 from backend.models.network_channel import NetworkChannel
 from backend.models.network_control import NetworkControl
 from backend.models.network_job import NetworkJob
+from backend.models.youtube_performance_snapshot import YoutubePerformanceSnapshotRecord
 from backend.services.runtime.capabilities import RuntimeCapabilityService
 
 
@@ -28,6 +29,9 @@ async def network_snapshot(db: AsyncSession, *, storage_path: Path) -> dict:
                                     .order_by(NetworkAllocation.created_at.desc()).limit(100))).all()
     counts = (await db.execute(select(NetworkJob.state, func.count(NetworkJob.id))
                                .group_by(NetworkJob.state))).all()
+    snapshots = (await db.scalars(select(YoutubePerformanceSnapshotRecord)
+                                  .order_by(YoutubePerformanceSnapshotRecord.captured_at.desc())
+                                  .limit(100))).all()
     disk = shutil.disk_usage(storage_path)
     return {
         "public_publishing_enabled": (
@@ -59,6 +63,12 @@ async def network_snapshot(db: AsyncSession, *, storage_path: Path) -> dict:
                            "why": a.why_automation_stopped,
                            "required_user_action": a.required_user_action,
                            "resumes_afterward": a.resumes_afterward} for a in pending],
+        "analytics": [{"channel_id": a.channel_id, "video_id": a.video_id,
+                       "title": a.title, "views": a.views, "likes": a.likes,
+                       "comments": a.comments,
+                       "captured_at": a.captured_at.isoformat(),
+                       "published_at": a.published_at.isoformat() if a.published_at else None}
+                      for a in snapshots],
         "system": {"disk_total_bytes": disk.total, "disk_free_bytes": disk.free,
                    "ffmpeg_available": shutil.which("ffmpeg") is not None,
                    "cpu_percent": None, "ram_percent": None, "gpu_percent": None},
