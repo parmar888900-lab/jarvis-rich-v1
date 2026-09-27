@@ -42,6 +42,7 @@ class VoiceAssistantResult:
     requires_confirmation: bool = False
     execution: VoiceExecutionResult | None = None
     reason: str | None = None
+    wake_variant: str | None = None
 
 
 
@@ -684,6 +685,7 @@ class VoiceAssistant:
                 transcript=transcript,
                 command_text="",
                 reason="wake_phrase_without_command",
+                wake_variant=getattr(wake, "variant", "standard"),
             )
 
         command = self.router.parse(

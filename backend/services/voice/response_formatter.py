@@ -23,6 +23,14 @@ class VoiceResponseFormatter:
         "source",
     )
 
+    _HOME_GREETINGS = (
+        "Welcome, sir.", "Welcome, Mr. Parmar.",
+        "Good to have you back, sir.", "Welcome back, Mr. Parmar.",
+    )
+
+    def __init__(self) -> None:
+        self._home_greeting_index = 0
+
     def format(self, result: Any) -> str:
         """Return a concise user-facing response."""
 
@@ -45,6 +53,11 @@ class VoiceResponseFormatter:
             )
 
         if status == "wake_only":
+            if getattr(result, "wake_variant", None) == "special_home":
+                greeting = self._HOME_GREETINGS[
+                    self._home_greeting_index % len(self._HOME_GREETINGS)]
+                self._home_greeting_index += 1
+                return greeting
             return "Yes?"
 
         if status == "no_speech":

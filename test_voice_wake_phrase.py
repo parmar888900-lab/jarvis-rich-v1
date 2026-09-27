@@ -70,11 +70,11 @@ def main():
         "Jarvis analyze trends"
     )
 
-    assert result.detected is False
-    assert result.command == ""
+    assert result.detected is True
+    assert result.command == "analyze trends"
 
     print(
-        "PASS: incomplete wake phrase is rejected."
+        "PASS: Jarvis alone is the primary wake phrase."
     )
 
 

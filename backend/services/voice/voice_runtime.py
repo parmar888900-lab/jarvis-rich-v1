@@ -27,7 +27,7 @@ async def run_voice_runtime() -> None:
     )
 
     print("Jarvis voice runtime started.")
-    print('Listening for "Hey Jarvis"...')
+    print('Listening for "Jarvis"...')
 
     while True:
         try:
@@ -37,7 +37,7 @@ async def run_voice_runtime() -> None:
                 duration_seconds=5.0,
                 confirmation_duration_seconds=4.0,
                 on_ready=lambda: print(
-                    'Listening for "Hey Jarvis"...'
+                    'Listening for "Jarvis"...'
                 ),
                 on_confirmation_ready=lambda: print(
                     "Listening for confirmation..."
@@ -81,4 +81,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

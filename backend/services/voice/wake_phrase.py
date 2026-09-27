@@ -13,12 +13,13 @@ class WakePhraseMatch:
     detected: bool
     command: str
     transcript: str
+    variant: str = "standard"
 
 
 class WakePhraseParser:
     """Extract commands that explicitly address Jarvis."""
 
-    DEFAULT_WAKE_PHRASE = "hey jarvis"
+    DEFAULT_WAKE_PHRASE = "jarvis"
 
     def __init__(
         self,
@@ -50,6 +51,12 @@ class WakePhraseParser:
             + r"(?:\s*[,.:;!?-]\s*|\s+|$)",
             flags=re.IGNORECASE,
         )
+        self._legacy = re.compile(r"^\s*hey[\s,.:;!?-]+jarvis(?:\s*[,.:;!?-]\s*|\s+|$)",
+                                  flags=re.IGNORECASE) if clean_phrase == "jarvis" else None
+        self._special = re.compile(
+            r"^\s*jarvis[\s,.:;!?\-]*wake\s+up[\s,.:;!?\-—–]*daddy['’]s\s+home"
+            r"(?:\s*[,.:;!?\-]\s*|\s+|$)", flags=re.IGNORECASE
+        ) if clean_phrase == "jarvis" else None
 
     def parse(
         self,
@@ -66,7 +73,8 @@ class WakePhraseParser:
                 transcript="",
             )
 
-        match = self._pattern.match(raw)
+        special = self._special.match(raw) if self._special else None
+        match = special or (self._legacy.match(raw) if self._legacy else None) or self._pattern.match(raw)
 
         if match is None:
             return WakePhraseMatch(
@@ -87,6 +95,7 @@ class WakePhraseParser:
             detected=True,
             command=command,
             transcript=raw,
+            variant="special_home" if special else "standard",
         )
 
     def is_wake_only(
