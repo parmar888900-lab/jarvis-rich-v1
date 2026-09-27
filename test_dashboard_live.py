@@ -24,6 +24,7 @@ def test_dashboard_shell_and_owner_only_stream(monkeypatch):
         assert "innerHTML" not in page.text
         assert client.get("/api/network/status").status_code == 401
         assert client.get("/api/network/events").status_code == 401
+        assert client.post("/api/network/control", json={"action": "pause_production"}).status_code == 401
         assert client.get("/dashboard/manifest.webmanifest").json()["display"] == "standalone"
 
 
