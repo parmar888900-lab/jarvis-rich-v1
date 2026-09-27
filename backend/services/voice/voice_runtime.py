@@ -48,9 +48,7 @@ async def run_voice_runtime() -> None:
                 confirmation_audio_path=CONFIRMATION_AUDIO,
                 duration_seconds=5.0,
                 confirmation_duration_seconds=4.0,
-                on_ready=lambda: print(
-                    'Listening for "Jarvis"...'
-                ),
+                on_ready=lambda: None,
                 on_confirmation_ready=lambda: print(
                     "Listening for confirmation..."
                 ),
@@ -58,10 +56,9 @@ async def run_voice_runtime() -> None:
 
             result = response.assistant_result
 
-            print(
-                f"Voice status={result.status} "
-                f"transcript={result.transcript!r}"
-            )
+            # Spoken text can contain secrets. Persist only the safe outcome.
+            if result.status not in {"wake_not_detected", "no_speech"}:
+                print(f"Voice status={result.status}")
             failures = 0
             write_heartbeat(HEARTBEAT, state="WAKE_LISTENING",
                             detail=result.status)

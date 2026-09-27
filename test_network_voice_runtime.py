@@ -40,3 +40,27 @@ async def test_voice_uses_default_microphone_and_independent_recovery(monkeypatc
     assert devices == [None]
     assert calls == [1, 1]
     assert waits == [2]
+
+
+@pytest.mark.asyncio
+async def test_voice_runtime_does_not_log_spoken_secrets(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(voice_runtime, "VOICE_DIR", tmp_path)
+    async def no_db():
+        return None
+    monkeypatch.setattr(voice_runtime, "init_db", no_db)
+    class Capture:
+        pass
+    class Assistant:
+        def __init__(self, audio_capture):
+            pass
+        async def interact_once(self, *args, **kwargs):
+            if not hasattr(self, "done"):
+                self.done = True
+                return SimpleNamespace(assistant_result=SimpleNamespace(
+                    status="completed", transcript="private spoken credential"))
+            raise asyncio.CancelledError
+    monkeypatch.setattr(voice_runtime, "AudioCapture", Capture)
+    monkeypatch.setattr(voice_runtime, "VoiceAssistant", Assistant)
+    with pytest.raises(asyncio.CancelledError):
+        await voice_runtime.run_voice_runtime()
+    assert "private spoken credential" not in capsys.readouterr().out
