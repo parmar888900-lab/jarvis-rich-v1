@@ -88,9 +88,10 @@ def test_technical_probe_rejects_placeholder_and_accepts_real_video_audio(tmp_pa
     if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
         pytest.skip("FFmpeg unavailable in this environment")
     actual = tmp_path / "short.mp4"
-    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=160x284:r=5",
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=1080x1920:r=30",
                     "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100",
-                    "-t", "1", "-c:v", "libx264", "-c:a", "aac", "-shortest", str(actual)],
+                    "-t", "1", "-c:v", "libx264", "-preset", "ultrafast", "-c:a", "aac",
+                    "-shortest", str(actual)],
                    check=True, timeout=30)
     assert verify_local_render(actual)
 

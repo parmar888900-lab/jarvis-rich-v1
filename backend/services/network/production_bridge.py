@@ -30,7 +30,7 @@ def verify_local_render(path: Path) -> bool:
     try:
         completed = subprocess.run(
             ["ffprobe", "-v", "error", "-show_entries",
-             "format=duration:stream=codec_type,width,height", "-of", "json", str(path)],
+             "format=duration:stream=codec_type,width,height,r_frame_rate", "-of", "json", str(path)],
             capture_output=True, text=True, timeout=20, check=False,
         )
         if completed.returncode != 0:
@@ -39,8 +39,9 @@ def verify_local_render(path: Path) -> bool:
         duration = float(probe.get("format", {}).get("duration", 0))
         streams = probe.get("streams", [])
         return (0 < duration <= 180 and any(s.get("codec_type") == "audio" for s in streams)
-                and any(s.get("codec_type") == "video" and s.get("width", 0) > 0
-                        and s.get("height", 0) > 0 for s in streams))
+                and any(s.get("codec_type") == "video" and s.get("width") == 1080
+                        and s.get("height") == 1920
+                        and s.get("r_frame_rate") in {"30/1", "30"} for s in streams))
     except (OSError, ValueError, TypeError, json.JSONDecodeError, subprocess.TimeoutExpired):
         return False
 
