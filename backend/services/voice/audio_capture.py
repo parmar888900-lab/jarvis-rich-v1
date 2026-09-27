@@ -6,7 +6,16 @@ from pathlib import Path
 import wave
 
 import numpy as np
-import sounddevice as sd
+try:
+    import sounddevice as sd
+except (ImportError, OSError):  # Missing native PortAudio is a recoverable device failure.
+    from types import SimpleNamespace
+
+    def _unavailable(*_args, **_kwargs):
+        raise RuntimeError("PortAudio microphone runtime unavailable")
+
+    sd = SimpleNamespace(query_devices=_unavailable, check_input_settings=_unavailable,
+                         InputStream=_unavailable)
 
 
 class AudioCapture:

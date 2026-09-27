@@ -98,6 +98,9 @@ class VoiceResponseFormatter:
             None,
         )
 
+        if agent == "network" and isinstance(payload, dict):
+            return str(payload.get("message") or "Network command completed.")
+
         if (
             agent == "youtube"
             and task == "analyze_trends"

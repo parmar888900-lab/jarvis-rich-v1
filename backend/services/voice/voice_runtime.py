@@ -8,6 +8,7 @@ from pathlib import Path
 
 from backend.services.network.instance_lock import instance_lock
 from backend.services.network.heartbeat import write_heartbeat
+from backend.database import init_db
 
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ async def run_voice_runtime() -> None:
     """Continuously listen for Jarvis voice interactions."""
 
     VOICE_DIR.mkdir(parents=True, exist_ok=True)
+    await init_db()
 
     assistant_type, capture_type = VoiceAssistant, AudioCapture
     if assistant_type is None:

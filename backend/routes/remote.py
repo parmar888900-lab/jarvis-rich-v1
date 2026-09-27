@@ -21,6 +21,8 @@ from backend.services.voice.command_router import VoiceCommandRouter
 from backend.services.voice.transcriber import WhisperTranscriber
 from backend.services.voice.wake_phrase import WakePhraseParser
 from backend.services.voice.response_formatter import VoiceResponseFormatter
+from backend.database import async_session
+from backend.services.network.voice_commands import route_network_command
 from backend.services.video.voice_generator import VoiceGenerator
 
 
@@ -76,6 +78,10 @@ async def _execute_command_text(
 ) -> dict:
     """Parse and safely execute one natural-language command."""
 
+    network = await route_network_command(command, async_session, root=Path.cwd())
+    if network is not None:
+        return network
+
     parsed = command_router.parse(
         command
     )
@@ -123,7 +129,7 @@ async def _route_manual_voice(transcript: str) -> dict:
     if wake.variant == "special_home":
         greeting = voice_formatter.format(SimpleNamespace(
             status="wake_only", wake_variant="special_home"))
-        result["message"] = f"{greeting} {voice_formatter.format(SimpleNamespace(**result))}"
+        result["message"] = f"{greeting} {result.get('message') or voice_formatter.format(SimpleNamespace(**result))}"
     else:
         result["message"] = voice_formatter.format(SimpleNamespace(**result))
     return result

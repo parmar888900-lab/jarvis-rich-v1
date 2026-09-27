@@ -6,7 +6,15 @@ import wave
 from pathlib import Path
 
 import numpy as np
-import sounddevice as sd
+try:
+    import sounddevice as sd
+except (ImportError, OSError):
+    from types import SimpleNamespace
+
+    def _unavailable(*_args, **_kwargs):
+        raise RuntimeError("PortAudio speaker runtime unavailable")
+
+    sd = SimpleNamespace(query_devices=_unavailable, play=_unavailable)
 
 
 class AudioPlayer:

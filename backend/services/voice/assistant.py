@@ -15,6 +15,7 @@ from backend.services.voice.command_executor import (
     VoiceExecutionResult,
 )
 from backend.services.voice.command_router import (
+    VoiceCommand,
     VoiceCommandRouter,
 )
 from backend.services.voice.transcriber import (
@@ -344,6 +345,23 @@ class VoiceAssistant:
                 command_text="",
                 reason="confirmed_command_missing",
             )
+
+        if command.agent == "network":
+            from backend.database import async_session
+            from backend.services.network.voice_commands import route_network_command
+            network = await route_network_command(
+                "confirm " + command.transcript, async_session, root=Path.cwd())
+            if network is None or network["status"] != "completed":
+                return VoiceAssistantResult(
+                    status="execution_failed", transcript=normalized_transcript,
+                    command_text=command.transcript, agent="network", task=command.task,
+                    reason="network_confirmation_failed")
+            return VoiceAssistantResult(
+                status="completed", transcript=normalized_transcript,
+                command_text=command.transcript, agent="network", task=command.task,
+                execution=VoiceExecutionResult(
+                    status="completed", command_id=None, agent="network",
+                    task=command.task, result=network))
 
         execution = await self.executor.execute(
             command,
@@ -685,6 +703,31 @@ class VoiceAssistant:
                 transcript=transcript,
                 command_text="",
                 reason="wake_phrase_without_command",
+                wake_variant=getattr(wake, "variant", "standard"),
+            )
+
+        # Network commands use the same persisted controls as the owner
+        # dashboard. Unrecognized requests continue through Commander.
+        from backend.database import async_session
+        from backend.services.network.voice_commands import route_network_command
+        network = await route_network_command(command_text, async_session, root=Path.cwd())
+        if network is not None:
+            if network["status"] == "confirmation_required":
+                pending = self.confirmation_manager.request(VoiceCommand(
+                    status="ready", transcript=command_text, agent="network",
+                    task=network["task"], requires_confirmation=True))
+                if pending.status != "pending":
+                    return VoiceAssistantResult(
+                        status="blocked", transcript=transcript,
+                        command_text=command_text, agent="network",
+                        reason="network_confirmation_unavailable")
+            return VoiceAssistantResult(
+                status=network["status"], transcript=transcript,
+                command_text=command_text, agent="network", task=network["task"],
+                requires_confirmation=network["status"] == "confirmation_required",
+                execution=VoiceExecutionResult(
+                    status=network["status"], command_id=None, agent="network",
+                    task=network["task"], result=network),
                 wake_variant=getattr(wake, "variant", "standard"),
             )
 
