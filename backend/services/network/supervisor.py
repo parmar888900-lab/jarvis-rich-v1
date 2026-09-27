@@ -17,6 +17,7 @@ from backend.models.network_control import NetworkControl
 from backend.models.network_job import NetworkJob
 from backend.services.network.job_store import ACTIVE_STATES, JobStore
 from backend.services.runtime.execution_watchdog import run_bounded
+from backend.services.runtime.capabilities import RuntimeCapabilityService
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -24,9 +25,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 class NetworkSupervisor:
     def __init__(self, sessions, *, runner=run_bounded, root: Path = PROJECT_ROOT,
-                 max_job_seconds: int = 7200, max_plan_seconds: int = 1200):
+                 max_job_seconds: int = 7200, max_plan_seconds: int = 1200,
+                 readiness=None):
         self.sessions, self.runner, self.root = sessions, runner, root
         self.max_job_seconds, self.max_plan_seconds = max_job_seconds, max_plan_seconds
+        self.readiness = readiness or (lambda: RuntimeCapabilityService().inspect().missing_required)
 
     async def tick(self) -> dict:
         async with self.sessions() as db:
@@ -67,6 +70,13 @@ class NetworkSupervisor:
                 channel = await db.get(NetworkChannel, job.channel_id)
                 if channel is None or channel.lifecycle_state != "ACTIVE" or channel.paused:
                     continue
+                # Private, local QA does not need a YouTube token. All other
+                # production dependencies remain required; never burn hours
+                # repeatedly launching a known-incomplete runtime.
+                missing = [name for name in self.readiness() if name != "youtube_token"]
+                if missing:
+                    return {"status": "runtime_unready", "missing_required": missing,
+                            "job_id": job.id, "recovered": recovered}
                 return await self._execute("job", job.id, self.max_job_seconds,
                                            recovered=recovered)
             return {"status": "idle", "recovered": recovered}

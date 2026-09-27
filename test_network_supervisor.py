@@ -28,7 +28,7 @@ async def test_supervisor_plans_then_runs_persisted_queue_with_kill_and_disk_gat
         assert kwargs["timeout_seconds"] <= 7200
         return SimpleNamespace(returncode=0)
 
-    worker = NetworkSupervisor(sessions, runner=bounded, root=tmp_path)
+    worker = NetworkSupervisor(sessions, runner=bounded, root=tmp_path, readiness=lambda: [])
     async with sessions() as db:
         channel = await ChannelRegistry().register(db, name="Space", niche="science",
                                                    editorial_identity="JWST mechanisms",
@@ -43,6 +43,12 @@ async def test_supervisor_plans_then_runs_persisted_queue_with_kill_and_disk_gat
         await db.commit()
         job = await JobStore().enqueue(db, channel_id=channel.id,
                                        idempotency_key="queued", topic="Webb mirror")
+    worker.readiness = lambda: ("piper_executable", "youtube_token")
+    unready = await worker.tick()
+    assert unready["status"] == "runtime_unready"
+    assert unready["missing_required"] == ["piper_executable"]
+    assert len(calls) == 1
+    worker.readiness = lambda: []
     assert (await worker.tick())["kind"] == "job"
     assert "run_network_job.py" in calls[-1][0][1]
     async with sessions() as db:
