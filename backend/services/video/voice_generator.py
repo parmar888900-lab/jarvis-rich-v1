@@ -9,6 +9,7 @@ from pathlib import Path
 
 from backend.services.storyboard.scene import Scene
 from backend.services.runtime.runtime_config import RuntimeConfig
+from backend.services.runtime.execution_watchdog import run_bounded
 
 
 class VoiceGenerator:
@@ -174,32 +175,19 @@ class VoiceGenerator:
         output_file: Path,
     ) -> None:
 
-        process = await asyncio.create_subprocess_exec(
-            str(self.piper_executable),
-            "-m",
-            str(self.model_path),
-            "-f",
-            str(output_file),
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        # The process-tree watchdog bounds Piper and any descendants. It
+        # preserves a completed WAV if a later operation fails.
+        result = await asyncio.to_thread(
+            run_bounded,
+            [str(self.piper_executable), "-m", str(self.model_path),
+             "-f", str(output_file)],
+            stage="piper-tts", timeout_seconds=min(900, max(120, len(script.split()) * 4)),
+            heartbeat_seconds=15, stdin_data=script.encode("utf-8"),
+            log_path=self.output_dir / "piper.log",
         )
 
-        _, stderr = await process.communicate(
-            input=script.encode("utf-8")
-        )
-
-        if process.returncode != 0:
-
-            error_message = stderr.decode(
-                "utf-8",
-                errors="replace",
-            )
-
-            raise RuntimeError(
-                "Piper voice generation failed: "
-                f"{error_message}"
-            )
+        if result.returncode != 0:
+            raise RuntimeError("Piper voice generation failed")
 
         if not output_file.exists():
             raise RuntimeError(

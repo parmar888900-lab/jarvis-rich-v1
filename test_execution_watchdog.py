@@ -60,6 +60,16 @@ def test_success_failure_and_append_only_child_logs(tmp_path):
     assert (failed.status, failed.returncode) == ("failed", 7)
 
 
+def test_bounded_stdin_for_piper_style_workload(tmp_path):
+    output = tmp_path / "speech.txt"
+    secret_script = b"Welcome, Mr. Parmar."
+    result = _run(f"import sys; from pathlib import Path; Path({str(output)!r}).write_bytes(sys.stdin.buffer.read())",
+                  timeout_seconds=5, stdin_data=secret_script,
+                  on_event=lambda event: None)
+    assert result.returncode == 0
+    assert output.read_bytes() == secret_script
+
+
 @pytest.mark.parametrize("bad", [0, -1, float("inf"), float("nan"), -float("inf")])
 def test_rejects_nonfinite_or_nonpositive_deadlines(bad):
     with pytest.raises(ValueError, match="timeout_seconds"):

@@ -224,6 +224,7 @@ def run_bounded(
     env: Mapping[str, str] | None = None,
     log_path: str | Path | None = None,
     on_event: Callable[[dict], None] | None = None,
+    stdin_data: bytes | None = None,
 ) -> ExecutionResult:
     """Run without a shell, returning failure exit codes and raising on timeout.
 
@@ -240,6 +241,8 @@ def run_bounded(
         raise ValueError("stage must be a nonempty, single-line label of at most 128 characters")
     if isinstance(command, (str, bytes)) or not command or any(not isinstance(arg, str) or "\0" in arg for arg in command):
         raise ValueError("command must be a nonempty sequence of string arguments")
+    if stdin_data is not None and not isinstance(stdin_data, bytes):
+        raise ValueError("stdin_data must be bytes")
     emit = on_event or _default_event
     started = time.monotonic()
     process = None
@@ -269,7 +272,7 @@ def run_bounded(
             log_handle = path.open("ab", buffering=0)
         options = dict(cwd=cwd, env=env, stdout=log_handle,
                        stderr=subprocess.STDOUT if log_handle else None,
-                       stdin=subprocess.DEVNULL)
+                       stdin=subprocess.PIPE if stdin_data is not None else subprocess.DEVNULL)
         if os.name == "nt":
             job = _WindowsJob()
             # CREATE_SUSPENDED | CREATE_NEW_PROCESS_GROUP: assign before any code runs.
@@ -283,6 +286,15 @@ def run_bounded(
             raise ExecutionWatchdogError(f"Stage {stage!r} could not start") from None
         if job is not None:
             job.assign_and_resume(process.pid)
+        if stdin_data is not None:
+            def send_input():
+                try:
+                    process.stdin.write(stdin_data)
+                    process.stdin.close()
+                except (BrokenPipeError, OSError):
+                    pass
+            threading.Thread(target=send_input, daemon=True,
+                             name=f"stdin-{stage}").start()
         emit(asdict(result("started")))
         next_heartbeat = time.monotonic() + heartbeat
         deadline = started + timeout
