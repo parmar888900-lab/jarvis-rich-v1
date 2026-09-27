@@ -919,8 +919,9 @@ class VideoRenderer:
 
                 phrases = (
                     await self.caption_aligner
-                    .align_phrases(
-                        str(audio_path)
+                    .align_script_phrases(
+                        str(audio_path),
+                        content.full_script,
                     )
                 )
 
