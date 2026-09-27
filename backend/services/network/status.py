@@ -14,6 +14,7 @@ from backend.models.network_allocation import NetworkAllocation
 from backend.models.network_channel import NetworkChannel
 from backend.models.network_control import NetworkControl
 from backend.models.network_job import NetworkJob
+from backend.services.runtime.capabilities import RuntimeCapabilityService
 
 
 async def network_snapshot(db: AsyncSession, *, storage_path: Path) -> dict:
@@ -61,4 +62,5 @@ async def network_snapshot(db: AsyncSession, *, storage_path: Path) -> dict:
         "system": {"disk_total_bytes": disk.total, "disk_free_bytes": disk.free,
                    "ffmpeg_available": shutil.which("ffmpeg") is not None,
                    "cpu_percent": None, "ram_percent": None, "gpu_percent": None},
+        "runtime_capabilities": RuntimeCapabilityService().inspect().as_dict(),
     }
