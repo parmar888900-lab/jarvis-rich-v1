@@ -6,8 +6,7 @@ import asyncio
 import logging
 from pathlib import Path
 
-from backend.services.voice.assistant import VoiceAssistant
-from backend.services.voice.audio_capture import AudioCapture
+from backend.services.network.instance_lock import instance_lock
 
 
 logger = logging.getLogger(__name__)
@@ -15,6 +14,8 @@ logger = logging.getLogger(__name__)
 VOICE_DIR = Path("generated") / "voice_runtime"
 COMMAND_AUDIO = VOICE_DIR / "command.wav"
 CONFIRMATION_AUDIO = VOICE_DIR / "confirmation.wav"
+VoiceAssistant = None
+AudioCapture = None
 
 
 async def run_voice_runtime() -> None:
@@ -22,13 +23,19 @@ async def run_voice_runtime() -> None:
 
     VOICE_DIR.mkdir(parents=True, exist_ok=True)
 
-    assistant = VoiceAssistant(
-        audio_capture=AudioCapture(device=2),
+    assistant_type, capture_type = VoiceAssistant, AudioCapture
+    if assistant_type is None:
+        from backend.services.voice.assistant import VoiceAssistant as assistant_type
+    if capture_type is None:
+        from backend.services.voice.audio_capture import AudioCapture as capture_type
+    assistant = assistant_type(
+        audio_capture=capture_type(),
     )
 
     print("Jarvis voice runtime started.")
     print('Listening for "Jarvis"...')
 
+    failures = 0
     while True:
         try:
             response = await assistant.interact_once(
@@ -50,6 +57,7 @@ async def run_voice_runtime() -> None:
                 f"Voice status={result.status} "
                 f"transcript={result.transcript!r}"
             )
+            failures = 0
 
         except KeyboardInterrupt:
             raise
@@ -61,7 +69,8 @@ async def run_voice_runtime() -> None:
             logger.exception(
                 "Voice interaction failed; continuing."
             )
-            await asyncio.sleep(1)
+            failures += 1
+            await asyncio.sleep(min(60, 2 ** min(failures, 6)))
 
 
 def main() -> None:
@@ -74,7 +83,8 @@ def main() -> None:
     )
 
     try:
-        asyncio.run(run_voice_runtime())
+        with instance_lock(Path("generated/state/voice_runtime.lock")):
+            asyncio.run(run_voice_runtime())
     except KeyboardInterrupt:
         print("\nJarvis voice runtime stopped.")
 

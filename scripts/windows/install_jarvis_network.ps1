@@ -7,3 +7,6 @@ $action = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument ('/d /c "' + $run
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $settings = New-ScheduledTaskSettingsSet -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Seconds 0) -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName 'JarvisNetwork' -Action $action -Trigger $trigger -Settings $settings -Description 'Local Jarvis QA-only production supervisor' -Force
+$voiceRunner = Join-Path $PSScriptRoot 'run_jarvis_voice.cmd'
+$voiceAction = New-ScheduledTaskAction -Execute 'cmd.exe' -Argument ('/d /c "' + $voiceRunner + '"') -WorkingDirectory (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+Register-ScheduledTask -TaskName 'JarvisVoice' -Action $voiceAction -Trigger $trigger -Settings $settings -Description 'Local restartable Jarvis wake and voice service' -Force
