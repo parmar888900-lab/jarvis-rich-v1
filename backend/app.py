@@ -17,6 +17,7 @@ from backend.routes import (
     production,
     settings as settings_routes,
     remote,
+    network,
 )
 from backend.services.orchestration.production_operation_recovery_runner import (
     ProductionOperationRecoveryRunner,
@@ -256,6 +257,7 @@ app.include_router(
     tags=["settings"],
 )
 app.include_router(remote.router)
+app.include_router(network.router)
 
 
 @app.get("/")
@@ -266,4 +268,3 @@ async def root():
         "status": "running",
         "docs": "/docs",
     }
-

@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-from backend.routes import remote
+from backend.routes import remote, network
 
 
 app = FastAPI(
@@ -14,6 +14,7 @@ app = FastAPI(
 )
 
 app.include_router(remote.router)
+app.include_router(network.router)
 
 
 @app.get("/health")
