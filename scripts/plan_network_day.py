@@ -18,6 +18,22 @@ from backend.services.network.allocation import DailyAllocator  # noqa: E402
 from backend.services.network.topic_source import candidate_from_analysis  # noqa: E402
 
 
+async def select_candidate(channel):
+    from backend.services.commander import Commander
+    analysis = await Commander().route(agent="youtube", task="analyze_trends",
+                                       command_id=f"{channel.id}:network-plan",
+                                       allowed_topics=channel.allowed_topics,
+                                       blocked_topics=channel.blocked_topics)
+    if analysis.get("status") not in {"success", "no_production_ready_topic"}:
+        raise RuntimeError("Topic selection unavailable; preserve unplanned state")
+    trend = analysis.get("best_trend")
+    if analysis.get("status") == "success" and isinstance(trend, dict):
+        from backend.services.research.evergreen_research_service import EvergreenResearchService
+        pack = await asyncio.to_thread(EvergreenResearchService().research, trend["title"])
+        trend["knowledge"] = pack.to_dict()
+    return candidate_from_analysis(channel, analysis)
+
+
 async def run(channel_id: str):
     os.environ["JARVIS_PUBLIC_PUBLISH_ENABLED"] = "false"
     await init_db()
@@ -27,21 +43,7 @@ async def run(channel_id: str):
             raise ValueError("Channel is not active")
         if not channel.allowed_topics:
             raise ValueError("Channel needs editorial allowed_topics before planning")
-        from backend.services.commander import Commander
-        analysis = await Commander().route(agent="youtube", task="analyze_trends",
-                                           command_id=f"{channel_id}:network-plan",
-                                           allowed_topics=channel.allowed_topics,
-                                           blocked_topics=channel.blocked_topics)
-        if analysis.get("status") not in {"success", "no_production_ready_topic"}:
-            raise RuntimeError("Topic selection unavailable; preserve today's unplanned state")
-        trend = analysis.get("best_trend")
-        if analysis.get("status") == "success" and isinstance(trend, dict):
-            # Evergreen's credibility is a title heuristic. Measure evidence
-            # against actual sources before the network allocation gate.
-            from backend.services.research.evergreen_research_service import EvergreenResearchService
-            pack = await asyncio.to_thread(EvergreenResearchService().research, trend["title"])
-            trend["knowledge"] = pack.to_dict()
-        candidate = candidate_from_analysis(channel, analysis)
+        candidate = await select_candidate(channel)
         decision = await DailyAllocator().allocate(db, channel_id=channel_id,
                                                    candidates=[candidate] if candidate else [])
         print(f"channel={channel_id} date={decision.local_date} jobs={decision.target}", flush=True)

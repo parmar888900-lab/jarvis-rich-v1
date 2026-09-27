@@ -75,3 +75,50 @@ async def test_allocation_rejects_unmeasured_opportunity(tmp_path):
             await DailyAllocator().allocate(db, channel_id=channel.id,
                                             candidates=[{"topic": "A topic", "quality": 1}])
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_private_commission_preserves_sealed_zero_allocation_and_originality(tmp_path):
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'commission.db'}")
+    async with engine.begin() as connection:
+        for model in (NetworkChannel, NetworkJob, NetworkJobEvent,
+                      NetworkContentIdentity, NetworkAllocation):
+            await connection.run_sync(model.__table__.create)
+    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    async with sessions() as db:
+        channel = await ChannelRegistry().register(db, name="Space", niche="science",
+            editorial_identity="Webb mechanisms", allowed_topics=["Webb"], max_daily_posts=1)
+        await ChannelRegistry().set_state(db, channel.id, "ACTIVE")
+        sealed = await DailyAllocator().allocate(db, channel_id=channel.id, candidates=[])
+        assert sealed.target == 0
+        vetted = candidate("How Webb deployed its mirror", .72)
+        vetted["selected_trend"]["production_selection"].update(
+            {"production_score": 72, "visual_supply": 72})
+        vetted["selected_trend"]["knowledge"] = {"score": 72,
+            "sources": [{"url": "https://images.nasa.gov/details/test"}], "facts": ["NASA evidence"]}
+        job = await DailyAllocator().commission_one(db, channel_id=channel.id,
+                                                      candidate=vetted)
+        same = await DailyAllocator().commission_one(db, channel_id=channel.id,
+                                                       candidate=vetted)
+        assert same.id == job.id
+        assert job.scheduler_decision["selection_source"] == "audited_private_commissioning"
+        assert job.state == "QUEUED"
+        assert (await db.get(NetworkAllocation, sealed.id)).target == 0
+        assert (await db.scalars(select(NetworkContentIdentity))).first().job_id == job.id
+        weak = {**vetted, "topic": "Webb weak", "quality": .54,
+                "evidence": .54, "visual": .54,
+                "selected_trend": {**vetted["selected_trend"], "title": "Webb weak",
+                    "production_selection": {**vetted["selected_trend"]["production_selection"],
+                        "production_score": 54, "visual_supply": 54},
+                    "knowledge": {**vetted["selected_trend"]["knowledge"], "score": 54}}}
+        with pytest.raises(ValueError, match="threshold"):
+            await DailyAllocator().commission_one(db, channel_id=channel.id,
+                                                  candidate=weak)
+        with pytest.raises(ValueError, match="channel-vetted"):
+            await DailyAllocator().commission_one(db, channel_id=channel.id,
+                                                  candidate=candidate("Mars rover", .9))
+        forged = {**vetted, "evidence": 1.0}
+        with pytest.raises(ValueError, match="measured"):
+            await DailyAllocator().commission_one(db, channel_id=channel.id,
+                                                  candidate=forged)
+    await engine.dispose()

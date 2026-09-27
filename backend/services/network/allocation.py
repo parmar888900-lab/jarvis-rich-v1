@@ -26,6 +26,58 @@ def _score(item: dict) -> float:
 
 
 class DailyAllocator:
+    async def commission_one(self, session: AsyncSession, *, channel_id: str,
+                             candidate: dict, at: datetime | None = None) -> NetworkJob:
+        """Audited one-off QA job without altering a sealed daily allocation.
+
+        Intended for commissioning after a planning defect is repaired. It
+        retains all editorial, opportunity, capacity and originality gates.
+        """
+        channel = await session.get(NetworkChannel, channel_id)
+        if channel is None or channel.lifecycle_state != "ACTIVE" or channel.paused:
+            raise ValueError("Channel is not active")
+        now = at or datetime.now(timezone.utc)
+        today = now.astimezone(ZoneInfo(channel.timezone)).date().isoformat()
+        topic = str(candidate.get("topic") or "").strip()
+        trend = candidate.get("selected_trend")
+        selection = trend.get("production_selection") if isinstance(trend, dict) else None
+        if (not topic or not isinstance(selection, dict) or trend.get("title") != topic
+                or selection.get("eligible") is not True or selection.get("selected") is not True
+                or not channel.allowed_topics
+                or not any(term.casefold() in topic.casefold() for term in channel.allowed_topics)
+                or any(term.casefold() in topic.casefold() for term in channel.blocked_topics)):
+            raise ValueError("Commissioning needs a channel-vetted selected topic")
+        from backend.services.network.topic_source import candidate_from_analysis
+        measured = candidate_from_analysis(channel, {"status": "success", "best_trend": trend})
+        if measured is None or any(candidate.get(signal) != measured[signal]
+                                   for signal in ("quality", "evidence", "visual")):
+            raise ValueError("Commissioning needs source-backed measured scores")
+        score = _score(candidate)
+        if score < .55:
+            raise ValueError("Commissioning topic is below the production threshold")
+        key = f"commission:{channel_id}:{today}"
+        existing = await session.scalar(select(NetworkJob).where(NetworkJob.idempotency_key == key))
+        if existing:
+            return existing
+        jobs = (await session.scalars(select(NetworkJob).where(NetworkJob.channel_id == channel_id))).all()
+        used = sum(1 for job in jobs if (job.created_at.replace(tzinfo=timezone.utc)
+            if job.created_at.tzinfo is None else job.created_at).astimezone(
+                ZoneInfo(channel.timezone)).date().isoformat() == today)
+        if used >= min(4, channel.max_daily_posts):
+            raise ValueError("Channel daily capacity exhausted")
+        job = await JobStore().enqueue(session, channel_id=channel_id,
+            idempotency_key=key, topic=topic,
+            scheduler_decision={"score": score, "local_date": today,
+                "selection_source": "audited_private_commissioning",
+                "selected_trend": trend})
+        try:
+            await OriginalityGate().reserve(session, job_id=job.id, topic=topic,
+                central_claim=candidate.get("claim"), hook=candidate.get("hook"))
+        except DuplicateContentError as exc:
+            await JobStore().transition(session, job.id, "FAILED", reason=str(exc))
+            raise
+        return job
+
     async def allocate(self, session: AsyncSession, *, channel_id: str,
                        candidates: list[dict], at: datetime | None = None) -> NetworkAllocation:
         channel = await session.get(NetworkChannel, channel_id)
