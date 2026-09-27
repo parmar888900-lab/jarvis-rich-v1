@@ -1,0 +1,42 @@
+{
+  "status": "recovered official sources; timestamp matches remain coarse and are not semantic approvals",
+  "parent_sha256": "32e5c233c581f6714c9be81b94c51e106eced016f1043ffaa559355c2b62bb26",
+  "sources": [
+    {
+      "provider": "NASA Images",
+      "nasa_id": "Webb_Mirror_Phasing_ChamberA_Social_media-h264",
+      "source_url": "https://images-assets.nasa.gov/video/Webb_Mirror_Phasing_ChamberA_Social_media-h264/Webb_Mirror_Phasing_ChamberA_Social_media-h264~orig.mp4",
+      "source_api": "https://images-api.nasa.gov/asset/Webb_Mirror_Phasing_ChamberA_Social_media-h264",
+      "license_name": "NASA Media",
+      "license_url": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+      "usage_basis": "Inherited R13 official NASA source approval; NASA source audio not used",
+      "creator": "NASA",
+      "bytes": 186171055,
+      "sha256": "ad790027cab8b0fae8fd3c24c064e68aee038e2f22caf05c0f96b23426eb814a"
+    },
+    {
+      "provider": "NASA Images",
+      "nasa_id": "Mission_Overview_MASTER-h264",
+      "source_url": "https://images-assets.nasa.gov/video/Mission_Overview_MASTER-h264/Mission_Overview_MASTER-h264~orig.mp4",
+      "source_api": "https://images-api.nasa.gov/asset/Mission_Overview_MASTER-h264",
+      "license_name": "NASA Media",
+      "license_url": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+      "usage_basis": "Inherited R13 official NASA source approval; NASA source audio not used",
+      "creator": "NASA",
+      "bytes": 287195940,
+      "sha256": "2976732f4813956e18ec89031989b1e66b1dde5eda509c7fcc00f36f2beab87b"
+    },
+    {
+      "provider": "NASA Images",
+      "nasa_id": "GSFC_201908006_JWST_m13273_SMS_Deploy",
+      "source_url": "https://images-assets.nasa.gov/video/GSFC_201908006_JWST_m13273_SMS_Deploy/GSFC_201908006_JWST_m13273_SMS_Deploy~orig.mp4",
+      "source_api": "https://images-api.nasa.gov/asset/GSFC_201908006_JWST_m13273_SMS_Deploy",
+      "license_name": "NASA Media",
+      "license_url": "https://www.nasa.gov/nasa-brand-center/images-and-media/",
+      "usage_basis": "Inherited R13 official NASA source approval; NASA source audio not used",
+      "creator": "NASA",
+      "bytes": 106988251,
+      "sha256": "c307a57a1b01696af815502873e12779c903e0d74a8cf05bfb4b07fc269d98b7"
+    }
+  ]
+}
