@@ -99,6 +99,7 @@ class EvergreenContentSelector:
             "Why precision bearings matter inside machines",
         ],
         "space_aviation": [
+            "How James Webb Space Telescope unfolded its mirror after launch",
             "Why rockets launch vertically",
             "How spacecraft survive the heat of reentry",
             "Why commercial airplanes cruise so high",
@@ -221,6 +222,8 @@ class EvergreenContentSelector:
         performance: dict[str, Any] | None = None,
         goal_strategy: dict[str, Any] | None = None,
         format_name: str | None = None,
+        allowed_topics: list[str] | None = None,
+        blocked_topics: list[str] | None = None,
     ) -> dict[str, Any] | None:
         """Return one production-authorized evergreen candidate."""
 
@@ -240,6 +243,14 @@ class EvergreenContentSelector:
                 continue
 
             for topic in topics:
+                if allowed_topics is not None and not any(
+                    term and term.casefold() in topic.casefold() for term in allowed_topics
+                ):
+                    continue
+                if any(
+                    term and term.casefold() in topic.casefold() for term in blocked_topics or []
+                ):
+                    continue
                 if topic in self._recent:
                     continue
 
@@ -251,7 +262,7 @@ class EvergreenContentSelector:
                     )
                 )
 
-        if not candidates:
+        if not candidates and allowed_topics is None:
             self._recent.clear()
 
             return self.select(
@@ -260,6 +271,9 @@ class EvergreenContentSelector:
                 goal_strategy=goal_strategy,
                 format_name=format_name,
             )
+
+        if not candidates:
+            return None
 
         candidates.sort(
             key=lambda item: (
@@ -552,4 +566,3 @@ class EvergreenContentSelector:
                 channel_fit
             ),
         }
-

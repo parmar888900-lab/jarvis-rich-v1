@@ -27,8 +27,21 @@ def candidate_from_analysis(channel: NetworkChannel, analysis: dict) -> dict | N
         return None
     try:
         quality = float(selection["production_score"]) / 100
-        evidence = float(selection["research_confidence"]) / 100
-        visual = float(selection["suitability_score"]) / 100
+        if "research_confidence" in selection and "suitability_score" in selection:
+            evidence = float(selection["research_confidence"]) / 100
+            visual = float(selection["suitability_score"]) / 100
+        else:
+            # Evergreen's credibility is not research confidence. The planner
+            # must have researched actual sources before accepting this schema.
+            knowledge = trend["knowledge"]
+            if (not isinstance(knowledge, dict)
+                    or not isinstance(knowledge.get("sources"), list)
+                    or not any(isinstance(source, dict) and source.get("url")
+                               for source in knowledge["sources"])
+                    or not knowledge.get("facts")):
+                return None
+            evidence = float(knowledge["score"]) / 100
+            visual = float(selection["visual_supply"]) / 100
     except (TypeError, ValueError, KeyError):
         return None
     if not all(0 <= score <= 1 for score in (quality, evidence, visual)):

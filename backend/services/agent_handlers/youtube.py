@@ -112,7 +112,7 @@ class YoutubeAgentHandler(BaseAgentHandler):
 
         if task == "analyze_trends":
             return await self._analyze_trends(
-                command_id
+                command_id, **kwargs
             )
 
         if task == "create_video":
@@ -390,6 +390,8 @@ class YoutubeAgentHandler(BaseAgentHandler):
     async def _analyze_trends(
         self,
         command_id: str,
+        *, allowed_topics: list[str] | None = None,
+        blocked_topics: list[str] | None = None,
     ) -> dict:
         """
         Select an evergreen production topic.
@@ -423,13 +425,15 @@ class YoutubeAgentHandler(BaseAgentHandler):
             daily_target=1,
         )
 
-        locked_format = slots[0].format_name
+        locked_format = slots[0].format_name if allowed_topics is None else None
 
         best_topic = self.selector.select(
             content_id=content_id,
             performance=performance,
             goal_strategy=goal_strategy,
             format_name=locked_format,
+            allowed_topics=allowed_topics,
+            blocked_topics=blocked_topics,
         )
 
         if best_topic is None:
@@ -683,5 +687,4 @@ class YoutubeAgentHandler(BaseAgentHandler):
             "privacy_status": privacy,
             "upload": operation_result,
         }
-
 

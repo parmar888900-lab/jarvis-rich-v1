@@ -29,9 +29,18 @@ async def run(channel_id: str):
             raise ValueError("Channel needs editorial allowed_topics before planning")
         from backend.services.commander import Commander
         analysis = await Commander().route(agent="youtube", task="analyze_trends",
-                                           command_id=f"{channel_id}:network-plan")
+                                           command_id=f"{channel_id}:network-plan",
+                                           allowed_topics=channel.allowed_topics,
+                                           blocked_topics=channel.blocked_topics)
         if analysis.get("status") not in {"success", "no_production_ready_topic"}:
             raise RuntimeError("Topic selection unavailable; preserve today's unplanned state")
+        trend = analysis.get("best_trend")
+        if analysis.get("status") == "success" and isinstance(trend, dict):
+            # Evergreen's credibility is a title heuristic. Measure evidence
+            # against actual sources before the network allocation gate.
+            from backend.services.research.evergreen_research_service import EvergreenResearchService
+            pack = await asyncio.to_thread(EvergreenResearchService().research, trend["title"])
+            trend["knowledge"] = pack.to_dict()
         candidate = candidate_from_analysis(channel, analysis)
         decision = await DailyAllocator().allocate(db, channel_id=channel_id,
                                                    candidates=[candidate] if candidate else [])

@@ -17,6 +17,7 @@ from backend.services.network.channel_registry import ChannelRegistry
 from backend.services.network.production_bridge import ProductionBridge
 from backend.services.network.status import network_snapshot
 from backend.services.network.topic_source import candidate_from_analysis
+from backend.services.intelligence.evergreen_content_selector import EvergreenContentSelector
 
 
 class EngineBoundary:
@@ -47,10 +48,11 @@ async def test_channel_to_qa_lineage_and_status_survives_restart(tmp_path, monke
                                                    editorial_identity="Webb mechanics",
                                                    allowed_topics=["Webb"], max_daily_posts=2)
         await ChannelRegistry().set_state(db, channel.id, "ACTIVE")
-        analysis = {"status": "success", "best_trend": {
-            "title": "Webb mirror deployment", "production_selection": {
-                "eligible": True, "selected": True, "production_score": 91,
-                "research_confidence": 88, "suitability_score": 90}}}
+        monkeypatch.setattr(EvergreenContentSelector, "STATE_PATH", tmp_path / "selector.json")
+        trend = EvergreenContentSelector().select(content_id="network", allowed_topics=["Webb"])
+        trend["knowledge"] = {"score": 88, "sources": [{"url": "https://images.nasa.gov/details/Webb"}],
+                              "facts": ["The mirror unfolded after launch."]}
+        analysis = {"status": "success", "best_trend": trend}
         candidate = candidate_from_analysis(channel, analysis)
         assert candidate is not None
         decision = await DailyAllocator().allocate(
@@ -70,7 +72,7 @@ async def test_channel_to_qa_lineage_and_status_survives_restart(tmp_path, monke
     sessions = async_sessionmaker(restarted, expire_on_commit=False)
     renderer = EngineBoundary(video, package)
     await ProductionBridge(sessions, orchestrator=renderer).run(job_id, worker_id="dry-run")
-    assert renderer.calls[0][1]["title"] == "Webb mirror deployment"
+    assert renderer.calls[0][1]["title"] == trend["title"]
     async with sessions() as db:
         snapshot = await network_snapshot(db, storage_path=tmp_path)
         assert snapshot["jobs"][0]["state"] == "QA"
