@@ -1,5 +1,6 @@
-from PIL import Image
-from moviepy import ColorClip
+import numpy as np
+from PIL import Image, ImageDraw
+from moviepy import ColorClip, ImageClip
 
 from backend.services.video_renderer.renderer import VideoRenderer
 
@@ -37,6 +38,60 @@ def test_context_safe_visual_preserves_vertical_output_canvas():
     try:
         assert clip.size == (renderer.WIDTH, renderer.HEIGHT)
         assert clip.duration == 1.0
+    finally:
+        clip.close()
+        source.close()
+
+
+def test_context_safe_visual_preserves_edge_labels_without_background_duplicates(tmp_path):
+    source_image = Image.new("RGB", (1080, 608), (70, 100, 130))
+    draw = ImageDraw.Draw(source_image)
+    edge_colors = ((255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0))
+    for box, color in zip(
+        ((0, 0, 59, 59), (1020, 0, 1079, 59),
+         (0, 548, 59, 607), (1020, 548, 1079, 607)),
+        edge_colors,
+    ):
+        draw.rectangle(box, fill=color)
+    image_path = tmp_path / "edge_annotations.png"
+    source_image.save(image_path)
+
+    renderer = VideoRenderer()
+    source = ImageClip(str(image_path), duration=1.0)
+    clip = renderer._fit_context_safe_visual(source, duration=1.0)
+    try:
+        frame = clip.get_frame(0.5)
+        matte = np.array((10, 16, 24))
+        visible = np.any(frame != matte, axis=2)
+        ys, xs = np.where(visible)
+        top, bottom = ys.min(), ys.max()
+        assert (xs.min(), xs.max()) == (0, renderer.WIDTH - 1)
+        assert bottom - top + 1 == 608
+        # All four source edges survive; none are cropped to fill the canvas.
+        samples = ((top + 20, 20), (top + 20, 1060),
+                   (bottom - 20, 20), (bottom - 20, 1060))
+        for (y, x), color in zip(samples, edge_colors):
+            assert tuple(frame[y, x]) == color
+        assert 48 <= renderer.subtitle_renderer.Y_POSITION - bottom <= 96
+        assert np.all(frame[:top] == matte)
+        assert np.all(frame[bottom + 1:] == matte)
+    finally:
+        clip.close()
+        source.close()
+
+
+def test_context_safe_visual_contains_portrait_source_above_captions():
+    renderer = VideoRenderer()
+    source = ColorClip(size=(1080, 1920), color=(30, 90, 160), duration=1.0)
+    clip = renderer._fit_context_safe_visual(source, duration=1.0)
+    try:
+        frame = clip.get_frame(0.5)
+        ys, xs = np.where(np.any(frame != (10, 16, 24), axis=2))
+        assert ys.min() >= 100
+        assert ys.max() < renderer.subtitle_renderer.Y_POSITION - 48
+        assert xs.min() > 0
+        assert abs((xs.max() - xs.min() + 1) / (ys.max() - ys.min() + 1)
+                   - 1080 / 1920) < 0.002
     finally:
         clip.close()
         source.close()

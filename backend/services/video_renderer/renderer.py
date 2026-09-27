@@ -308,22 +308,22 @@ class VideoRenderer:
             raise RuntimeError("Invalid source video dimensions.")
 
         safe_duration = max(0.05, float(duration))
-        background = (
-            self._fit_visual(clip, safe_duration)
-            .with_opacity(0.32)
-        )
-        shade = (
-            ColorClip(
-                size=(self.WIDTH, self.HEIGHT),
-                color=(0, 0, 0),
-                duration=safe_duration,
-            )
-            .with_opacity(0.38)
+        # A cover copy repeats and crops the very annotations that this
+        # presentation preserves. Keep source information visible once,
+        # against a quiet matte that cannot compete with narration captions.
+        background = ColorClip(
+            size=(self.WIDTH, self.HEIGHT),
+            color=(10, 16, 24),
+            duration=safe_duration,
         )
 
+        top_margin = round(self.HEIGHT * 0.075)
+        caption_gap = round(self.HEIGHT / 30.0)
+        foreground_bottom = self.subtitle_renderer.Y_POSITION - caption_gap
+        available_height = max(1, foreground_bottom - top_margin)
         foreground_scale = min(
             self.WIDTH / float(source_width),
-            900.0 / float(source_height),
+            available_height / float(source_height),
         )
         foreground_width = max(1, int(round(source_width * foreground_scale)))
         foreground_height = max(1, int(round(source_height * foreground_scale)))
@@ -331,11 +331,14 @@ class VideoRenderer:
             clip
             .resized((foreground_width, foreground_height))
             .with_duration(safe_duration)
-            .with_position(("center", 150))
+            .with_position((
+                "center",
+                max(top_margin, foreground_bottom - foreground_height),
+            ))
         )
 
         return CompositeVideoClip(
-            [background, shade, foreground],
+            [background, foreground],
             size=(self.WIDTH, self.HEIGHT),
         ).with_duration(safe_duration)
 
