@@ -45,7 +45,9 @@ class ProductionBridge:
         # The existing orchestrator owns research, selection and actual video
         # production. Stable cycle identity makes its own operations idempotent.
         try:
-            cycle_id = f"network:{job_id}:attempt:{attempt}"
+            # Handler derives its content identity from the prefix before
+            # the first colon. Keep the job UUID in that prefix.
+            cycle_id = f"network-{job_id}-attempt-{attempt}"
             if isinstance(selected_trend, dict):
                 result = await self.orchestrator.run_cycle(cycle_id,
                                                            selected_trend=selected_trend)
@@ -78,5 +80,5 @@ class ProductionBridge:
                                            reason="No verified local render reached QA")
                 return result
             await self.jobs.transition(session, job_id, "QA", artifact=("render", path),
-                                       lineage={"production_cycle": f"network:{job_id}:attempt:{attempt}"})
+                                       lineage={"production_cycle": cycle_id})
             return result

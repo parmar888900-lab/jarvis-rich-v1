@@ -39,6 +39,7 @@ async def test_render_stops_at_qa_without_upload_or_auto_approval(tmp_path):
     fake = FakeEngine({"status": "awaiting_qa", "video_path": str(video)})
     result = await ProductionBridge(sessions, orchestrator=fake).run(job_id, worker_id="worker")
     assert result["status"] == "awaiting_qa"
+    assert fake.calls[0].startswith(f"network-{job_id}-attempt-0")
     async with sessions() as session:
         saved = await session.get(NetworkJob, job_id)
         assert saved.state == "QA"
