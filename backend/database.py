@@ -37,7 +37,7 @@ async_session = async_sessionmaker(
 async def init_db() -> None:
     """Create all database tables and configure SQLite for concurrency."""
 
-    from backend.models import agent, command, conversation, goal, memory, production_cycle, production_operation, youtube_performance_snapshot, network_channel, network_job, network_identity  # noqa: F401
+    from backend.models import agent, command, conversation, goal, memory, production_cycle, production_operation, youtube_performance_snapshot, network_channel, network_job, network_identity, network_allocation  # noqa: F401
 
     async with engine.begin() as conn:
         # Enable WAL mode so reads can continue while another connection writes.
