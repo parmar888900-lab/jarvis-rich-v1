@@ -25,6 +25,10 @@ def _score(item: dict) -> float:
     return min(values)
 
 
+class PreviouslyRejectedCommission(ValueError):
+    """The same topic already has a durable failed commissioning attempt."""
+
+
 class DailyAllocator:
     async def commission_one(self, session: AsyncSession, *, channel_id: str,
                              candidate: dict, at: datetime | None = None) -> NetworkJob:
@@ -55,12 +59,19 @@ class DailyAllocator:
         score = _score(candidate)
         if score < .55:
             raise ValueError("Commissioning topic is below the production threshold")
-        key = f"commission:{channel_id}:{today}"
-        existing = await session.scalar(select(NetworkJob).where(NetworkJob.idempotency_key == key))
-        if existing:
-            return existing
-        jobs = (await session.scalars(select(NetworkJob).where(NetworkJob.channel_id == channel_id))).all()
-        used = sum(1 for job in jobs if (job.created_at.replace(tzinfo=timezone.utc)
+        existing_jobs = (await session.scalars(select(NetworkJob).where(
+            NetworkJob.channel_id == channel_id))).all()
+        prior = next((job for job in existing_jobs
+            if job.idempotency_key.startswith(f"commission:{channel_id}:{today}:")
+            and job.state != "FAILED"), None)
+        if prior:
+            return prior
+        key = f"commission:{channel_id}:{today}:{hashlib.sha256(topic.casefold().encode()).hexdigest()[:20]}"
+        same = next((job for job in existing_jobs if job.idempotency_key == key), None)
+        if same:
+            raise PreviouslyRejectedCommission("Topic already failed private commissioning")
+        used = sum(1 for job in existing_jobs if job.state != "FAILED" and
+            (job.created_at.replace(tzinfo=timezone.utc)
             if job.created_at.tzinfo is None else job.created_at).astimezone(
                 ZoneInfo(channel.timezone)).date().isoformat() == today)
         if used >= min(4, channel.max_daily_posts):

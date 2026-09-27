@@ -100,6 +100,8 @@ class EvergreenContentSelector:
         ],
         "space_aviation": [
             "How James Webb Space Telescope unfolded its mirror after launch",
+            "How James Webb Space Telescope aligned its mirror segments",
+            "How James Webb Space Telescope deployed its sunshield",
             "Why rockets launch vertically",
             "How spacecraft survive the heat of reentry",
             "Why commercial airplanes cruise so high",
@@ -227,6 +229,45 @@ class EvergreenContentSelector:
     ) -> dict[str, Any] | None:
         """Return one production-authorized evergreen candidate."""
 
+        candidates = self.channel_candidates(
+            content_id=content_id, format_name=format_name,
+            allowed_topics=allowed_topics, blocked_topics=blocked_topics,
+        )
+
+        if not candidates and allowed_topics is None:
+            self._recent.clear()
+
+            return self.select(
+                content_id=content_id,
+                performance=performance,
+                goal_strategy=goal_strategy,
+                format_name=format_name,
+            )
+
+        if not candidates:
+            return None
+
+        # Rotate across equally strong candidates instead of repeatedly
+        # choosing the same alphabetically-highest topic.
+        index = self._cursor % len(candidates)
+        winner = candidates[index]
+        self._cursor += 1
+
+        self._recent.append(winner["title"])
+        winner["production_selection"]["selected"] = True
+
+        if format_name:
+            winner["locked_format"] = format_name
+
+        self._save_state()
+        return winner
+
+    def channel_candidates(
+        self, *, content_id: str, format_name: str | None = None,
+        allowed_topics: list[str] | None = None,
+        blocked_topics: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Rank remaining catalog topics without selecting or changing state."""
         candidates: list[dict[str, Any]] = []
 
         allowed_genres = (
@@ -262,19 +303,6 @@ class EvergreenContentSelector:
                     )
                 )
 
-        if not candidates and allowed_topics is None:
-            self._recent.clear()
-
-            return self.select(
-                content_id=content_id,
-                performance=performance,
-                goal_strategy=goal_strategy,
-                format_name=format_name,
-            )
-
-        if not candidates:
-            return None
-
         candidates.sort(
             key=lambda item: (
                 item["production_selection"][
@@ -285,26 +313,7 @@ class EvergreenContentSelector:
             reverse=True,
         )
 
-        # Rotate across equally strong candidates instead of repeatedly
-        # choosing the same alphabetically-highest topic.
-        index = self._cursor % len(candidates)
-        winner = candidates[index]
-        self._cursor += 1
-
-        self._recent.append(
-            winner["title"]
-        )
-
-        winner["production_selection"][
-            "selected"
-        ] = True
-
-        if format_name:
-            winner["locked_format"] = format_name
-
-        self._save_state()
-
-        return winner
+        return candidates
 
     def _build_candidate(
         self,

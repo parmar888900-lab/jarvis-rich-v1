@@ -393,6 +393,7 @@ class YoutubeAgentHandler(BaseAgentHandler):
         command_id: str,
         *, allowed_topics: list[str] | None = None,
         blocked_topics: list[str] | None = None,
+        candidate_limit: int = 1,
     ) -> dict:
         """
         Select an evergreen production topic.
@@ -454,6 +455,13 @@ class YoutubeAgentHandler(BaseAgentHandler):
                 ),
             }
 
+        options = [best_topic]
+        if allowed_topics is not None and 1 < candidate_limit <= 8:
+            options.extend(self.selector.channel_candidates(
+                content_id=content_id, allowed_topics=allowed_topics,
+                blocked_topics=blocked_topics,
+            )[:candidate_limit - 1])
+
         return {
             "agent": self.name,
             "task": "analyze_trends",
@@ -464,7 +472,7 @@ class YoutubeAgentHandler(BaseAgentHandler):
             "trend_system_active": False,
             "provider_count": 0,
             "raw_trend_count": 0,
-            "final_trend_count": 1,
+            "final_trend_count": len(options),
             "analytics": analytics,
             "goal_strategy": (
                 goal_strategy_status
@@ -472,6 +480,7 @@ class YoutubeAgentHandler(BaseAgentHandler):
             # Kept as best_trend so the already-tested
             # ProductionOrchestrator requires no rewrite.
             "best_trend": best_topic,
+            "candidate_options": options,
             "status": "success",
         }
     async def _create_video(

@@ -8,8 +8,9 @@ from backend.models.network_allocation import NetworkAllocation
 from backend.models.network_channel import NetworkChannel
 from backend.models.network_identity import NetworkContentIdentity
 from backend.models.network_job import NetworkJob, NetworkJobEvent
-from backend.services.network.allocation import DailyAllocator
+from backend.services.network.allocation import DailyAllocator, PreviouslyRejectedCommission
 from backend.services.network.channel_registry import ChannelRegistry
+from backend.services.network.originality import DuplicateContentError
 
 
 def candidate(topic, score):
@@ -121,4 +122,51 @@ async def test_private_commission_preserves_sealed_zero_allocation_and_originali
         with pytest.raises(ValueError, match="measured"):
             await DailyAllocator().commission_one(db, channel_id=channel.id,
                                                   candidate=forged)
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_commission_can_try_new_original_topic_after_duplicate(tmp_path):
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'commission-duplicate.db'}")
+    async with engine.begin() as connection:
+        for model in (NetworkChannel, NetworkJob, NetworkJobEvent,
+                      NetworkContentIdentity, NetworkAllocation):
+            await connection.run_sync(model.__table__.create)
+    sessions = async_sessionmaker(engine, expire_on_commit=False)
+
+    def measured(topic):
+        item = candidate(topic, .72)
+        item["selected_trend"]["production_selection"].update(
+            {"production_score": 72, "visual_supply": 72})
+        item["selected_trend"]["knowledge"] = {"score": 72,
+            "sources": [{"url": "https://images.nasa.gov/details/Webb"}],
+            "facts": ["NASA explains the mechanism."]}
+        return item
+
+    async with sessions() as db:
+        registry = ChannelRegistry()
+        first = await registry.register(db, name="First", niche="science",
+            editorial_identity="First Webb lens", allowed_topics=["Webb"], max_daily_posts=1)
+        second = await registry.register(db, name="Second", niche="science",
+            editorial_identity="Second Webb lens", allowed_topics=["Webb"], max_daily_posts=1)
+        for channel in (first, second):
+            await registry.set_state(db, channel.id, "ACTIVE")
+        sealed = await DailyAllocator().allocate(db, channel_id=second.id, candidates=[])
+        prior = await DailyAllocator().commission_one(db, channel_id=first.id,
+            candidate=measured("Webb mirror deployment"))
+        with pytest.raises(DuplicateContentError):
+            await DailyAllocator().commission_one(db, channel_id=second.id,
+                candidate=measured("Webb mirror deployment"))
+        failed = (await db.scalars(select(NetworkJob).where(
+            NetworkJob.channel_id == second.id))).first()
+        assert failed.state == "FAILED"
+        with pytest.raises(PreviouslyRejectedCommission):
+            await DailyAllocator().commission_one(db, channel_id=second.id,
+                candidate=measured("Webb mirror deployment"))
+        next_job = await DailyAllocator().commission_one(db, channel_id=second.id,
+            candidate=measured("Webb sunshield deployment"))
+        assert next_job.state == "QUEUED" and next_job.id != failed.id
+        assert next_job.scheduler_decision["score"] == .72
+        assert (await db.get(NetworkAllocation, sealed.id)).target == 0
+        assert prior.id != next_job.id
     await engine.dispose()
