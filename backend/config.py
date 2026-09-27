@@ -22,7 +22,7 @@ class Settings(BaseSettings):
 
     app_name: str = "JARVIS AI"
     app_version: str = "0.1.0"
-    debug: bool = True
+    debug: bool = False
 
     # Database (SQLite - local only)
     database_url: str = f"sqlite+aiosqlite:///{DATABASE_DIR / 'jarvis.db'}"

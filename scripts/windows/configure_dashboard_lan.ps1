@@ -6,9 +6,11 @@ if (-not (Test-Path $python)) { $python = Join-Path $repo 'venv\Scripts\python.e
 if (-not (Test-Path $python)) { throw 'Install Python requirements into .venv or venv first.' }
 $lanHost = Read-Host 'Enter this Windows machine LAN IP address (from ipconfig)'
 if (-not $lanHost) { throw 'A LAN IP address is required.' }
-$folder = Join-Path $repo 'generated\state\dashboard-tls'
-& $python (Join-Path $repo 'scripts\configure_dashboard_tls.py') --host $lanHost --directory $folder
-if ($LASTEXITCODE -ne 0) { throw 'Certificate generation failed; existing files were preserved.' }
+$folder = Join-Path $repo ('generated\state\dashboard-tls-' + ($lanHost -replace '[^A-Za-z0-9.-]', '-'))
+if (-not (Test-Path (Join-Path $folder 'dashboard.pem')) -or -not (Test-Path (Join-Path $folder 'dashboard.key'))) {
+    & $python (Join-Path $repo 'scripts\configure_dashboard_tls.py') --host $lanHost --directory $folder
+    if ($LASTEXITCODE -ne 0) { throw 'Certificate generation failed; existing files were preserved.' }
+} else { Write-Host 'Reusing the existing certificate for this exact LAN host.' }
 $token = [Environment]::GetEnvironmentVariable('JARVIS_REMOTE_TOKEN', 'User')
 if (-not $token -or $token.Length -lt 32) {
     $bytes = New-Object byte[] 32
