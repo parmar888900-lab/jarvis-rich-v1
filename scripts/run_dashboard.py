@@ -32,4 +32,5 @@ def dashboard_config() -> dict:
 
 if __name__ == "__main__":
     os.environ["JARVIS_PUBLIC_PUBLISH_ENABLED"] = "false"
+    os.environ.setdefault("DEBUG", "false")
     uvicorn.run("backend.remote_app:app", **dashboard_config())

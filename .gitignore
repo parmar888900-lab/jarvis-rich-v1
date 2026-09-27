@@ -107,6 +107,7 @@ generated/audio/
 generated/renders/
 generated/cache/
 generated/temp/
+generated/state/*.json
 
 # Large media
 *.mp4
