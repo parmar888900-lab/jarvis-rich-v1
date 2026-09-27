@@ -24,4 +24,4 @@ if (-not $token -or $token.Length -lt 32) {
 [Environment]::SetEnvironmentVariable('JARVIS_DASHBOARD_CERT', (Join-Path $folder 'dashboard.pem'), 'User')
 [Environment]::SetEnvironmentVariable('JARVIS_DASHBOARD_KEY', (Join-Path $folder 'dashboard.key'), 'User')
 Write-Host "Dashboard URL: https://${lanHost}:8765/dashboard"
-Write-Host 'Install and fully trust dashboard.pem on the iPad before microphone use. Restart the JarvisDashboard scheduled task after this setup.'
+Write-Host 'Install and fully trust dashboard.pem on the iPad before microphone use. Sign out and back in so the dashboard task inherits these settings.'

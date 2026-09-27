@@ -35,8 +35,8 @@ $ownerToken = [Convert]::ToBase64String($bytes)
 ```
 
 Copy `$ownerToken` privately into the dashboard owner-token field. This token
-is stored only in that browser tab's session storage. Restart tasks after
-changing user environment variables.
+is stored only in that browser tab's session storage. Sign out and back in
+after changing user environment variables so scheduled tasks inherit them.
 
 ## Start, check, pause
 
@@ -85,7 +85,6 @@ The iPad cannot use Windows `localhost`. An explicit LAN binding requires a
 
 ```powershell
 & .\scripts\windows\configure_dashboard_lan.ps1
-Start-ScheduledTask -TaskName JarvisDashboard
 ```
 
 Enter the Windows machine's current private LAN IP from `ipconfig`. The
@@ -99,7 +98,9 @@ forward it to the public Internet. The iPad and Windows host must be on the
 same LAN. Enter the private owner token in the iPad dashboard. Safari's Share
 menu can add the page to Home Screen. The app refetches authoritative state
 after foregrounding and reconnecting. iPad microphone access needs the
-certificate fully trusted; typed commands remain available otherwise.
+certificate fully trusted; typed commands remain available otherwise. Sign out
+and back in on Windows after LAN setup so the scheduled dashboard task sees
+the new environment variables.
 
 Do not mistake a Safari certificate warning for completed trust. If the LAN
 IP changes, rerun the LAN configuration script and trust the new certificate.
