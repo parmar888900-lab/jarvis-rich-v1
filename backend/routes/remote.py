@@ -5,6 +5,7 @@ from __future__ import annotations
 import tempfile
 import asyncio
 from uuid import uuid4
+from types import SimpleNamespace
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,6 +19,8 @@ from backend.services.remote_auth import require_remote_token
 from backend.services.voice.command_executor import VoiceCommandExecutor
 from backend.services.voice.command_router import VoiceCommandRouter
 from backend.services.voice.transcriber import WhisperTranscriber
+from backend.services.voice.wake_phrase import WakePhraseParser
+from backend.services.voice.response_formatter import VoiceResponseFormatter
 from backend.services.video.voice_generator import VoiceGenerator
 
 
@@ -36,6 +39,8 @@ voice_transcriber = WhisperTranscriber(
 
 MAX_REMOTE_AUDIO_BYTES = 20 * 1024 * 1024
 speech_lock = asyncio.Lock()
+wake_parser = WakePhraseParser()
+voice_formatter = VoiceResponseFormatter()
 
 
 class RemoteCommandRequest(BaseModel):
@@ -104,6 +109,22 @@ async def _execute_command_text(
         "result": execution.result,
         "reason": execution.reason,
     }
+
+
+async def _route_manual_voice(transcript: str) -> dict:
+    """The button accepts natural commands and honors either wake activation."""
+    wake = wake_parser.parse(transcript)
+    if wake.detected and not wake.command:
+        result = SimpleNamespace(status="wake_only", wake_variant=wake.variant)
+        return {"status": "greeting", "message": voice_formatter.format(result),
+                "transcript": transcript}
+    command = wake.command if wake.detected else transcript
+    result = await _execute_command_text(command)
+    if wake.variant == "special_home":
+        greeting = voice_formatter.format(SimpleNamespace(
+            status="wake_only", wake_variant="special_home"))
+        result["message"] = f"{greeting} {voice_formatter.format(SimpleNamespace(**result))}"
+    return result
 
 
 def _audio_suffix(
@@ -249,7 +270,7 @@ async def remote_voice(
                 ),
             }
 
-        result = await _execute_command_text(
+        result = await _route_manual_voice(
             transcript
         )
 
