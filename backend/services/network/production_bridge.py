@@ -23,13 +23,13 @@ class ProductionBridge:
     def __init__(self, session_factory: async_sessionmaker, *, orchestrator=None,
                  job_store: JobStore | None = None):
         self.sessions = session_factory
+        self._requires_selected_trend = orchestrator is None
         if orchestrator is None:
             from backend.services.orchestration.production_orchestrator import ProductionOrchestrator
             orchestrator = ProductionOrchestrator(
                 session_factory=session_factory, private_upload_enabled=False)
         self.orchestrator = orchestrator
         self.jobs = job_store or JobStore()
-        self._requires_selected_trend = orchestrator is None
 
     async def run(self, job_id: str, *, worker_id: str, lease_seconds: int = 7200) -> dict:
         async with self.sessions() as session:

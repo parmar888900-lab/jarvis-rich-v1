@@ -96,3 +96,30 @@ async def test_no_action_and_missing_artifact_are_durable(tmp_path):
         assert (await session.get(NetworkJob, no_topic.id)).state == "COMPLETE"
         assert (await session.get(NetworkJob, bad.id)).state == "REPAIR"
     await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_real_bridge_rejects_unvetted_job_before_starting_worker(tmp_path, monkeypatch):
+    from backend.services.orchestration import production_orchestrator
+
+    fake = FakeEngine({"status": "no_action"})
+    monkeypatch.setattr(production_orchestrator, "ProductionOrchestrator",
+                        lambda **kwargs: fake)
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'guard.db'}")
+    async with engine.begin() as connection:
+        for model in (NetworkChannel, NetworkJob, NetworkJobEvent, NetworkContentIdentity):
+            await connection.run_sync(model.__table__.create)
+    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    async with sessions() as session:
+        channel = await ChannelRegistry().register(session, name="SpaceDecoded", niche="science",
+                                                   editorial_identity="Webb engineering")
+        await ChannelRegistry().set_state(session, channel.id, "ACTIVE")
+        job = await JobStore().enqueue(session, channel_id=channel.id,
+                                       idempotency_key="unvetted", topic="Webb mirror")
+        job_id = job.id
+    with pytest.raises(ValueError, match="channel-vetted selected trend"):
+        await ProductionBridge(sessions).run(job_id, worker_id="worker")
+    assert fake.calls == []
+    async with sessions() as session:
+        assert (await session.get(NetworkJob, job_id)).state == "QUEUED"
+    await engine.dispose()
