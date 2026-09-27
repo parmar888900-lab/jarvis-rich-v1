@@ -22,6 +22,9 @@ def test_dashboard_shell_and_owner_only_stream(monkeypatch):
                      "viewport-fit=cover", "@media(max-width:760px)"):
             assert part in page.text
         assert "innerHTML" not in page.text
+        assert "epoch!==state.epoch" in page.text
+        assert "state.epoch++" in page.text
+        assert "if(s.ok)" in page.text and "Piper response unavailable" in page.text
         assert client.get("/api/network/status").status_code == 401
         assert client.get("/api/network/events").status_code == 401
         assert client.post("/api/network/control", json={"action": "pause_production"}).status_code == 401
