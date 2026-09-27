@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import tempfile
+import asyncio
+from uuid import uuid4
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
 
@@ -14,6 +18,7 @@ from backend.services.remote_auth import require_remote_token
 from backend.services.voice.command_executor import VoiceCommandExecutor
 from backend.services.voice.command_router import VoiceCommandRouter
 from backend.services.voice.transcriber import WhisperTranscriber
+from backend.services.video.voice_generator import VoiceGenerator
 
 
 router = APIRouter(
@@ -30,6 +35,7 @@ voice_transcriber = WhisperTranscriber(
 )
 
 MAX_REMOTE_AUDIO_BYTES = 20 * 1024 * 1024
+speech_lock = asyncio.Lock()
 
 
 class RemoteCommandRequest(BaseModel):
@@ -40,6 +46,24 @@ class RemoteCommandRequest(BaseModel):
         min_length=1,
         max_length=500,
     )
+
+
+class SpeechRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=500)
+
+
+@router.post("/speech")
+async def remote_piper_speech(payload: SpeechRequest):
+    """Generate a bounded British Piper response for the authenticated owner."""
+    async with speech_lock:
+        try:
+            result = await VoiceGenerator().generate(
+                payload.text, filename=f"jarvis_remote_{uuid4().hex}")
+        except (OSError, RuntimeError, TimeoutError) as exc:
+            raise HTTPException(status_code=503, detail=f"Piper unavailable: {type(exc).__name__}") from None
+    path = Path(result["audio_path"])
+    return FileResponse(path, media_type="audio/wav",
+                        background=BackgroundTask(path.unlink, missing_ok=True))
 
 
 async def _execute_command_text(

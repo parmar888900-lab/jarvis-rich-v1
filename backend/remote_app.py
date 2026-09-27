@@ -261,7 +261,7 @@ async def remote_dashboard():
 
         <div class="row">
             <button id="mic" class="secondary">
-                🎤 Speak
+                TALK TO JARVIS
             </button>
 
             <button id="send">
@@ -356,29 +356,33 @@ async def remote_dashboard():
         return "Jarvis returned a response.";
     }
 
-    function speakReply(text) {
+    let activeAudio = null;
+
+    async function speakReply(text) {
         if (
             !spokenReplies ||
-            !text ||
-            !("speechSynthesis" in window)
+            !text
         ) {
             return;
         }
-
-        window.speechSynthesis.cancel();
-
-        const utterance =
-            new SpeechSynthesisUtterance(text);
-
-        utterance.lang =
-            navigator.language || "en-US";
-
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-
-        window.speechSynthesis.speak(
-            utterance
-        );
+        try {
+            const response = await fetch("/remote/speech", {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + tokenInput.value.trim(),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({text: text})
+            });
+            if (!response.ok) throw new Error("Piper unavailable");
+            if (activeAudio) activeAudio.pause();
+            const url = URL.createObjectURL(await response.blob());
+            activeAudio = new Audio(url);
+            activeAudio.onended = () => URL.revokeObjectURL(url);
+            await activeAudio.play();
+        } catch (error) {
+            voiceNote.textContent = "British Piper speech unavailable: " + error.message;
+        }
     }
 
     function setConnection(state, text) {
@@ -562,7 +566,7 @@ async def remote_dashboard():
         micButton.textContent =
             busy
                 ? "Processing voice..."
-                : "🎤 Speak";
+                : "TALK TO JARVIS";
     }
 
     async function sendVoiceRecording(file) {
