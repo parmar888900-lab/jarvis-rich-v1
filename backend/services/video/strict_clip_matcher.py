@@ -19,6 +19,7 @@ from backend.services.video.source_clip_indexer import (
 from backend.services.video.visual_beat_source_planner import (
     SourceVisualBeat,
 )
+from backend.services.video.opening_diversity import opening_choice
 
 
 @dataclass(slots=True)
@@ -154,7 +155,7 @@ class StrictClipMatcher:
 
         output = []
 
-        for beat in beats:
+        for beat_index, beat in enumerate(beats):
 
             positive_prompts = [
                 beat.visual_goal,
@@ -202,7 +203,7 @@ class StrictClipMatcher:
                 descending=True,
             ).tolist()
 
-            winner = None
+            eligible = []
 
             for index in ranked:
 
@@ -255,14 +256,25 @@ class StrictClipMatcher:
                 ):
                     continue
 
-                winner = (
+                eligible.append((
                     clip,
                     positive,
                     negative,
                     final,
-                )
+                ))
 
-                break
+                # Later narrative beats keep the strongest strict match.
+                # In the opening, inspect only near-equal alternatives so
+                # visual novelty never rescues a weak semantic match.
+                if beat_index == 0 or beat_index >= 3:
+                    break
+                if len(eligible) > 1 and eligible[0][3] - final > .025:
+                    break
+
+            winner = opening_choice(
+                eligible,
+                [match.preview_path for match in output[-2:]],
+            ) if 0 < beat_index < 3 else (eligible[0] if eligible else None)
 
             if winner is None:
                 continue
