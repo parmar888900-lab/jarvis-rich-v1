@@ -18,9 +18,11 @@ from backend.services.network.allocation import DailyAllocator  # noqa: E402
 from backend.services.network.topic_source import candidate_from_analysis  # noqa: E402
 
 
-async def select_candidate(channel):
-    from backend.services.commander import Commander
-    analysis = await Commander().route(agent="youtube", task="analyze_trends",
+async def select_candidate(channel, *, route=None, research=None):
+    if route is None:
+        from backend.services.commander import Commander
+        route = Commander().route
+    analysis = await route(agent="youtube", task="analyze_trends",
                                        command_id=f"{channel.id}:network-plan",
                                        allowed_topics=channel.allowed_topics,
                                        blocked_topics=channel.blocked_topics)
@@ -28,8 +30,10 @@ async def select_candidate(channel):
         raise RuntimeError("Topic selection unavailable; preserve unplanned state")
     trend = analysis.get("best_trend")
     if analysis.get("status") == "success" and isinstance(trend, dict):
-        from backend.services.research.evergreen_research_service import EvergreenResearchService
-        pack = await asyncio.to_thread(EvergreenResearchService().research, trend["title"])
+        if research is None:
+            from backend.services.research.evergreen_research_service import EvergreenResearchService
+            research = EvergreenResearchService().research
+        pack = await asyncio.to_thread(research, trend["title"])
         trend["knowledge"] = pack.to_dict()
     return candidate_from_analysis(channel, analysis)
 
