@@ -1,13 +1,23 @@
 """Network-facing authenticated remote-control API for Jarvis."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-from backend.routes import remote, network
+from backend.routes import remote, network, dashboard
+from backend.database import init_db
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    await init_db()
+    yield
 
 
 app = FastAPI(
     title="Jarvis Remote",
+    lifespan=lifespan,
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
@@ -15,6 +25,7 @@ app = FastAPI(
 
 app.include_router(remote.router)
 app.include_router(network.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/health")

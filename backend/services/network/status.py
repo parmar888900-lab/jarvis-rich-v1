@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -34,6 +35,7 @@ async def network_snapshot(db: AsyncSession, *, storage_path: Path) -> dict:
                                   .limit(100))).all()
     disk = shutil.disk_usage(storage_path)
     return {
+        "observed_at": datetime.now(timezone.utc).isoformat(),
         "public_publishing_enabled": (
             os.environ.get("JARVIS_PUBLIC_PUBLISH_ENABLED", "").strip().lower() == "true"
         ),
@@ -45,15 +47,20 @@ async def network_snapshot(db: AsyncSession, *, storage_path: Path) -> dict:
             "minimum_free_bytes": control.min_free_bytes if control else 5 * 1024**3,
             "planner_failures": control.planner_failures if control else {},
         },
-        "channels": [{"id": c.id, "name": c.name, "niche": c.niche,
+        "channels": [{"id": c.id, "name": c.name, "handle": c.handle,
+                      "production_engine": c.production_engine,
+                      "niche": c.niche,
                       "lifecycle": c.lifecycle_state, "paused": c.paused,
                       "timezone": c.timezone, "max_daily_posts": c.max_daily_posts,
-                      "youtube_channel_id": c.youtube_channel_id} for c in channels],
+                      "youtube_channel_id": c.youtube_channel_id,
+                      "capability": c.upload_capability,
+                      "degraded_reason": c.degraded_reason} for c in channels],
         "jobs": [{"id": j.id, "channel_id": j.channel_id, "state": j.state,
                   "topic": j.topic, "attempt": j.attempt, "max_attempts": j.max_attempts,
                   "failure_reason": j.failure_reason,
+                  "updated_at": j.updated_at.isoformat() if j.updated_at else None,
                   "retry_after": j.retry_after.isoformat() if j.retry_after else None,
-                  "artifacts": j.artifacts} for j in jobs],
+                  "artifacts": j.artifacts, "lineage": j.lineage} for j in jobs],
         "job_counts": dict(counts),
         "allocations": [{"channel_id": a.channel_id, "local_date": a.local_date,
                          "target": a.target, "rationale": a.rationale,

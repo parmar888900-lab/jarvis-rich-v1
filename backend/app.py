@@ -18,6 +18,7 @@ from backend.routes import (
     settings as settings_routes,
     remote,
     network,
+    dashboard,
 )
 from backend.services.orchestration.production_operation_recovery_runner import (
     ProductionOperationRecoveryRunner,
@@ -258,6 +259,7 @@ app.include_router(
 )
 app.include_router(remote.router)
 app.include_router(network.router)
+app.include_router(dashboard.router)
 
 
 @app.get("/")

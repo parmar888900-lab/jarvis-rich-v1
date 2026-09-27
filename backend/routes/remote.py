@@ -124,6 +124,8 @@ async def _route_manual_voice(transcript: str) -> dict:
         greeting = voice_formatter.format(SimpleNamespace(
             status="wake_only", wake_variant="special_home"))
         result["message"] = f"{greeting} {voice_formatter.format(SimpleNamespace(**result))}"
+    else:
+        result["message"] = voice_formatter.format(SimpleNamespace(**result))
     return result
 
 
