@@ -27,7 +27,6 @@ from backend.services.orchestration.idempotency import (
 from backend.services.orchestration.idempotent_operation_executor import (
     IdempotentOperationExecutor,
 )
-from backend.services.pipelines import VideoPipeline
 from backend.services.providers.youtube_publisher import (
     YoutubePublisher,
     build_youtube_operation_tag,
@@ -72,7 +71,9 @@ class YoutubeAgentHandler(BaseAgentHandler):
     ):
         self.selector = EvergreenContentSelector()
         self.format_rotator = DailyFormatRotator()
-        self.pipeline = VideoPipeline()
+        # Analysis/planning needs no rendering stack. Load it only for an
+        # actual create_video request, keeping private planning independent.
+        self.pipeline = None
         self.publisher = YoutubePublisher()
 
         self.performance_collector = (
@@ -508,6 +509,9 @@ class YoutubeAgentHandler(BaseAgentHandler):
                 ),
             }
 
+        if self.pipeline is None:
+            from backend.services.pipelines import VideoPipeline
+            self.pipeline = VideoPipeline()
         result = await self.pipeline.run(
             trend
         )
@@ -687,4 +691,3 @@ class YoutubeAgentHandler(BaseAgentHandler):
             "privacy_status": privacy,
             "upload": operation_result,
         }
-

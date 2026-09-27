@@ -23,9 +23,9 @@ async def select_candidate(channel, *, route=None, research=None):
         from backend.services.commander import Commander
         route = Commander().route
     analysis = await route(agent="youtube", task="analyze_trends",
-                                       command_id=f"{channel.id}:network-plan",
-                                       allowed_topics=channel.allowed_topics,
-                                       blocked_topics=channel.blocked_topics)
+                           command_id=f"{channel.id}:network-plan",
+                           parameters={"allowed_topics": channel.allowed_topics,
+                                       "blocked_topics": channel.blocked_topics})
     if analysis.get("status") not in {"success", "no_production_ready_topic"}:
         raise RuntimeError("Topic selection unavailable; preserve unplanned state")
     trend = analysis.get("best_trend")

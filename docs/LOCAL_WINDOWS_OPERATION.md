@@ -8,9 +8,9 @@ a video against the six-reference perceptual gate or upload it automatically.
 
 ```powershell
 cd C:\Users\hp\jarvis.ai
-py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe scripts\check_jarvis.py
+py -3.12 -m venv venv
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+.\venv\Scripts\python.exe scripts\check_jarvis.py
 ```
 
 The check prints missing local dependencies, disk space, persisted channels,
@@ -20,7 +20,7 @@ An empty channel list means the network has no work. To register a real local
 editorial identity (this does not create a YouTube account):
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\configure_network_channel.py --name SpaceDecoded --niche science --editorial "Evidence-first Webb engineering" --allow-topic Webb --timezone America/Edmonton --activate
+.\venv\Scripts\python.exe scripts\configure_network_channel.py --name SpaceDecoded --niche science --editorial "Evidence-first Webb engineering" --allow-topic Webb --timezone America/Edmonton --activate
 ```
 
 For Windows-only dashboard access, generate a private owner token in a local
@@ -41,11 +41,11 @@ after changing user environment variables so scheduled tasks inherit them.
 ## Start, check, pause
 
 ```powershell
-& .\scripts\windows\install_jarvis_network.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\install_jarvis_network.ps1"
 Start-ScheduledTask -TaskName JarvisDashboard
 Start-ScheduledTask -TaskName JarvisNetwork
 Start-ScheduledTask -TaskName JarvisVoice
-.\.venv\Scripts\python.exe scripts\check_jarvis.py
+.\venv\Scripts\python.exe scripts\check_jarvis.py
 ```
 
 At each user logon the three tasks start independently and retry on exit.
@@ -61,10 +61,10 @@ sections show no records rather than invented work. `TALK TO JARVIS` uses the
 same owner API and needs a working microphone, Whisper, FFmpeg and Piper.
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\control_network.py pause_production
-.\.venv\Scripts\python.exe scripts\control_network.py resume_production
-.\.venv\Scripts\python.exe scripts\control_network.py pause_channel --channel-id <ID_FROM_DASHBOARD>
-.\.venv\Scripts\python.exe scripts\control_network.py resume_channel --channel-id <ID_FROM_DASHBOARD>
+.\venv\Scripts\python.exe scripts\control_network.py pause_production
+.\venv\Scripts\python.exe scripts\control_network.py resume_production
+.\venv\Scripts\python.exe scripts\control_network.py pause_channel --channel-id <ID_FROM_DASHBOARD>
+.\venv\Scripts\python.exe scripts\control_network.py resume_channel --channel-id <ID_FROM_DASHBOARD>
 ```
 
 The dashboard also has authenticated pause/resume controls. Resumes require
@@ -87,8 +87,8 @@ adapter repair, keep that allocation as audit history. For one private QA
 commissioning job, use the existing active channel ID and a bounded child:
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\run_bounded.py --stage network-commission --timeout 300 --heartbeat 15 --log generated\logs\network-commission.log -- .venv\Scripts\python.exe scripts\commission_network_job.py 2fef2173-b5da-43bc-8045-f96eaba8d14b
-.\.venv\Scripts\python.exe scripts\check_jarvis.py
+.\venv\Scripts\python.exe scripts\run_bounded.py --stage network-commission --timeout 300 --heartbeat 15 --log generated\logs\network-commission.log -- venv\Scripts\python.exe scripts\commission_network_job.py 2fef2173-b5da-43bc-8045-f96eaba8d14b
+.\venv\Scripts\python.exe scripts\check_jarvis.py
 ```
 
 The command selects within the channel's topic rules, researches sources,
@@ -104,7 +104,7 @@ The iPad cannot use Windows `localhost`. An explicit LAN binding requires a
 32-character owner token and TLS. In PowerShell on Windows, run:
 
 ```powershell
-& .\scripts\windows\configure_dashboard_lan.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\scripts\windows\configure_dashboard_lan.ps1"
 ```
 
 Enter the Windows machine's current private LAN IP from `ipconfig`. The

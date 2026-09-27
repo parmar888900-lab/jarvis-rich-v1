@@ -16,8 +16,9 @@ async def test_planner_passes_channel_rules_and_researches_selected_evergreen(tm
 
     async def route(**kwargs):
         calls.append(kwargs)
-        trend = selector.select(content_id="space", allowed_topics=kwargs["allowed_topics"],
-                                blocked_topics=kwargs["blocked_topics"])
+        rules = kwargs["parameters"]
+        trend = selector.select(content_id="space", allowed_topics=rules["allowed_topics"],
+                                blocked_topics=rules["blocked_topics"])
         return {"status": "success", "best_trend": trend}
 
     def research(topic):
@@ -30,8 +31,7 @@ async def test_planner_passes_channel_rules_and_researches_selected_evergreen(tm
     assert candidate is not None and "Webb" in candidate["topic"]
     assert candidate["evidence"] == .79
     assert candidate["selected_trend"]["knowledge"]["facts"]
-    assert calls[0]["allowed_topics"] == ["Webb"]
-    assert calls[0]["blocked_topics"] == ["rumor"]
+    assert calls[0]["parameters"] == {"allowed_topics": ["Webb"], "blocked_topics": ["rumor"]}
     assert calls[0]["command_id"] == "space:network-plan"
 
 
@@ -46,3 +46,33 @@ async def test_planner_fails_closed_when_research_has_no_sources():
 
     assert await select_candidate(channel, route=route,
         research=lambda topic: KnowledgePack(topic=topic, score=95)) is None
+
+
+@pytest.mark.asyncio
+async def test_real_commander_routes_channel_rules_to_real_youtube_handler(tmp_path, monkeypatch):
+    """Use the production route signature; a **kwargs stub hid the Windows failure."""
+    from backend.services.agent_handlers.youtube import YoutubeAgentHandler
+    from backend.services.agent_registry import AgentRegistry
+    from backend.services.commander import Commander
+
+    monkeypatch.setattr(EvergreenContentSelector, "STATE_PATH", tmp_path / "selector.json")
+    handler = YoutubeAgentHandler()
+
+    async def no_analytics():
+        return None, {"status": "unavailable"}
+
+    async def no_goal():
+        return None, {"status": "unavailable"}
+
+    monkeypatch.setattr(handler, "_performance_evidence", no_analytics)
+    monkeypatch.setattr(handler, "_goal_strategy", no_goal)
+    registry = AgentRegistry()
+    registry.register(handler)
+    channel = SimpleNamespace(id="space", allowed_topics=["Webb"], blocked_topics=["rumor"])
+    result = await select_candidate(channel, route=Commander(registry=registry).route,
+        research=lambda topic: KnowledgePack(topic=topic, score=81,
+            sources=[{"url": "https://images.nasa.gov/details/Webb"}],
+            facts=["NASA describes Webb's mirror deployment."]))
+    assert result is not None and "Webb" in result["topic"]
+    assert result["evidence"] == .81
+    assert handler.pipeline is None  # Analysis did not instantiate rendering.
