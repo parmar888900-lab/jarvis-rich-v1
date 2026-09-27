@@ -44,6 +44,8 @@ class ProductionOrchestrator:
     async def run_cycle(
         self,
         cycle_id: str,
+        *,
+        selected_trend: dict | None = None,
     ) -> dict:
         """Analyze trends and produce one selected video."""
 
@@ -52,10 +54,15 @@ class ProductionOrchestrator:
         )
 
         try:
-            analysis = await self.commander.route(
-                agent="youtube",
-                task="analyze_trends",
-                command_id=f"{cycle_id}:analyze",
+            analysis = (
+                {"status": "success", "best_trend": selected_trend,
+                 "selection_source": "network_scheduler"}
+                if selected_trend is not None else
+                await self.commander.route(
+                    agent="youtube",
+                    task="analyze_trends",
+                    command_id=f"{cycle_id}:analyze",
+                )
             )
 
             analysis_status = analysis.get(
@@ -544,5 +551,4 @@ class ProductionOrchestrator:
                 cycle_id,
                 result=result,
             )
-
 

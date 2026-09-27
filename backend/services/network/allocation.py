@@ -44,6 +44,12 @@ class DailyAllocator:
             if not topic:
                 continue
             score = _score(candidate)
+            trend = candidate.get("selected_trend")
+            selection = trend.get("production_selection") if isinstance(trend, dict) else None
+            if (not isinstance(selection, dict) or trend.get("title") != topic
+                    or selection.get("eligible") is not True
+                    or selection.get("selected") is not True):
+                continue
             if channel.allowed_topics and not any(t.casefold() in topic.casefold()
                                                   for t in channel.allowed_topics):
                 continue
@@ -64,7 +70,8 @@ class DailyAllocator:
             identity_key = f"{channel_id}:{today}:{key}"
             job = await store.enqueue(session, channel_id=channel_id,
                                       idempotency_key=identity_key, topic=topic,
-                                      scheduler_decision={"score": score, "local_date": today})
+                                      scheduler_decision={"score": score, "local_date": today,
+                                                          "selected_trend": candidate.get("selected_trend")})
             try:
                 await gate.reserve(session, job_id=job.id, topic=topic,
                                    central_claim=candidate.get("claim"),

@@ -24,6 +24,7 @@ class ProductionBridge:
                 session_factory=session_factory, private_upload_enabled=False)
         self.orchestrator = orchestrator
         self.jobs = job_store or JobStore()
+        self._requires_selected_trend = orchestrator is None
 
     async def run(self, job_id: str, *, worker_id: str, lease_seconds: int = 7200) -> dict:
         async with self.sessions() as session:
@@ -32,6 +33,11 @@ class ProductionBridge:
                 raise LookupError("Production job not found")
             if job.state not in {"QUEUED", "REPAIR"}:
                 raise ValueError("Only queued or repair jobs may start a production cycle")
+            selected_trend = job.scheduler_decision.get("selected_trend")
+            if self._requires_selected_trend and not isinstance(selected_trend, dict):
+                raise ValueError("Network job lacks a channel-vetted selected trend")
+            if isinstance(selected_trend, dict) and selected_trend.get("title") != job.topic:
+                raise ValueError("Selected trend does not match reserved job topic")
             attempt = job.attempt
             await self.jobs.start_stage(session, job_id, "RESEARCHING", worker_id,
                                         lease_seconds=lease_seconds)
@@ -39,7 +45,12 @@ class ProductionBridge:
         # The existing orchestrator owns research, selection and actual video
         # production. Stable cycle identity makes its own operations idempotent.
         try:
-            result = await self.orchestrator.run_cycle(f"network:{job_id}:attempt:{attempt}")
+            cycle_id = f"network:{job_id}:attempt:{attempt}"
+            if isinstance(selected_trend, dict):
+                result = await self.orchestrator.run_cycle(cycle_id,
+                                                           selected_trend=selected_trend)
+            else:
+                result = await self.orchestrator.run_cycle(cycle_id)
         except Exception as exc:
             async with self.sessions() as session:
                 job = await session.get(NetworkJob, job_id)

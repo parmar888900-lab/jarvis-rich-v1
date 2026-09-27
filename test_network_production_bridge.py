@@ -15,7 +15,7 @@ class FakeEngine:
         self.result = result
         self.calls = []
 
-    async def run_cycle(self, cycle_id):
+    async def run_cycle(self, cycle_id, **kwargs):
         self.calls.append(cycle_id)
         return self.result
 

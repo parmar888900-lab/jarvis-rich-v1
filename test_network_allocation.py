@@ -14,7 +14,9 @@ from backend.services.network.channel_registry import ChannelRegistry
 
 def candidate(topic, score):
     return {"topic": topic, "quality": score, "evidence": score,
-            "visual": score, "originality": score}
+            "visual": score, "originality": score,
+            "selected_trend": {"title": topic, "production_selection": {
+                "eligible": True, "selected": True}}}
 
 
 @pytest.mark.asyncio
