@@ -1,6 +1,6 @@
 """Persisted network kill switches; public publishing defaults OFF."""
 
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, JSON, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.database import Base
@@ -15,3 +15,4 @@ class NetworkControl(Base):
     publishing_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     emergency_stop: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     min_free_bytes: Mapped[int] = mapped_column(default=5 * 1024**3, nullable=False)
+    planner_failures: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)

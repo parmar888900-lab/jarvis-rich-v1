@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import shutil
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -52,6 +52,10 @@ class NetworkSupervisor:
                         NetworkAllocation.channel_id == channel.id,
                         NetworkAllocation.local_date == local_date))
                     if allocation is None and channel.allowed_topics:
+                        failure = (control.planner_failures or {}).get(channel.id, {})
+                        until = failure.get("retry_after")
+                        if until and datetime.fromisoformat(until) > now:
+                            continue
                         return await self._execute("plan", channel.id, self.max_plan_seconds,
                                                    recovered=recovered)
             candidates = (await db.scalars(select(NetworkJob).where(
@@ -71,6 +75,7 @@ class NetworkSupervisor:
                        *, recovered: list[str]) -> dict:
         script = "plan_network_day.py" if kind == "plan" else "run_network_job.py"
         command = [sys.executable, str(self.root / "scripts" / script), identifier]
+        failure_type = None
         try:
             outcome = await asyncio.to_thread(
                 self.runner, command, stage=f"network-{kind}", timeout_seconds=seconds,
@@ -78,17 +83,33 @@ class NetworkSupervisor:
                 log_path=self.root / "generated" / "logs" / f"network-{kind}.log",
                 cwd=self.root)
             status = "completed" if outcome.returncode == 0 else "child_failed"
+            if status == "child_failed":
+                failure_type = "WorkerExit"
         except Exception as exc:
             status = "bounded_failure"
-            # The worker may have persisted a repair already. When it died
-            # unexpectedly, mark only its own active lease for recovery.
-            if kind == "job":
-                async with self.sessions() as db:
-                    job = await db.get(NetworkJob, identifier)
-                    if job and job.state in ACTIVE_STATES:
-                        job.attempt += 1
-                        await db.commit()
-                        await JobStore().transition(db, identifier,
-                            "FAILED" if job.attempt >= job.max_attempts else "REPAIR",
-                            reason=f"Bounded worker failure: {type(exc).__name__}")
+            failure_type = type(exc).__name__
+        async with self.sessions() as db:
+            if kind == "plan":
+                control = await db.get(NetworkControl, "global")
+                failures = dict(control.planner_failures or {})
+                if status == "completed":
+                    failures.pop(identifier, None)
+                else:
+                    count = int(failures.get(identifier, {}).get("count", 0)) + 1
+                    failures[identifier] = {"count": count, "retry_after": (
+                        datetime.now(timezone.utc) + timedelta(
+                            seconds=min(3600, 300 * (2 ** min(count - 1, 4))))
+                        ).isoformat(), "reason": failure_type}
+                control.planner_failures = failures
+                await db.commit()
+            elif status != "completed":
+                # Child may have persisted a repair already. If it died
+                # unexpectedly, mark only its own active lease immediately.
+                job = await db.get(NetworkJob, identifier)
+                if job and job.state in ACTIVE_STATES:
+                    job.attempt += 1
+                    await db.commit()
+                    await JobStore().transition(db, identifier,
+                        "FAILED" if job.attempt >= job.max_attempts else "REPAIR",
+                        reason=f"Bounded worker failure: {failure_type}")
         return {"status": status, "kind": kind, "id": identifier, "recovered": recovered}

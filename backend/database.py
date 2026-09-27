@@ -51,6 +51,14 @@ async def init_db() -> None:
 
         await conn.run_sync(Base.metadata.create_all)
 
+        # The Network V1 control row may have been created by an earlier
+        # checkpoint. create_all does not add columns to existing tables.
+        columns = (await conn.exec_driver_sql("PRAGMA table_info(network_control)")).fetchall()
+        if columns and "planner_failures" not in {row[1] for row in columns}:
+            await conn.exec_driver_sql(
+                "ALTER TABLE network_control ADD COLUMN planner_failures JSON NOT NULL DEFAULT '{}'"
+            )
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency that provides a database session."""
