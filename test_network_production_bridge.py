@@ -11,6 +11,7 @@ from backend.services.network.channel_registry import ChannelRegistry
 from backend.services.network.job_store import JobStore
 from backend.services.network.originality import OriginalityGate
 from backend.services.network.production_bridge import ProductionBridge
+from backend.services.network.production_bridge import verify_local_render
 
 
 class FakeEngine:
@@ -47,7 +48,8 @@ async def test_render_stops_at_qa_without_upload_or_auto_approval(tmp_path):
         await OriginalityGate().reserve(session, job_id=job_id, topic="Webb mirror")
     fake = FakeEngine({"status": "awaiting_qa", "video_path": str(video),
                        "production": {"production_package": {"package_dir": str(package)}}})
-    result = await ProductionBridge(sessions, orchestrator=fake).run(job_id, worker_id="worker")
+    result = await ProductionBridge(sessions, orchestrator=fake,
+                                    render_verifier=lambda path: path.is_file()).run(job_id, worker_id="worker")
     assert result["status"] == "awaiting_qa"
     assert fake.calls[0].startswith(f"network-{job_id}-attempt-0")
     async with sessions() as session:
@@ -64,14 +66,33 @@ async def test_render_stops_at_qa_without_upload_or_auto_approval(tmp_path):
         second = await JobStore().enqueue(session, channel_id=channel.id,
                                           idempotency_key="other", topic="Mars rotor")
         await OriginalityGate().reserve(session, job_id=second.id, topic="Mars rotor")
-    await ProductionBridge(sessions, orchestrator=fake).run(second.id, worker_id="worker")
+    await ProductionBridge(sessions, orchestrator=fake,
+                           render_verifier=lambda path: path.is_file()).run(second.id, worker_id="worker")
     async with sessions() as session:
         second_saved = await session.get(NetworkJob, second.id)
         assert second_saved.state == "REPAIR"
         assert second_saved.retry_after is not None
     with pytest.raises(ValueError, match="Only queued"):
-        await ProductionBridge(sessions, orchestrator=fake).run(job_id, worker_id="worker")
+        await ProductionBridge(sessions, orchestrator=fake,
+                               render_verifier=lambda path: path.is_file()).run(job_id, worker_id="worker")
     await engine.dispose()
+
+
+def test_technical_probe_rejects_placeholder_and_accepts_real_video_audio(tmp_path):
+    import shutil
+    import subprocess
+
+    placeholder = tmp_path / "placeholder.mp4"
+    placeholder.write_bytes(b"not a real video")
+    assert not verify_local_render(placeholder)
+    if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
+        pytest.skip("FFmpeg unavailable in this environment")
+    actual = tmp_path / "short.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=blue:s=160x284:r=5",
+                    "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100",
+                    "-t", "1", "-c:v", "libx264", "-c:a", "aac", "-shortest", str(actual)],
+                   check=True, timeout=30)
+    assert verify_local_render(actual)
 
 
 @pytest.mark.asyncio

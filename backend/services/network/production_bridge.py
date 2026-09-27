@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 from sqlalchemy import select
@@ -19,9 +20,34 @@ from backend.models.network_job import NetworkJob
 from backend.services.network.job_store import JobStore
 
 
+def verify_local_render(path: Path) -> bool:
+    """Check actual decodable stream metadata before recording a QA artifact.
+
+    This is technical admission to human/perceptual QA, never an approval.
+    """
+    if not path.is_file() or path.stat().st_size == 0:
+        return False
+    try:
+        completed = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries",
+             "format=duration:stream=codec_type,width,height", "-of", "json", str(path)],
+            capture_output=True, text=True, timeout=20, check=False,
+        )
+        if completed.returncode != 0:
+            return False
+        probe = json.loads(completed.stdout)
+        duration = float(probe.get("format", {}).get("duration", 0))
+        streams = probe.get("streams", [])
+        return (0 < duration <= 180 and any(s.get("codec_type") == "audio" for s in streams)
+                and any(s.get("codec_type") == "video" and s.get("width", 0) > 0
+                        and s.get("height", 0) > 0 for s in streams))
+    except (OSError, ValueError, TypeError, json.JSONDecodeError, subprocess.TimeoutExpired):
+        return False
+
+
 class ProductionBridge:
     def __init__(self, session_factory: async_sessionmaker, *, orchestrator=None,
-                 job_store: JobStore | None = None):
+                 job_store: JobStore | None = None, render_verifier=verify_local_render):
         self.sessions = session_factory
         self._requires_selected_trend = orchestrator is None
         if orchestrator is None:
@@ -30,6 +56,7 @@ class ProductionBridge:
                 session_factory=session_factory, private_upload_enabled=False)
         self.orchestrator = orchestrator
         self.jobs = job_store or JobStore()
+        self.render_verifier = render_verifier
 
     async def run(self, job_id: str, *, worker_id: str, lease_seconds: int = 7200) -> dict:
         async with self.sessions() as session:
@@ -80,7 +107,8 @@ class ProductionBridge:
                                            reason="No eligible evidence-backed topic")
                 return result
             path = result.get("video_path")
-            if result.get("status") != "awaiting_qa" or not isinstance(path, str) or not Path(path).is_file():
+            if (result.get("status") != "awaiting_qa" or not isinstance(path, str)
+                    or not self.render_verifier(Path(path))):
                 job.attempt += 1
                 await session.commit()
                 await self.jobs.transition(session, job_id,

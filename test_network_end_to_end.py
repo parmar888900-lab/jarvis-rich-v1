@@ -71,7 +71,8 @@ async def test_channel_to_qa_lineage_and_status_survives_restart(tmp_path, monke
     restarted = create_async_engine(url)
     sessions = async_sessionmaker(restarted, expire_on_commit=False)
     renderer = EngineBoundary(video, package)
-    await ProductionBridge(sessions, orchestrator=renderer).run(job_id, worker_id="dry-run")
+    await ProductionBridge(sessions, orchestrator=renderer,
+                           render_verifier=lambda path: path.is_file()).run(job_id, worker_id="dry-run")
     assert renderer.calls[0][1]["title"] == trend["title"]
     async with sessions() as db:
         snapshot = await network_snapshot(db, storage_path=tmp_path)
