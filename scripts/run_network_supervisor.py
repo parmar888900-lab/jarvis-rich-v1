@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from backend.database import async_session, init_db  # noqa: E402
 from backend.services.network.supervisor import NetworkSupervisor  # noqa: E402
+from backend.services.network.instance_lock import instance_lock  # noqa: E402
 
 
 async def main(once: bool, interval: int) -> None:
@@ -34,4 +35,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if not 10 <= args.interval <= 3600:
         parser.error("interval must be 10 to 3600 seconds")
-    asyncio.run(main(args.once, args.interval))
+    with instance_lock(Path(__file__).resolve().parents[1] / "generated" / "state" /
+                       "network_supervisor.lock"):
+        asyncio.run(main(args.once, args.interval))
