@@ -48,3 +48,14 @@ def test_loopback_starts_without_lan_credentials(monkeypatch):
     monkeypatch.delenv("JARVIS_DASHBOARD_HOST", raising=False)
     monkeypatch.delenv("JARVIS_REMOTE_TOKEN", raising=False)
     assert dashboard_config()["host"] == "127.0.0.1"
+
+
+def test_dashboard_script_can_import_backend_from_repo_root():
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent
+    result = subprocess.run([sys.executable, "-c", "import runpy; runpy.run_path('scripts/run_dashboard.py')"],
+                            cwd=root, capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr

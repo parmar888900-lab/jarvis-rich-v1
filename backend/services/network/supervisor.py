@@ -85,12 +85,14 @@ class NetworkSupervisor:
                        *, recovered: list[str]) -> dict:
         script = "plan_network_day.py" if kind == "plan" else "run_network_job.py"
         command = [sys.executable, str(self.root / "scripts" / script), identifier]
+        log_path = self.root / "generated" / "logs" / f"network-{kind}.log"
+        self._rotate_log(log_path)
         failure_type = None
         try:
             outcome = await asyncio.to_thread(
                 self.runner, command, stage=f"network-{kind}", timeout_seconds=seconds,
                 heartbeat_seconds=20, terminate_grace_seconds=5,
-                log_path=self.root / "generated" / "logs" / f"network-{kind}.log",
+                log_path=log_path,
                 cwd=self.root)
             status = "completed" if outcome.returncode == 0 else "child_failed"
             if status == "child_failed":
@@ -123,3 +125,13 @@ class NetworkSupervisor:
                         "FAILED" if job.attempt >= job.max_attempts else "REPAIR",
                         reason=f"Bounded worker failure: {failure_type}")
         return {"status": status, "kind": kind, "id": identifier, "recovered": recovered}
+
+    @staticmethod
+    def _rotate_log(path: Path, *, max_bytes: int = 20 * 1024 * 1024) -> None:
+        """Keep bounded child logs without touching media, renders or state."""
+        if not path.is_file() or path.stat().st_size < max_bytes:
+            return
+        for index in range(3, 0, -1):
+            source = path if index == 1 else Path(f"{path}.{index - 1}")
+            if source.exists():
+                source.replace(Path(f"{path}.{index}"))

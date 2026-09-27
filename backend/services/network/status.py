@@ -17,6 +17,12 @@ from backend.models.network_control import NetworkControl
 from backend.models.network_job import NetworkJob
 from backend.models.youtube_performance_snapshot import YoutubePerformanceSnapshotRecord
 from backend.services.runtime.capabilities import RuntimeCapabilityService
+from backend.services.network.heartbeat import read_heartbeat
+
+try:
+    import psutil
+except ImportError:  # Optional on a minimally installed host.
+    psutil = None
 
 
 async def network_snapshot(db: AsyncSession, *, storage_path: Path) -> dict:
@@ -34,6 +40,7 @@ async def network_snapshot(db: AsyncSession, *, storage_path: Path) -> dict:
                                   .order_by(YoutubePerformanceSnapshotRecord.captured_at.desc())
                                   .limit(100))).all()
     disk = shutil.disk_usage(storage_path)
+    state_dir = storage_path / "generated" / "state"
     return {
         "observed_at": datetime.now(timezone.utc).isoformat(),
         "public_publishing_enabled": (
@@ -78,6 +85,12 @@ async def network_snapshot(db: AsyncSession, *, storage_path: Path) -> dict:
                       for a in snapshots],
         "system": {"disk_total_bytes": disk.total, "disk_free_bytes": disk.free,
                    "ffmpeg_available": shutil.which("ffmpeg") is not None,
-                   "cpu_percent": None, "ram_percent": None, "gpu_percent": None},
+                   "cpu_percent": psutil.cpu_percent(interval=None) if psutil else None,
+                   "ram_percent": psutil.virtual_memory().percent if psutil else None,
+                   "gpu_percent": None},
+        "services": {"supervisor": read_heartbeat(state_dir / "supervisor.json",
+                                                       max_age_seconds=150),
+                     "voice": read_heartbeat(state_dir / "voice.json",
+                                              max_age_seconds=45)},
         "runtime_capabilities": RuntimeCapabilityService().inspect().as_dict(),
     }

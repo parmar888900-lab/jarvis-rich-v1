@@ -45,7 +45,9 @@ async def test_status_only_reports_persisted_network_facts(tmp_path, monkeypatch
         assert snapshot["human_actions"][0]["required_user_action"] == "Sign in"
         assert snapshot["public_publishing_enabled"] is False
         assert snapshot["system"]["disk_free_bytes"] > 0
-        assert snapshot["system"]["cpu_percent"] is None
+        assert (snapshot["system"]["cpu_percent"] is None or
+                0 <= snapshot["system"]["cpu_percent"] <= 100)
+        assert snapshot["services"]["supervisor"]["fresh"] is False
         assert snapshot["analytics"][0]["views"] == 12
     await engine.dispose()
 

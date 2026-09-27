@@ -7,6 +7,7 @@ import logging
 from pathlib import Path
 
 from backend.services.network.instance_lock import instance_lock
+from backend.services.network.heartbeat import write_heartbeat
 
 
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 VOICE_DIR = Path("generated") / "voice_runtime"
 COMMAND_AUDIO = VOICE_DIR / "command.wav"
 CONFIRMATION_AUDIO = VOICE_DIR / "confirmation.wav"
+HEARTBEAT = Path("generated/state/voice.json")
 VoiceAssistant = None
 AudioCapture = None
 
@@ -38,6 +40,7 @@ async def run_voice_runtime() -> None:
     failures = 0
     while True:
         try:
+            write_heartbeat(HEARTBEAT, state="WAKE_LISTENING")
             response = await assistant.interact_once(
                 COMMAND_AUDIO,
                 confirmation_audio_path=CONFIRMATION_AUDIO,
@@ -58,6 +61,8 @@ async def run_voice_runtime() -> None:
                 f"transcript={result.transcript!r}"
             )
             failures = 0
+            write_heartbeat(HEARTBEAT, state="WAKE_LISTENING",
+                            detail=result.status)
 
         except KeyboardInterrupt:
             raise
@@ -66,6 +71,7 @@ async def run_voice_runtime() -> None:
             raise
 
         except Exception:
+            write_heartbeat(HEARTBEAT, state="ERROR", detail="voice_interaction_failed")
             logger.exception(
                 "Voice interaction failed; continuing."
             )

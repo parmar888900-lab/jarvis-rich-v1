@@ -12,16 +12,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from backend.database import async_session, init_db  # noqa: E402
 from backend.services.network.supervisor import NetworkSupervisor  # noqa: E402
 from backend.services.network.instance_lock import instance_lock  # noqa: E402
+from backend.services.network.heartbeat import write_heartbeat  # noqa: E402
 
 
 async def main(once: bool, interval: int) -> None:
     os.environ["JARVIS_PUBLIC_PUBLISH_ENABLED"] = "false"
     await init_db()
     supervisor = NetworkSupervisor(async_session)
+    heartbeat = Path(__file__).resolve().parents[1] / "generated" / "state" / "supervisor.json"
     while True:
         try:
-            print(await supervisor.tick(), flush=True)
+            result = await supervisor.tick()
+            write_heartbeat(heartbeat, state=result["status"], detail=result.get("kind"))
+            print(result, flush=True)
         except Exception as exc:
+            write_heartbeat(heartbeat, state="ERROR", detail=type(exc).__name__)
             print(f"supervisor_error={type(exc).__name__}", file=sys.stderr, flush=True)
         if once:
             return
