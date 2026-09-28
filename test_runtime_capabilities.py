@@ -147,6 +147,28 @@ def test_missing_ffmpeg_blocks_production():
         assert "ffmpeg" in report.missing_required
 
 
+def test_missing_ffprobe_blocks_render_before_private_qa():
+    with tempfile.TemporaryDirectory() as temp:
+        service = RuntimeCapabilityService(
+            build_config(Path(temp))
+        )
+
+        def tool(name):
+            return None if name == "ffprobe" else "/usr/bin/ffmpeg"
+
+        with patch(
+            "backend.services.runtime.capabilities.shutil.which",
+            side_effect=tool,
+        ), patch(
+            "backend.services.runtime.capabilities.importlib.util.find_spec",
+            return_value=object(),
+        ):
+            report = service.inspect()
+
+        assert not report.production_ready
+        assert "ffprobe" in report.missing_required
+
+
 def test_missing_youtube_token_blocks_production():
     with tempfile.TemporaryDirectory() as temp:
         root = Path(

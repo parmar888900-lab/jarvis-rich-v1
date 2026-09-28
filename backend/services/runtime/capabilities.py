@@ -250,6 +250,14 @@ class RuntimeCapabilityService:
                 command=config.ffmpeg_executable,
                 required=True,
             ),
+            # The Network QA bridge probes the completed video before
+            # recording an artifact. Fail readiness before a costly render
+            # if that mandatory tool is unavailable on the worker PATH.
+            self._command(
+                name="ffprobe",
+                command="ffprobe",
+                required=True,
+            ),
             self._directory_or_creatable(
                 name="generated_storage",
                 path=config.generated_dir,

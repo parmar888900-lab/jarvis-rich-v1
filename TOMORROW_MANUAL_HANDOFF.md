@@ -15,6 +15,11 @@ source text competing with captions. It is **Rich V1 FAIL** until a later
 actual render clears the six-reference perceptual bar. This recovered Work
 artifact is not assumed present on the Windows host.
 
+The current matcher now prefers a visibly different opening frame only when
+another **strictly eligible** clip scores within .025 of the best semantic
+match. That code has a focused regression test, but no later real render has
+verified the viewer-facing effect. Do not call R14 improved retroactively.
+
 ## 1. Pull, inspect and verify (first action)
 
 In PowerShell on Windows, from the existing repository:
@@ -37,6 +42,9 @@ If the checker reports either publishing flag true, pause via
 `.\venv\Scripts\python.exe scripts\control_network.py pause_production`
 and do not commission. If dependencies are missing, report the list; no
 Google OAuth refresh is needed merely for private local QA.
+The readiness check now also requires `ffprobe`, because the private QA
+boundary probes the completed video with it. A missing `ffprobe` is a real
+machine dependency to fix before running a costly render.
 
 ## 2. One audited private commissioning attempt
 
@@ -179,6 +187,14 @@ availability and branding with the actual services; proposed handles are not
 reserved. Account creation, Google login, OAuth consent, phone/identity
 verification, tax/payment and platform restrictions are HUMAN_ACTION_REQUIRED
 only if later separately authorized. They are not needed for local QA.
+
+The Work audit searched tracked code, configs, fixtures, docs, migrations,
+generated definitions/state, all available Git object paths and channel
+history, plus the repository SQLite database in read-only mode. The latter
+contains a `network_channels` table with **zero rows**. There is no authentic
+first-60 account roster here. The actual 60 YouTube names/handles and their
+account-side availability must come from the owner's records or authorized
+account view; the Work session did not invent them.
 
 ## Safety after each step
 
