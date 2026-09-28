@@ -258,6 +258,11 @@ def execute(channel_id: str, *, wait_seconds: int, report_dir: Path) -> dict:
                 render_path = ROOT / render_path
             report["render_path"] = str(render_path)
             report["video"] = _probe_video(render_path, log_dir)
+            recorded_hash = report["job"].get("lineage", {}).get("render_sha256")
+            if (recorded_hash and report["video"].get("sha256")
+                    and recorded_hash != report["video"]["sha256"]):
+                report["video"]["valid"] = False
+                report["video"]["reason"] = "render_changed_since_qa"
     return report
 
 

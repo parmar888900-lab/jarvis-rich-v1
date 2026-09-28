@@ -43,7 +43,8 @@ stage logs remain separately under `generated\logs\private-commission\*`
 for local diagnosis and should not be shared without reviewing for sensitive
 provider output. The report records actual candidate scores, job state, render
 metadata and hash without tokens. `QA` is technical admission only, never
-perceptual approval. If `git pull`
+perceptual approval; the wrapper also rejects a render whose current SHA-256
+no longer matches its recorded QA lineage. If `git pull`
 reports local modifications, stop before overwriting them and retain the
 output of `git status --short --branch`; do not reset or apply the old stash.
 If the checker reports either publishing flag true, the wrapper stops before

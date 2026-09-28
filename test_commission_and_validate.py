@@ -38,7 +38,7 @@ def test_persisted_qa_report_probes_existing_artifact_without_upload():
         state = {
             "id": job_id, "state": "QA", "attempt": 0,
             "failure_reason": None, "render_path": str(render),
-            "lineage": {"render_sha256": "recorded-hash"},
+            "lineage": {},
         }
 
         def stage(_argv, *, name, deadline, log):
@@ -103,3 +103,34 @@ def test_probe_rejects_wrong_geometry_and_preserves_file():
             outcome = command._probe_video(render, directory)
         assert outcome["valid"] is False
         assert render.read_bytes() == b"content"
+
+
+def test_qa_hash_disagreement_is_not_reported_as_valid():
+    # A QA DB row can outlive a replaced/partial file on an unreliable disk.
+    with tempfile.TemporaryDirectory() as folder:
+        directory = Path(folder)
+        render = directory / "changed.mp4"
+        render.write_bytes(b"changed")
+        job_id = "12345678-1234-1234-1234-123456789abc"
+
+        def stage(_argv, *, name, deadline, log):
+            if name == "network-preflight":
+                log.write_text(json.dumps({"public_publishing_enabled": False,
+                    "network_publishing_enabled": False, "production_enabled": True,
+                    "missing_production_dependencies": []}), encoding="utf-8")
+            else:
+                log.write_text(f"private_qa_job={job_id} state=QA\n", encoding="utf-8")
+            return 0
+
+        async def job_state(_id):
+            return {"id": job_id, "state": "QA", "render_path": str(render),
+                    "lineage": {"render_sha256": "old-hash"}}
+
+        with patch.object(command, "_stage", side_effect=stage), \
+             patch.object(command, "_job_state", side_effect=job_state), \
+             patch.object(command, "_probe_video", return_value={
+                 "valid": True, "sha256": "new-hash"}):
+            result = command.execute("channel-id", wait_seconds=0, report_dir=directory)
+        assert result["boundary"] == "job_qa"
+        assert result["video"] == {"valid": False, "sha256": "new-hash",
+                                   "reason": "render_changed_since_qa"}
