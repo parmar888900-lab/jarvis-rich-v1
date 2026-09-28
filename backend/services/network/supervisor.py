@@ -45,22 +45,9 @@ class NetworkSupervisor:
                 return {"status": "disk_protection", "required_free_bytes": control.min_free_bytes}
             recovered = await JobStore().recover_stale(db)
             now = datetime.now(timezone.utc)
-            if control.accept_new_jobs:
-                channels = (await db.scalars(select(NetworkChannel).where(
-                    NetworkChannel.lifecycle_state == "ACTIVE", NetworkChannel.paused.is_(False))
-                    .order_by(NetworkChannel.id))).all()
-                for channel in channels:
-                    local_date = now.astimezone(ZoneInfo(channel.timezone)).date().isoformat()
-                    allocation = await db.scalar(select(NetworkAllocation).where(
-                        NetworkAllocation.channel_id == channel.id,
-                        NetworkAllocation.local_date == local_date))
-                    if allocation is None and channel.allowed_topics:
-                        failure = (control.planner_failures or {}).get(channel.id, {})
-                        until = failure.get("retry_after")
-                        if until and datetime.fromisoformat(until) > now:
-                            continue
-                        return await self._execute("plan", channel.id, self.max_plan_seconds,
-                                                   recovered=recovered)
+            # Finish durable, already vetted work before starting another
+            # channel's planning pass. In particular, private commissioning
+            # must not be starved by a new day's empty allocation.
             candidates = (await db.scalars(select(NetworkJob).where(
                 NetworkJob.state.in_(("QUEUED", "REPAIR")))
                 .order_by(NetworkJob.created_at, NetworkJob.id))).all()
@@ -79,6 +66,22 @@ class NetworkSupervisor:
                             "job_id": job.id, "recovered": recovered}
                 return await self._execute("job", job.id, self.max_job_seconds,
                                            recovered=recovered)
+            if control.accept_new_jobs:
+                channels = (await db.scalars(select(NetworkChannel).where(
+                    NetworkChannel.lifecycle_state == "ACTIVE", NetworkChannel.paused.is_(False))
+                    .order_by(NetworkChannel.id))).all()
+                for channel in channels:
+                    local_date = now.astimezone(ZoneInfo(channel.timezone)).date().isoformat()
+                    allocation = await db.scalar(select(NetworkAllocation).where(
+                        NetworkAllocation.channel_id == channel.id,
+                        NetworkAllocation.local_date == local_date))
+                    if allocation is None and channel.allowed_topics:
+                        failure = (control.planner_failures or {}).get(channel.id, {})
+                        until = failure.get("retry_after")
+                        if until and datetime.fromisoformat(until) > now:
+                            continue
+                        return await self._execute("plan", channel.id, self.max_plan_seconds,
+                                                   recovered=recovered)
             return {"status": "idle", "recovered": recovered}
 
     async def _execute(self, kind: str, identifier: str, seconds: int,
