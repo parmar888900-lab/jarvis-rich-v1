@@ -17,7 +17,7 @@ BLUEPRINTS = (
     (61, "OrbitMechanics", "space engineering", "science_engineering", "orbital mechanics", "Explain orbital maneuvers with mission geometry and measured constraints", "indigo orbital arcs"),
     (62, "OceanMachines", "marine engineering", "science_engineering", "submersible", "Explain underwater vehicle mechanisms using documented engineering", "teal bathymetric lines"),
     (63, "BridgeLogic", "civil engineering", "science_engineering", "bridge engineering", "Trace the load path through one bridge design at a time", "copper structural grids"),
-    (64, "BatteryDecoded", "energy engineering", "science_engineering", "battery chemistry", "Explain storage chemistry through verified failure and design tradeoffs", "amber cell schematics"),
+    (64, "CellChemistryLab", "energy engineering", "science_engineering", "battery chemistry", "Explain storage chemistry through verified failure and design tradeoffs", "amber cell schematics"),
     (65, "DeepEarthLab", "geoscience", "science_engineering", "seismology", "Explain seismic measurements and Earth's interior from published observations", "ochre strata contours"),
     (66, "FlightControlLab", "aviation engineering", "science_engineering", "aircraft control", "Show how flight controls solve documented aerodynamic problems", "sky-blue airflow ribbons"),
     (67, "ParticleLedger", "physics", "science_engineering", "particle detector", "Translate detector evidence into understandable particle observations", "violet detector rings"),
@@ -109,7 +109,13 @@ def validate_blueprints(existing: list[dict] | None = None) -> dict:
                 raise ValueError(f"Channel name/handle collision: {value} and {seen[key]}")
             seen[key] = (index, value)
     for index, left in enumerate(all_entries):
-        for right in all_entries[index + 1:]:
+        for right_index in range(index + 1, len(all_entries)):
+            # Existing account names are owner-supplied facts, not proposals
+            # this validator is authorized to rename. Flag only comparisons
+            # involving a proposed channel.
+            if right_index < len(known):
+                continue
+            right = all_entries[right_index]
             a, b = left["name"].casefold(), right["name"].casefold()
             if SequenceMatcher(None, a, b).ratio() >= .88:
                 raise ValueError(f"Channel names too similar: {left['name']} and {right['name']}")
