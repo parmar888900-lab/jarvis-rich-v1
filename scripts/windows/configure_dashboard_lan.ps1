@@ -1,8 +1,8 @@
 # Run in the owner's PowerShell session from C:\Users\hp\jarvis.ai.
 $ErrorActionPreference = 'Stop'
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-$python = Join-Path $repo '.venv\Scripts\python.exe'
-if (-not (Test-Path $python)) { $python = Join-Path $repo 'venv\Scripts\python.exe' }
+$python = Join-Path $repo 'venv\Scripts\python.exe'
+if (-not (Test-Path $python)) { $python = Join-Path $repo '.venv\Scripts\python.exe' }
 if (-not (Test-Path $python)) { throw 'Install Python requirements into .venv or venv first.' }
 $lanHost = Read-Host 'Enter this Windows machine LAN IP address (from ipconfig)'
 if (-not $lanHost) { throw 'A LAN IP address is required.' }

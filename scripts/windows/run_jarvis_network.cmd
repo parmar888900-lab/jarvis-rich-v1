@@ -2,8 +2,8 @@
 setlocal
 cd /d "%~dp0\..\.."
 if not exist "generated\logs" mkdir "generated\logs"
-set "JARVIS_PYTHON=.venv\Scripts\python.exe"
-if not exist "%JARVIS_PYTHON%" set "JARVIS_PYTHON=venv\Scripts\python.exe"
+set "JARVIS_PYTHON=venv\Scripts\python.exe"
+if not exist "%JARVIS_PYTHON%" set "JARVIS_PYTHON=.venv\Scripts\python.exe"
 if not exist "%JARVIS_PYTHON%" (
   echo Jarvis Python environment missing. Install pinned requirements first.
   exit /b 2
