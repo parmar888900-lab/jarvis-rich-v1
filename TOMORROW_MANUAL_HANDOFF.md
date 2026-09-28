@@ -37,9 +37,11 @@ command runs the checker, enforces both publishing flags OFF, allows only
 the unrelated missing YouTube analytics token for private QA, bounds topic
 research to 360 seconds, observes the persisted job and supervisor for at
 most 7500 seconds, and probes any final MP4 with a separate 30-second
-`ffprobe` watchdog. It writes `evidence.json`, `summary.txt` and bounded
-stage logs in a timestamped `generated\reports\private-commission-*`
-folder. The report records actual candidate scores, job state, render
+`ffprobe` watchdog. It writes shareable `evidence.json` and `summary.txt`
+in a timestamped `generated\reports\private-commission-*` folder. Raw
+stage logs remain separately under `generated\logs\private-commission\*`
+for local diagnosis and should not be shared without reviewing for sensitive
+provider output. The report records actual candidate scores, job state, render
 metadata and hash without tokens. `QA` is technical admission only, never
 perceptual approval. If `git pull`
 reports local modifications, stop before overwriting them and retain the
@@ -67,8 +69,8 @@ is reported as pending until its transactional reservation. Then either
 “No channel-vetted source-backed original topic cleared the .55 gate”. A
 correct no-job result is a quality-gate outcome, not permission to lower the
 threshold. A nonzero exit means a boundary is unresolved; share
-`evidence.json`, `summary.txt`, and if requested the relevant report-folder
-stage log. Do not repeat a job already queued/running.
+`evidence.json` and `summary.txt`. Only inspect raw logs locally, sharing
+redacted excerpts if needed. Do not repeat a job already queued/running.
 
 The original real Windows candidate, “How James Webb Space Telescope unfolded
 its mirror after launch”, had production score 72.25/100 and visual supply

@@ -26,6 +26,7 @@ def test_preflight_fails_closed_without_starting_commission():
             result = command.execute("channel-id", wait_seconds=0, report_dir=directory)
         assert result["boundary"] == "publishing_invariant_failed"
         assert calls.call_count == 1
+        assert not list(directory.glob("*.log"))
 
 
 def test_persisted_qa_report_probes_existing_artifact_without_upload():
@@ -79,6 +80,7 @@ def test_persisted_qa_report_probes_existing_artifact_without_upload():
         assert result["video"]["width"] == 1080
         assert result["candidates"][0]["evidence"] == 0.63
         assert "token" not in json.dumps(result.get("candidates"))
+        assert not list(directory.glob("*.log"))
 
 
 def test_probe_rejects_wrong_geometry_and_preserves_file():

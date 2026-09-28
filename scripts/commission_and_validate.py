@@ -100,13 +100,13 @@ def _stage(command: list[str], *, name: str, deadline: int, log: Path) -> int:
         return 125
 
 
-def _probe_video(path: Path, report_dir: Path) -> dict:
+def _probe_video(path: Path, log_dir: Path) -> dict:
     if not path.is_file() or path.stat().st_size == 0:
         return {"valid": False, "reason": "render_missing_or_empty"}
     binary = shutil.which("ffprobe")
     if not binary:
         return {"valid": False, "reason": "ffprobe_unavailable"}
-    log = report_dir / "ffprobe.log"
+    log = log_dir / "ffprobe.log"
     code = _stage([
         binary, "-v", "error", "-show_entries",
         "format=duration,size:stream=codec_name,codec_type,width,height,r_frame_rate",
@@ -164,11 +164,16 @@ def execute(channel_id: str, *, wait_seconds: int, report_dir: Path) -> dict:
     if not 0 <= wait_seconds <= 8000:
         raise ValueError("wait_seconds must be bounded to 0–8000")
     os.environ["JARVIS_PUBLIC_PUBLISH_ENABLED"] = "false"
+    # Child output is retained locally for diagnosis, but excluded from the
+    # shareable evidence directory because providers may print sensitive text.
+    log_dir = ROOT / "generated" / "logs" / "private-commission" / report_dir.name
+    log_dir.mkdir(parents=True, exist_ok=True)
     report = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "branch": None, "git_head": None, "channel_id": channel_id,
         "public_publishing_enabled": False, "network_publishing_enabled": None,
         "boundary": "preflight", "human_action_required": [],
+        "internal_log_dir": str(log_dir),
     }
     for name, args in (("branch", ["branch", "--show-current"]), ("git_head", ["rev-parse", "HEAD"])):
         try:
@@ -182,7 +187,7 @@ def execute(channel_id: str, *, wait_seconds: int, report_dir: Path) -> dict:
     if report["branch"] != "sprint/rich-v1-20260920":
         report["boundary"] = "wrong_branch"
         return report
-    checker = report_dir / "checker.log"
+    checker = log_dir / "checker.log"
     code = _stage([sys.executable, str(ROOT / "scripts" / "check_jarvis.py")],
                   name="network-preflight", deadline=90, log=checker)
     if code:
@@ -205,7 +210,7 @@ def execute(channel_id: str, *, wait_seconds: int, report_dir: Path) -> dict:
     if missing:
         report.update(boundary="runtime_unready", missing_dependencies=missing)
         return report
-    commission = report_dir / "commission.log"
+    commission = log_dir / "commission.log"
     code = _stage([sys.executable, str(ROOT / "scripts" / "commission_network_job.py"), channel_id],
                   name="network-commission", deadline=360, log=commission)
     try:
@@ -236,7 +241,7 @@ def execute(channel_id: str, *, wait_seconds: int, report_dir: Path) -> dict:
             code = _stage([sys.executable, str(ROOT / "scripts" / "run_network_supervisor.py"),
                            "--once"], name="network-one-shot",
                           deadline=min(7300, max(1, wait_seconds)),
-                          log=report_dir / "supervisor.log")
+                          log=log_dir / "supervisor.log")
             report["one_shot_exit_code"] = code
         while time.monotonic() < deadline:
             report["job"] = asyncio.run(_job_state(job_id))
@@ -252,7 +257,7 @@ def execute(channel_id: str, *, wait_seconds: int, report_dir: Path) -> dict:
             if not render_path.is_absolute():
                 render_path = ROOT / render_path
             report["render_path"] = str(render_path)
-            report["video"] = _probe_video(render_path, report_dir)
+            report["video"] = _probe_video(render_path, log_dir)
     return report
 
 
