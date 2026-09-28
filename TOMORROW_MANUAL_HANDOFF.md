@@ -192,6 +192,12 @@ comparison was completed in Work, including a genuine collision at proposed
 
 The roster is a JSON array of objects with `name` and optional `handle`.
 Expected `all_100_checked: true`, `known_existing: 60`, and no collision.
+The validator reports three **pre-existing** similar-name pairs among the
+already created 1–60: SceneDecoded/ScienceDecoded, WeatherDecoded/WaterDecoded,
+and MachineDecoded/MineDecoded. None involves a 61–100 proposal, and the
+owner-supplied names were not altered. The first-60 roster contains no niche,
+audience or branding metadata, so cross-network differentiation of those
+fields cannot be truthfully validated from names and handles alone.
 Check handle
 availability and branding with the actual services; proposed handles are not
 reserved. Account creation, Google login, OAuth consent, phone/identity

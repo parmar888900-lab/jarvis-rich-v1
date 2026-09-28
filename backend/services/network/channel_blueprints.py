@@ -108,17 +108,20 @@ def validate_blueprints(existing: list[dict] | None = None) -> dict:
             if key in seen and seen[key][0] != index:
                 raise ValueError(f"Channel name/handle collision: {value} and {seen[key]}")
             seen[key] = (index, value)
+    preexisting_similar_names = []
     for index, left in enumerate(all_entries):
         for right_index in range(index + 1, len(all_entries)):
             # Existing account names are owner-supplied facts, not proposals
             # this validator is authorized to rename. Flag only comparisons
             # involving a proposed channel.
-            if right_index < len(known):
-                continue
             right = all_entries[right_index]
             a, b = left["name"].casefold(), right["name"].casefold()
             if SequenceMatcher(None, a, b).ratio() >= .88:
+                if right_index < len(known):
+                    preexisting_similar_names.append([left["name"], right["name"]])
+                    continue
                 raise ValueError(f"Channel names too similar: {left['name']} and {right['name']}")
     return {"proposed": len(proposals), "known_existing": len(known),
             "all_100_checked": len(known) == 60,
-            "missing_existing_roster": max(0, 60 - len(known))}
+            "missing_existing_roster": max(0, 60 - len(known)),
+            "preexisting_similar_names": preexisting_similar_names}

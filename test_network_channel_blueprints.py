@@ -20,7 +20,8 @@ def test_forty_distinct_safe_differentiated_proposals():
                and p["allowed_topics"] and p["branding_specification"]["logo_prompt"]
                for p in proposed)
     assert validate_blueprints() == {"proposed": 40, "known_existing": 0,
-                                      "all_100_checked": False, "missing_existing_roster": 60}
+                                      "all_100_checked": False, "missing_existing_roster": 60,
+                                      "preexisting_similar_names": []}
 
 
 def test_actual_roster_collision_fails_and_unknown_roster_is_reported():
@@ -41,6 +42,11 @@ def test_owner_supplied_account_roster_checks_all_one_hundred_without_registrati
     assert validate_blueprints(roster) == {
         "proposed": 40, "known_existing": 60,
         "all_100_checked": True, "missing_existing_roster": 0,
+        "preexisting_similar_names": [
+            ["SceneDecoded", "ScienceDecoded"],
+            ["WeatherDecoded", "WaterDecoded"],
+            ["MachineDecoded", "MineDecoded"],
+        ],
     }
     proposals = proposed_channels()
     assert proposals[3]["name"] == "CellChemistryLab"
