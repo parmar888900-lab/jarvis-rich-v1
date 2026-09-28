@@ -20,7 +20,7 @@ another **strictly eligible** clip scores within .025 of the best semantic
 match. That code has a focused regression test, but no later real render has
 verified the viewer-facing effect. Do not call R14 improved retroactively.
 
-## 1. Pull, inspect and verify (first action)
+## 1. Pull, inspect, then run one private validation command
 
 In PowerShell on Windows, from the existing repository:
 
@@ -29,45 +29,46 @@ cd C:\Users\hp\jarvis.ai
 git status --short --branch
 git fetch origin
 git pull --ff-only origin sprint/rich-v1-20260920
-.\venv\Scripts\python.exe scripts\check_jarvis.py
+.\venv\Scripts\python.exe scripts\commission_and_validate.py 2fef2173-b5da-43bc-8045-f96eaba8d14b
 ```
 
-Expected: branch `sprint/rich-v1-20260920`, a fast-forward, `public_publishing_enabled:
-false`, `network_publishing_enabled: false`, `channels: 1`, and empty
-`missing_production_dependencies` on the actual Windows host (the unrelated
-expired YouTube analytics token does not gate private QA). If `git pull`
+Expected: branch `sprint/rich-v1-20260920` and a fast-forward. The single
+command runs the checker, enforces both publishing flags OFF, allows only
+the unrelated missing YouTube analytics token for private QA, bounds topic
+research to 360 seconds, observes the persisted job and supervisor for at
+most 7500 seconds, and probes any final MP4 with a separate 30-second
+`ffprobe` watchdog. It writes `evidence.json`, `summary.txt` and bounded
+stage logs in a timestamped `generated\reports\private-commission-*`
+folder. The report records actual candidate scores, job state, render
+metadata and hash without tokens. `QA` is technical admission only, never
+perceptual approval. If `git pull`
 reports local modifications, stop before overwriting them and retain the
 output of `git status --short --branch`; do not reset or apply the old stash.
-If the checker reports either publishing flag true, pause via
+If the checker reports either publishing flag true, the wrapper stops before
+commissioning. Pause production via
 `.\venv\Scripts\python.exe scripts\control_network.py pause_production`
-and do not commission. If dependencies are missing, report the list; no
+and do not commission. If dependencies are missing, retain the report; no
 Google OAuth refresh is needed merely for private local QA.
 The readiness check now also requires `ffprobe`, because the private QA
 boundary probes the completed video with it. A missing `ffprobe` is a real
 machine dependency to fix before running a costly render.
 
-## 2. One audited private commissioning attempt
+## 2. Understand the private result (no second commissioning command)
 
 Use the existing ACTIVE SpaceDecoded ID. This is bounded, source-backed and
 tries up to four eligible allowed Webb alternatives; it may correctly produce
 no job. It leaves the prior zero allocation untouched.
 
-```powershell
-.\venv\Scripts\python.exe scripts\run_bounded.py --stage network-commission --timeout 300 --heartbeat 15 --log generated\logs\network-commission.log -- venv\Scripts\python.exe scripts\commission_network_job.py 2fef2173-b5da-43bc-8045-f96eaba8d14b
-.\venv\Scripts\python.exe scripts\check_jarvis.py
-Get-Content generated\logs\network-commission.log -Tail 60
-```
-
-Expected: JSON records with actual `production_score`, `quality`,
+The one command above records actual `production_score`, `quality`,
 `research_confidence`, `evidence`, `visual_supply`, `visual`, `weakest`,
 `source_count`, `.55` threshold, and rejection/eligibility reason. Originality
 is reported as pending until its transactional reservation. Then either
 `private_qa_job=<ID> state=QUEUED`, an idempotent existing job ID, or a safe
 “No channel-vetted source-backed original topic cleared the .55 gate”. A
 correct no-job result is a quality-gate outcome, not permission to lower the
-threshold. If exit code is 124, the watchdog stopped the child; retain the
-log and cached work. If code is nonzero, retain the last 60 lines and the
-checker output for diagnosis. Do not repeat a job already queued/running.
+threshold. A nonzero exit means a boundary is unresolved; share
+`evidence.json`, `summary.txt`, and if requested the relevant report-folder
+stage log. Do not repeat a job already queued/running.
 
 The original real Windows candidate, “How James Webb Space Telescope unfolded
 its mirror after launch”, had production score 72.25/100 and visual supply
@@ -76,14 +77,16 @@ Windows log; the new diagnostic records it on the next actual research run.
 It was below the unchanged weakest-component .55 cutoff. Do not infer or
 invent the absent value.
 
-## 3. Supervisor, local QA video and lineage
+## 3. Local QA video and lineage
 
-If a job was queued, start the existing task if necessary and watch one
-bounded job. A single render can take time; it has a 7200-second worker limit
-and the supervisor records repair/failure rather than uploading.
+The wrapper observes the scheduled supervisor. If its heartbeat was stale,
+it runs one bounded single-instance supervisor tick; the OS lock prevents
+overlapping workers. A render has a 7200-second worker limit and the supervisor
+records repair/failure rather than uploading. If the evidence ends at
+`job_queued` or `job_repair`, examine the recorded retry/state; never start
+a duplicate production child.
 
 ```powershell
-Start-ScheduledTask -TaskName JarvisNetwork
 .\venv\Scripts\python.exe scripts\check_jarvis.py
 Get-Content generated\logs\network-supervisor.log -Tail 60
 Get-Content generated\logs\network-job.log -Tail 80
@@ -99,7 +102,8 @@ bounded policy. If the task is queued but no heartbeat becomes fresh, run
 `Get-ScheduledTaskInfo -TaskName JarvisNetwork` and retain the task result.
 Do not restart the production child manually while the supervisor owns it.
 
-On a final MP4, use the recorded path (do not guess a filename):
+The wrapper already records `ffprobe` metadata and SHA-256. For independent
+verification on a final MP4, use the recorded path (do not guess a filename):
 
 ```powershell
 ffprobe -v error -show_entries format=duration,size:stream=codec_name,codec_type,width,height,r_frame_rate -of json "<ARTIFACTS.RENDER_PATH>"
@@ -172,29 +176,28 @@ These are physical device checks, not repository test passes.
 
 The repository contains **proposals only**, all PLANNED and paused, in
 `backend/services/network/channel_blueprints.py`. No accounts, OAuth grants,
-branding images or channel rows were created for 61–100. Validate them
-against an authentic first-60 name/handle roster before account-side work:
+branding images or channel rows were created for 61–100. The owner supplied
+the real first-60 names and handles; they are stored as **external account-side
+planning data**, not registered IDs, in
+`config/channel_roster_1_60.user_supplied.json`. The full 100-name/handle
+comparison was completed in Work, including a genuine collision at proposed
+#64; that proposal alone was renamed to `CellChemistryLab`. Recheck with:
 
 ```powershell
-.\venv\Scripts\python.exe scripts\validate_channel_blueprints.py --existing-roster "<PRIVATE_FIRST_60_ROSTER_JSON>"
+.\venv\Scripts\python.exe scripts\validate_channel_blueprints.py --existing-roster config\channel_roster_1_60.user_supplied.json
 ```
 
 The roster is a JSON array of objects with `name` and optional `handle`.
 Expected `all_100_checked: true`, `known_existing: 60`, and no collision.
-Without that roster the validator explicitly reports `missing_existing_roster:
-60`, and **no full 100-channel collision claim is justified**. Check handle
+Check handle
 availability and branding with the actual services; proposed handles are not
 reserved. Account creation, Google login, OAuth consent, phone/identity
 verification, tax/payment and platform restrictions are HUMAN_ACTION_REQUIRED
 only if later separately authorized. They are not needed for local QA.
 
-The Work audit searched tracked code, configs, fixtures, docs, migrations,
-generated definitions/state, all available Git object paths and channel
-history, plus the repository SQLite database in read-only mode. The latter
-contains a `network_channels` table with **zero rows**. There is no authentic
-first-60 account roster here. The actual 60 YouTube names/handles and their
-account-side availability must come from the owner's records or authorized
-account view; the Work session did not invent them.
+This user-supplied roster does not establish OAuth, repository registration,
+account capabilities or current handle availability. Those facts require
+authorized account-side verification only if later needed.
 
 ## Safety after each step
 
